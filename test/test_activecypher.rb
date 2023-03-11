@@ -2,10 +2,6 @@
 
 require 'helper'
 
-# frozen_string_literal: true
-
-require 'test_helper'
-
 class CompanyVertexTest < ActiveSupport::TestCase
   test 'should create a company vertex' do
     company = CompanyVertex.new('Google')

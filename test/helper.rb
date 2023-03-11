@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
-$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
+ENV['RAILS_ENV'] = 'test'
 
+require 'active_support'
 require 'active_support/testing/autorun'
+
+## Load the dummy app
+require_relative 'dummy/config/environment'
