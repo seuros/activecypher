@@ -1,0 +1,6 @@
+version: "3.9"
+services:
+  redis_stack:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6380:6379"
