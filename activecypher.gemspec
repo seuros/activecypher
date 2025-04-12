@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name = 'activecypher'
-  spec.version = '0.0.0'
+  spec.version = '0.1.0'
   spec.authors = ['Abdelkader Boudih']
   spec.email = ['seuros@pre-history.com']
 
@@ -18,5 +18,5 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob('{lib,sig}/**/*', File::FNM_DOTMATCH).reject { |f| File.directory?(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'activemodel', '~> 7.0'
+  spec.add_dependency 'activemodel', '~> 8.0'
 end

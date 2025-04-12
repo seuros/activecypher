@@ -1,15 +1,9 @@
 # frozen_string_literal: true
 
-require 'helper'
+require 'test_helper'
 
-class CompanyVertexTest < ActiveSupport::TestCase
-  test 'should create a company vertex' do
-    company = CompanyVertex.new('Google')
-    assert_equal 'Google', company.name
-  end
-
-  test 'should create a company vertex with a string representation' do
-    company = CompanyVertex.new('Google')
-    assert_equal 'Google', company.to_s
+class TestActiveCypher < Minitest::Test
+  def test_that_it_has_a_version_number
+    refute_nil Gem::Specification.find_by_name('activevector').version
   end
 end

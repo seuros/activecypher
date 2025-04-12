@@ -7,8 +7,8 @@ gemspec
 
 gem 'rake', '~> 13.0'
 
-gem 'railties', "~> #{ENV['RAILS_VERSION'] || '7.0.0'}"
+gem 'railties'
 
 gem 'minitest', '~> 5.0'
-gem 'redis-client'
 gem 'neo4j-ruby-driver'
+gem 'redis-client'
