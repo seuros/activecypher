@@ -55,9 +55,7 @@ module Cyrel
               # We need to decide which operator (= or +=). Defaulting to = for now.
               # User might need to specify via a different method/option.
               # Let's assume the value is a hash for this case.
-              unless value.is_a?(Hash)
-                raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n = {props})'
-              end
+              raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n = {props})' unless value.is_a?(Hash)
 
               [[:variable_properties, key.to_sym, Expression.coerce(value)]]
             else

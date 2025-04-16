@@ -1,6 +1,42 @@
-version: "3.9"
 services:
-  redis_stack:
-    image: redis/redis-stack-server:latest
+  postgres:
+    image: ghcr.io/seuros/postgis-with-extensions:17-4
     ports:
-      - "6380:6379"
+      - "5437:5432"
+    environment:
+      POSTGRES_USER: ubuntu
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  neo4j:
+    image: neo4j:latest
+    ports:
+      - "7687:7687" # Bolt
+    environment:
+      NEO4J_AUTH: neo4j/activecypher
+    volumes:
+      - neo4j_data:/data
+
+  memgraph:
+    image: memgraph/memgraph-mage:latest
+    ports:
+      - "7688:7687" # Bolt protocol
+      - "7444:7444"
+    environment:
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=activecypher
+    volumes:
+      - memgraph_data:/var/lib/memgraph
+
+  memgraphlab:
+    image: memgraph/lab:latest
+    ports:
+      - "3000:3000" # Web UI
+    environment:
+      - QUICK_CONNECT_MG_HOST=memgraph
+volumes:
+  postgres_data:
+  neo4j_data:
+  memgraph_data:

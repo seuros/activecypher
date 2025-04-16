@@ -53,14 +53,13 @@ module Cyrel
       self
     end
 
-    # Specifies the fields to return in the query.
+    # Specifies what to return in the query.
+    # Also raises an exception if you try to be too clever—because your cleverness is not welcome here.
     # @param fields [Array<Symbol, String>] The fields to return.
     def return(*fields)
       fields.each do |field|
         # Skip validation for path variables and variables from subqueries
-        if field.is_a?(String) && (field == @path_variable.to_s || field.match(/^\w+$/) && defined_in_query?(field))
-          next
-        end
+        next if field.is_a?(String) && (field == @path_variable.to_s || (field.match(/^\w+$/) && defined_in_query?(field)))
 
         if field.is_a?(Symbol) || (field.is_a?(String) && !field.include?('.') && !field.include?(' as ') &&
                                   !field.include?('(') && !field.match(/\[.+\]/))
@@ -71,6 +70,8 @@ module Cyrel
       self
     end
 
+    # Defines the pattern to MATCH.
+    # Not to be confused with your desperate search for compatibility on dating apps.
     def match(pattern)
       @match_pattern = pattern
       self
@@ -96,6 +97,8 @@ module Cyrel
       self
     end
 
+    # Schedules the node for DEATH, WITH DETACHMENT.
+    # Cold, clean, and emotionally unavailable. Just like your ex.
     def detach_delete
       @detach_delete = true
       self
@@ -126,9 +129,11 @@ module Cyrel
       self
     end
 
-    def where_exists(&block)
+    # Builds a WHERE EXISTS subquery.
+    # A fancy way to say, “Does this thing even exist?”—the same question your self-esteem asks daily.
+    def where_exists(&)
       subquery = self.class.new(@label, as: @alias)
-      subquery.instance_eval(&block)
+      subquery.instance_eval(&)
       pattern = "(#{@alias})"
 
       if subquery.instance_variable_get(:@outgoing_relationship)
@@ -141,10 +146,12 @@ module Cyrel
       self
     end
 
-    def call(&block)
+    # Invokes a subquery block. Like a Matryoshka of complexity.
+    # Because why write one query when you can write *two* for double the confusion?
+    def call(&)
       if block_given?
         subquery = self.class.new(@label, as: @alias)
-        subquery.instance_eval(&block)
+        subquery.instance_eval(&)
         @call_subquery = subquery
       else
         # This is for standalone call
@@ -159,6 +166,8 @@ module Cyrel
       self
     end
 
+    # Specifies an optional outgoing relationship.
+    # It’s not ghosting, it’s just... optional commitment.
     def optional_outgoing(relationship)
       @outgoing_relationship = relationship
       @optional_match = true
@@ -174,7 +183,9 @@ module Cyrel
       self
     end
 
-    # Generates the Cypher query string.
+    # This method assembles the final Cypher query like Dr. Frankenstein assembling a monster:
+    # a bit of this, a stitch of that, and screaming at lightning until it runs.
+    # If this explodes, blame the architecture, not the architect.
     # @return [String] The Cypher query string.
     def to_cypher
       parts = []
@@ -233,13 +244,13 @@ module Cyrel
               field
             # Handle function calls (prevent node alias prefix on CASE/function keywords)
             elsif field.start_with?('CASE ') || field.match(/^\w+\s*\(/)
-              field.gsub(/ as /, ' AS ')
+              field.gsub(' as ', ' AS ')
             # Handle pattern comprehensions
             elsif field.match(/\[.+\]/)
-              field.gsub(/ as /, ' AS ')
+              field.gsub(' as ', ' AS ')
             # Handle field with alias syntax
             elsif field.include?(' as ')
-              modified_field = field.gsub(/ as /, ' AS ')
+              modified_field = field.gsub(' as ', ' AS ')
               if modified_field.include?('.')
                 modified_field
               else
@@ -358,6 +369,8 @@ module Cyrel
       match_clause
     end
 
+    # Formats properties into Cypher-compatible key-value pairs.
+    # It's like JSON, but with commitment issues and worse syntax.
     def format_properties(props)
       props.map do |k, v|
         if v.is_a?(Array)

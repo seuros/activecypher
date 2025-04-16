@@ -9,9 +9,7 @@ module Cyrel
       # @param subquery [Cyrel::Query] The nested query object.
       def initialize(subquery)
         super() # Call super for Base initialization
-        unless subquery.is_a?(Cyrel::Query)
-          raise ArgumentError, "Subquery must be a Cyrel::Query instance, got #{subquery.class}"
-        end
+        raise ArgumentError, "Subquery must be a Cyrel::Query instance, got #{subquery.class}" unless subquery.is_a?(Cyrel::Query)
 
         @subquery = subquery
       end
@@ -31,11 +29,11 @@ module Cyrel
         # A more robust solution would involve the outer query managing all parameters.
 
         sub_cypher, _sub_params = @subquery.to_cypher
-        # Removed puts
+
         indented_sub_cypher = sub_cypher.gsub(/^/, '  ') # Indent subquery
-        final_string = "CALL {\n#{indented_sub_cypher}\n}" # Construct final string
-        # Removed puts
-        final_string # Return final string
+        "CALL {\n#{indented_sub_cypher}\n}" # Construct final string
+
+        # Return final string
       end
     end
   end

@@ -17,11 +17,15 @@ module Cyrel
 
     # --- Common Cypher Functions ---
 
-    def id(node_variable)
-      # id() takes a variable/identifier, not an expression to be coerced
-      Expression::FunctionCall.new(:id, Clause::Return::RawIdentifier.new(node_variable.to_s))
+    # Use elementId() instead of deprecated id()
+    def element_id(node_variable)
+      Expression::FunctionCall.new(:elementId, Clause::Return::RawIdentifier.new(node_variable.to_s))
     end
 
+    alias id element_id
+
+    # Because apparently, COUNT(*) isn’t obvious enough.
+    # Handles the 'give me everything and make it snappy' use case.
     def count(expression, distinct: false)
       # Handle count(*) specifically
       expr_arg = case expression
@@ -32,6 +36,8 @@ module Cyrel
       Expression::FunctionCall.new(:count, expr_arg, distinct: distinct)
     end
 
+    # Retrieves labels from a node. You could also just... ask the node. But noooo.
+    # Instead, we call a function and pretend we're not slowly dying inside.
     def labels(node_variable)
       Expression::FunctionCall.new(:labels, node_variable)
     end
@@ -44,6 +50,8 @@ module Cyrel
       Expression::FunctionCall.new(:properties, variable)
     end
 
+    # Returns the first non-null expression.
+    # The Cypher equivalent of settling.
     def coalesce(*expressions)
       Expression::FunctionCall.new(:coalesce, expressions)
     end
@@ -56,6 +64,8 @@ module Cyrel
       Expression::FunctionCall.new(:toString, expression)
     end
 
+    # Converts a thing into an integer.
+    # Great for when your data is having an identity crisis and just wants to be whole again.
     def to_integer(expression)
       Expression::FunctionCall.new(:toInteger, expression)
     end

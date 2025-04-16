@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+class <%= class_name %> < ApplicationGraphNode
+  <% labels_list.each do |lbl| %>
+  label :<%= lbl %>
+    <% end %>
+
+    <% attributes.each do |attr| -%>
+    attribute :<%= attr.name %>, :<%= attr.type || "string" %>
+  <% end -%>
+end

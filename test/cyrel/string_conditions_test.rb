@@ -29,7 +29,7 @@ class StringConditionsTest < ActiveSupport::TestCase
     match_node = Cyrel::Pattern::Node.new(:person, labels: 'Person')
     condition = Cyrel::Expression::Comparison.new(
       Cyrel.prop(:person, :name),
-      :"STARTS WITH",
+      :'STARTS WITH',
       'Al'
     )
     query = Cyrel::Query.new
@@ -50,7 +50,7 @@ class StringConditionsTest < ActiveSupport::TestCase
     match_node = Cyrel::Pattern::Node.new(:person, labels: 'Person')
     condition = Cyrel::Expression::Comparison.new(
       Cyrel.prop(:person, :name),
-      :"ENDS WITH",
+      :'ENDS WITH',
       'son'
     )
     query = Cyrel::Query.new

@@ -1,0 +1,110 @@
+# .rubocop.yml
+# =======================================
+# This is the place where good code goes
+# to be yelled at by bad opinions.
+# =======================================
+
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: enable
+  SuggestExtensions: false # You can stop trying to help, RuboCop.
+  Exclude:
+    - "doc/**/*"
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "node_modules/**/*"
+    - "vendor/**/*"
+    - "**/Gemfile.lock"
+    - "**/test/dummy/**/*"
+
+# =======================================
+# Metrics that let you live your life
+# =======================================
+
+Metrics/ModuleLength:
+  Max: 400 # Because DSLs are long, deal with it.
+
+Metrics/ClassLength:
+  Max: 400 # Classes are like relationships: they can be long and complicated.
+
+Metrics/MethodLength:
+  Max: 150 # If we wanted micro-methods, i would use Haskell and cry more.
+
+Metrics/BlockLength:
+  Max: 300 # class_methods and define_method blocks are not crimes.
+
+Metrics/AbcSize:
+  Max: 150 # Building a Cypher query is not a moral failing.
+
+Metrics/PerceivedComplexity:
+  Max: 40 # Code is hard. Sorry for being smart.
+
+Metrics/CyclomaticComplexity:
+  Max: 35 # Sometimes, the ifs hit different.
+
+Metrics/BlockNesting:
+  Max: 4 # Nested blocks are like Inception — confusing but effective.
+
+# =======================================
+# Layout. Because line breaks ≠ discipline.
+# =======================================
+
+Layout/LineLength:
+  Max: 160 # DSLs gonna DSL.
+  Severity: warning
+
+# =======================================
+# Style cops. We are not writing a textbook.
+# =======================================
+
+Style/Documentation:
+  Enabled: false # We don't need comments on every single module. We know what classes are.
+
+Style/EmptyElse:
+  Enabled: false # Sometimes "else" is the vibe.
+
+# =======================================
+# Naming cops. Please stop renaming `tx` to `transactional_unit`.
+# =======================================
+
+Naming/PredicateName:
+  Enabled: false
+
+Naming/MethodParameterName:
+  Enabled: false
+
+# =======================================
+# Lint cops. Not today, Satan.
+# =======================================
+
+Lint/MissingSuper:
+  Enabled: false # Yes, we know about super. No, we don’t want to use it.
+
+Lint/UselessRescue:
+  Enabled: false # Our exception handling is between us and our deity.
+
+Lint/ShadowedException:
+  Enabled: false # We're not *trying* to cause bugs. We're just multitasking.
+
+Lint/SuppressedException:
+  Enabled: false # The exception was annoying. We suppressed it like emotions.
+
+Lint/DuplicateBranch:
+  Enabled: false # Leave our well-meaning copy-paste spaghetti alone.
+
+Lint/EmptyClass:
+  Enabled: false # It’s not empty. It’s full of potential.
+
+Lint/EmptyConditionalBody:
+  Enabled: false # Sometimes a blank `if` is all we have left.
+
+Style/RedundantInterpolationUnfreeze:
+  Enabled:
+    false # Sometimes "#{"text"}" is the ketamine of string manipulation.
+    # If Elon can use pharmaceuticals to stay `functional`,
+    # let us interpolate our way through the pain of legacy code.
+    # We unfreeze with strings, not substances. Touch grass, RuboCop.
+# =======================================
+# End of config.
+# Please direct any and all complaints to /dev/null.
+# =======================================

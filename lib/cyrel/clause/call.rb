@@ -39,7 +39,7 @@ module Cyrel
 
         # Ensure correct ordering and spacing
         parts = [call_part, yield_part, where_part, return_part]
-        parts.compact.reject(&:empty?).join('') # Join non-empty parts without extra spaces
+        parts.compact.reject(&:empty?).join # Join non-empty parts without extra spaces
       end
     end
   end

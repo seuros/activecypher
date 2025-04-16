@@ -30,55 +30,122 @@ $ gem install activecypher
 
 ## Configuration
 
-*(Details on configuring the database connection will be added here. This typically involves creating an initializer file in a Rails application, e.g., `config/initializers/active_cypher.rb`, to specify connection details for your graph database like Neo4j.)*
+To configure ActiveCypher, create an initializer file in your Rails application (e.g., `config/initializers/active_cypher.rb`) and specify the connection details for your graph database. ActiveCypher provides built-in adapters for Neo4j and Memgraph using the Bolt protocol.
+
+Example configuration for Neo4j:
 
 ```ruby
-# config/initializers/active_cypher.rb (Example - Needs specific implementation)
-# ActiveCypher.configure do |config|
-#   config.driver = Neo4j::Driver::GraphDatabase.driver('bolt://localhost:7687', Neo4j::Driver::AuthTokens.basic('user', 'password'))
-# end
+# config/initializers/active_cypher.rb
+
+ActiveCypher.configure do |config|
+  config.adapter = ActiveCypher::ConnectionAdapters::Neo4jAdapter.new(
+    uri: "bolt://localhost:7687",
+    username: "neo4j",
+    password: "your_password"
+  )
+end
 ```
+
+Example configuration for Memgraph:
+
+```ruby
+# config/initializers/active_cypher.rb
+
+ActiveCypher.configure do |config|
+  config.adapter = ActiveCypher::ConnectionAdapters::MemgraphAdapter.new(
+    uri: "bolt://localhost:7688",
+    username: "memgraph",
+    password: "your_password"
+  )
+end
+```
+
+Refer to the test files (e.g., `test/bolt/connection_test.rb` and `test/bolt/session_test.rb`) for more usage examples.
 
 ## Usage
 
-ActiveCypher allows you to define models representing nodes in your graph and use the `Cyrel` DSL to build queries.
+ActiveCypher allows you to define models representing nodes and relationships in your graph, using Ruby classes. See below for real examples from [`test/dummy/app/graph`](test/dummy/app/graph):
 
-**Example: Defining a Model (Conceptual)**
-
-*(Actual model definition might differ based on gem implementation)*
+**Example: Defining Node and Relationship Models**
 
 ```ruby
-# class Person
-#   include ActiveCypher::Node
-#   attribute :name, type: String
-#   attribute :born, type: Integer
-# end
+# app/graph/person_node.rb
+class PersonNode < ApplicationGraphNode
+  attribute :id, :string
+  attribute :name, :string
+  attribute :age, :integer
+  attribute :active, :boolean, default: true
+  attribute :internal_id, :string
+
+  validates :name, presence: true
+end
+
+# app/graph/conspiracy_node.rb
+class ConspiracyNode < ApplicationGraphNode
+  attribute :name,         :string
+  attribute :description,  :string
+  attribute :believability_index, :integer
+
+  has_many :followers,
+           class_name: 'PersonNode',
+           relationship: 'BELIEVES_IN',
+           direction: :in,
+           relationship_class: 'BelievesInRelationship'
+end
+
+# app/graph/believes_in_relationship.rb
+class BelievesInRelationship < ApplicationGraphRelationship
+  from_class 'PersonNode'
+  to_class   'ConspiracyNode'
+  type       'BELIEVES_IN'
+
+  attribute :reddit_karma_spent, :integer
+  attribute :level_of_devotion,  :string # "casual", "zealot", "makes merch"
+end
+```
+
+**Example: Creating and Querying Nodes and Relationships**
+
+```ruby
+# Create a new person node
+person = PersonNode.create(name: 'Alice', age: 30)
+
+# Create a new conspiracy node
+conspiracy = ConspiracyNode.create(name: 'Flat Earth', description: 'The earth is flat.', believability_index: 1)
+
+# Create a relationship between person and conspiracy
+BelievesInRelationship.create(
+  from: person,
+  to: conspiracy,
+  reddit_karma_spent: 100,
+  level_of_devotion: 'casual'
+)
+
+# Find all people who believe in a specific conspiracy
+followers = conspiracy.followers
+
+# Find all conspiracies a person believes in
+conspiracies = person.believes_in_relationships.map(&:to)
 ```
 
 **Example: Querying with Cyrel**
 
 ```ruby
-# Find a person named 'Alice'
-# query = Person.match(p).where(p[:name].eq('Alice')).return(p)
-# results = query.execute
+# Find all people named 'Alice'
+people = PersonNode.where(name: 'Alice')
 
-# Create a new person
-# create_query = Person.create(p: { name: 'Bob', born: 1994 }).return(p)
-# new_person = create_query.execute
-
-# Find people born after 1985
-# born_after_query = Person.match(p).where(p[:born] > 1985).return(p[:name], p[:born])
-# recent_people = born_after_query.execute
+# Find all conspiracies with a believability index greater than 5
+believable_conspiracies = ConspiracyNode.where('believability_index > ?', 5)
 ```
 
-*(More detailed usage examples covering various Cyrel features like MATCH, CREATE, MERGE, WHERE, RETURN, ORDER BY, LIMIT, etc., will be added based on the final implementation and test cases.)*
+*(See more detailed usage and advanced queries in the models and test files in `test/dummy/app/graph`.)*
 
 ## Features
 
-*   **Cyrel DSL:** Intuitive Ruby DSL for constructing complex Cypher queries.
+*   **Cyrel DSL:** Intuitive Ruby DSL for constructing complex Cypher queries ([see detailed Cyrel documentation](./CYREL.md)).
 *   **ActiveRecord-like Patterns:** Familiar interface for developers accustomed to ActiveRecord.
 *   **Rails Integration:** Easy integration into Rails projects via Rails Engine.
-*   **Comprehensive Cypher Support:** Aims to support a wide range of Cypher clauses and functions (refer to `test/cyrel/` for examples).
+*   **Comprehensive Cypher Support:** Aims to support a wide range of Cypher clauses and functions (refer to [`CYREL.md`](./CYREL.md) and `test/cyrel/` for examples).
 
 ## Development
 

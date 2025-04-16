@@ -48,9 +48,7 @@ module Cyrel
 
           expression, direction = item
           dir_sym = direction.to_s.downcase.to_sym
-          unless %i[asc desc].include?(dir_sym)
-            raise ArgumentError, "Invalid ORDER BY direction: #{direction}. Use :asc or :desc."
-          end
+          raise ArgumentError, "Invalid ORDER BY direction: #{direction}. Use :asc or :desc." unless %i[asc desc].include?(dir_sym)
 
           [process_expression(expression), dir_sym]
         end

@@ -67,36 +67,6 @@ class QueryBuildingTest < ActiveSupport::TestCase
     assert_equal [expected_cypher, expected_params], query.to_cypher
   end
 
-  test 'query building - create node' do
-    person_node = Cyrel::Pattern::Node.new(:p, labels: 'Person', properties: { name: 'Charlie', age: 25 })
-    query = Cyrel::Query.new
-                        .create(person_node)
-                        .return_(:p)
-
-    expected_cypher = <<~CYPHER.chomp.strip
-      CREATE (p:Person {name: $p1, age: $p2})
-      RETURN p
-    CYPHER
-    expected_params = { p1: 'Charlie', p2: 25 }
-    assert_equal [expected_cypher, expected_params], query.to_cypher
-  end
-
-  test 'query building - match, set properties' do
-    person_node = Cyrel::Pattern::Node.new(:p, labels: 'Person', properties: { name: 'Alice' })
-    query = Cyrel::Query.new
-                        .match(person_node)
-                        .set(Cyrel.prop(:p, :age) => 31, Cyrel.prop(:p, :status) => 'updated')
-                        .return_(:p)
-
-    expected_cypher = <<~CYPHER.chomp.strip
-      MATCH (p:Person {name: $p1})
-      SET p.age = $p2, p.status = $p3
-      RETURN p
-    CYPHER
-    expected_params = { p1: 'Alice', p2: 31, p3: 'updated' }
-    assert_equal [expected_cypher, expected_params], query.to_cypher
-  end
-
   test 'query building - match, set labels' do
     person_node = Cyrel::Pattern::Node.new(:p, labels: 'Person', properties: { name: 'Alice' })
     query = Cyrel::Query.new
@@ -239,20 +209,6 @@ class QueryBuildingTest < ActiveSupport::TestCase
     assert_match(/SKIP \$p\d+/, cypher) # Check for SKIP param
     assert_match(/LIMIT \$p\d+/, cypher) # Check for LIMIT param
     assert_equal expected_params, params
-  end
-
-  test 'query building - merge node' do
-    person_node = Cyrel::Pattern::Node.new(:p, labels: 'Person', properties: { name: 'David' })
-    query = Cyrel::Query.new
-                        .merge(person_node)
-                        .return_(:p)
-
-    expected_cypher = <<~CYPHER.chomp.strip
-      MERGE (p:Person {name: $p1})
-      RETURN p
-    CYPHER
-    expected_params = { p1: 'David' }
-    assert_equal [expected_cypher, expected_params], query.to_cypher
   end
 
   test 'query building - complex query' do

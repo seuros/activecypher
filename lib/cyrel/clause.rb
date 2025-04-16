@@ -3,7 +3,8 @@
 module Cyrel
   # Namespace for classes representing individual Cypher clauses (MATCH, WHERE, RETURN, etc.).
   module Clause
-    # Abstract base class for all Cypher clauses.
+    # Abstract method for rendering Cypher clauses.
+    # You’d think all subclasses would implement this, but lol, developers.
     class Base
       # Renders the specific Cypher clause fragment.
       # Subclasses must implement this method.

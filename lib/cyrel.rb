@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
+require 'irb' # Required for binding.irb
+
 module Cyrel
+  module_function
+
   # Define all top-level helpers as instance methods first
   def call(procedure)
     CallProcedure.new(procedure)
@@ -11,10 +15,27 @@ module Cyrel
   end
   # Now make all defined instance methods module functions
 
-  module_function
+  # --- Pattern Helpers ---
+  def node(alias_name, labels: [], properties: {})
+    Pattern::Node.new(alias_name, labels: labels, properties: properties)
+  end
+  # Add helpers for Relationship, Path if needed
+
+  # --- Query Building Starters ---
+  def create(pattern)
+    Query.new.create(pattern) # Start a new query and call create
+  end
+
+  def match(pattern, path_variable: nil)
+    Query.new.match(pattern, path_variable: path_variable) # Start a new query and call match
+  end
+  # Add helpers for merge etc. if desired as query starters
 
   # --- Function Helpers (Delegated) ---
-  def id(...) = Functions.id(...)
+  # Keep id for now for compatibility? Or remove entirely? Let's keep it but delegate element_id too.
+  # Delegate to the correct module function
+  def id(...) = Functions.element_id(...)
+  def element_id(...) = Functions.element_id(...)
   def count(...) = Functions.count(...)
   def labels(...) = Functions.labels(...)
   def type(...) = Functions.type(...)

@@ -133,14 +133,14 @@ class ExpressionTest < ActiveSupport::TestCase
   end
 
   test 'comparison rendering - IS NULL' do
-    expr = Cyrel::Expression::Comparison.new(Cyrel.prop(:n, :optional_prop), :"IS NULL")
+    expr = Cyrel::Expression::Comparison.new(Cyrel.prop(:n, :optional_prop), :'IS NULL')
     query = Cyrel::Query.new
     assert_equal '(n.optional_prop IS NULL)', expr.render(query)
     assert_empty query.parameters
   end
 
   test 'comparison rendering - IS NOT NULL' do
-    expr = Cyrel::Expression::Comparison.new(Cyrel.prop(:n, :required_prop), :"IS NOT NULL")
+    expr = Cyrel::Expression::Comparison.new(Cyrel.prop(:n, :required_prop), :'IS NOT NULL')
     query = Cyrel::Query.new
     assert_equal '(n.required_prop IS NOT NULL)', expr.render(query)
     assert_empty query.parameters
@@ -180,14 +180,6 @@ class ExpressionTest < ActiveSupport::TestCase
   end
 
   # --- Cyrel::Expression::FunctionCall Tests ---
-
-  test 'function call rendering - id()' do
-    expr = Cyrel.id(:n)
-    query = Cyrel::Query.new
-    # id() takes a variable directly, not an expression rendering to a variable name
-    assert_equal 'id(n)', expr.render(query)
-    assert_empty query.parameters
-  end
 
   test 'function call rendering - count(*)' do
     expr = Cyrel.count(:*)

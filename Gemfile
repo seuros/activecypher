@@ -10,5 +10,7 @@ gem 'rake', '~> 13.0'
 gem 'railties'
 
 gem 'minitest', '~> 5.0'
-gem 'neo4j-ruby-driver'
-gem 'redis-client'
+
+gem 'prop_check'
+gem 'rubocop'
+gem 'simplecov'

@@ -1,72 +1,75 @@
 # frozen_string_literal: true
 
+require 'logger'
+require 'date'
+require 'active_support/core_ext/hash/indifferent_access'
+
 module ActiveCypher
   module ConnectionAdapters
-    # Defines the abstract interface for ActiveCypher connection adapters.
-    # Concrete adapters for specific graph databases (like Neo4j, Memgraph)
-    # must inherit from this class and implement its methods.
+    # Minimal contract every graph adapter must fulfil.
+    # @note Because every project needs an abstract class to remind you that nothing is ever truly implemented.
     class AbstractAdapter
-      def initialize(config)
-        @config = config
-        # Optional: Establish connection immediately or defer
-        # connect
+      attr_reader :config
+
+      # Initializes the adapter, because you can't spell "configuration" without "con."
+      # @param config [Hash] The configuration hash for the adapter
+      def initialize(config) = (@config = config)
+
+      # ---- lifecycle ---------------------------------------------------------
+      # The lifecycle methods. Spoiler: most of them do nothing.
+      def connect                 = raise(AdapterNotFoundError)
+      def disconnect              = true
+      def active?                 = false
+      def reconnect               = disconnect && connect
+
+      # ---- Cypher ------------------------------------------------------------
+      # Executes a Cypher query, or at least raises an error about it.
+      # @raise [NotImplementedError] Always, unless implemented by subclass.
+      def execute_cypher(*)
+        raise NotImplementedError, "#{self.class} must implement #execute_cypher"
       end
 
-      # Establishes the connection to the database.
-      # Should be idempotent.
-      # @return [Boolean] true if connection is successful or already established.
-      def connect
-        raise NotImplementedError, "#{self.class.name}#connect must be implemented"
+      # ---- transactions (optional) ------------------------------------------
+      # Transaction methods: for when you want to pretend you have ACID.
+      def begin_transaction       = nil
+      def commit_transaction(_)   = true
+      def rollback_transaction(_) = true
+
+      # ---- helpers -----------------------------------------------------------
+      # Prepares parameters for Cypher, because the database can't read your mind. Yet.
+      # @param raw [Object] The raw parameter value
+      # @return [Object] The prepared parameter
+      def prepare_params(raw)
+        case raw
+        when Hash  then raw.transform_keys(&:to_s).transform_values { |v| prepare_params(v) }
+        when Array then raw.each_with_index.to_h { |v, i| ["p#{i + 1}", prepare_params(v)] }
+        when Time, Date, DateTime then raw.iso8601
+        when Symbol then raw.to_s
+        else raw # String/Integer/Float/Boolean/NilClass
+        end
       end
 
-      # Disconnects from the database.
-      # Should be idempotent.
-      # @return [Boolean] true if disconnection is successful or already disconnected.
-      def disconnect
-        raise NotImplementedError, "#{self.class.name}#disconnect must be implemented"
-      end
-
-      # Checks if the connection to the database is active.
-      # @return [Boolean] true if the connection is active, false otherwise.
-      def active?
-        raise NotImplementedError, "#{self.class.name}#active? must be implemented"
-      end
-
-      # Executes a Cypher query.
-      # @param cypher [String] The Cypher query string to execute.
-      # @param params [Hash] Optional parameters to bind to the query.
-      # @param context [String] Optional context for logging (e.g., "Load", "Save").
-      # @return [Object] The raw result from the database driver, format depends on the driver.
-      #         The calling code (e.g., Relation) is responsible for mapping this raw result.
-      def execute_cypher(cypher, params = {}, context = 'Query')
-        raise NotImplementedError, "#{self.class.name}#execute_cypher must be implemented"
-      end
-
-      # Begins a transaction.
-      # @return [Object] Transaction object or identifier, depending on the driver.
-      def begin_transaction
-        raise NotImplementedError, "#{self.class.name}#begin_transaction must be implemented"
-      end
-
-      # Commits the current transaction.
-      # @param transaction [Object] The transaction object/identifier returned by begin_transaction.
-      def commit_transaction(transaction)
-        raise NotImplementedError, "#{self.class.name}#commit_transaction must be implemented"
-      end
-
-      # Rolls back the current transaction.
-      # @param transaction [Object] The transaction object/identifier returned by begin_transaction.
-      def rollback_transaction(transaction)
-        raise NotImplementedError, "#{self.class.name}#rollback_transaction must be implemented"
-      end
-
-      # Optional: Methods for schema management (e.g., creating constraints/indexes)
-      # def create_constraint(...)
-      # def drop_constraint(...)
+      # Turns rows into symbols, because Rubyists fear strings.
+      # @param rows [Array<Hash>] The rows to process
+      # @return [Array<Hash>] The processed rows
+      def process_records(rows) = rows.map { |r| deep_symbolize(r) }
 
       private
 
-      attr_reader :config
+      # Recursively turns everything into symbols, because that's what all the cool kids do.
+      # @param obj [Object] The object to symbolize
+      # @return [Object] The symbolized object
+      def deep_symbolize(obj)
+        case obj
+        when Hash  then obj.transform_keys(&:to_sym).transform_values { |v| deep_symbolize(v) }
+        when Array then obj.map { |v| deep_symbolize(v) }
+        else obj
+        end
+      end
+
+      # Returns the logger, or creates a new one if Rails isn't watching.
+      # @return [Logger] The logger instance
+      def logger = defined?(Rails) ? Rails.logger : Logger.new($stdout)
     end
   end
 end

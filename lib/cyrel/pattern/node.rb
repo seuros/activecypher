@@ -1,43 +1,65 @@
 # frozen_string_literal: true
 
+require 'active_model' # ships with Rails 8
+require 'active_model/attributes'
+
 module Cyrel
   module Pattern
-    # Represents a node pattern in a Cypher query, e.g., (alias:Label {prop: $param}).
     class Node
-      attr_reader :alias_name, :labels, :properties
+      include ActiveModel::Model
+      include ActiveModel::Attributes # :contentReference[oaicite:3]{index=3}
+      include Cyrel::Parameterizable
 
-      # @param alias_name [Symbol, String] The alias for the node.
-      # @param labels [Array<Symbol, String>] The labels for the node.
-      # @param properties [Hash] The properties to match or set on the node.
-      def initialize(alias_name, labels: [], properties: {})
-        @alias_name = alias_name.to_sym
-        @labels = Array(labels).map(&:to_s) # Ensure labels are strings
-        @properties = properties
+      attribute :alias_name, Cyrel::Types::SymbolType.new
+      attribute :labels,     array: :string, default: []
+      attribute :properties, Cyrel::Types::HashType.new, default: -> { {} }
+
+      validates :alias_name, presence: true
+
+      def initialize(alias_name, labels: nil, properties: {}, **kw)
+        super(
+          { alias_name: alias_name,
+            labels: Array(labels).compact.flatten,
+            properties: properties }.merge(kw)
+        )
       end
 
-      # Renders the node pattern part of the Cypher query.
-      # @param query [Cyrel::Query] The query object, used for parameter registration.
-      # @return [String] The Cypher string fragment for the node pattern.
+      # ------------------------------------------------------------------
+      # Public: return a *copy* of this Node with a different alias.
+      #
+      #   Cyrel.node('Person').as(:p)      # (:p:Person)
+      #
+      # We dup so the original immutable instance (often reused by the DSL)
+      # isn’t mutated.
+      # ------------------------------------------------------------------
+      def as(new_alias)
+        dup_with(alias_name: new_alias.to_sym)
+      end
+
       def render(query)
-        alias_part = @alias_name ? @alias_name.to_s : ''
-        # Prepend each label with ':' and join them directly
-        labels_part = @labels.empty? ? '' : @labels.map { |l| ":#{l}" }.join('')
-
-        props_part = ''
-        if @properties.any?
-          prop_strings = @properties.map do |key, value|
-            param_key = query.register_parameter(value)
-            "#{key}: $#{param_key}"
-          end
-          # Add space prefix only if alias or labels are present AND properties exist
-          prop_prefix = (alias_part.empty? && labels_part.empty?) ? '' : ' '
-          props_part = "#{prop_prefix}{#{prop_strings.join(', ')}}"
+        base = +"(#{alias_name}"
+        base << ':' << labels.join(':') unless labels.empty?
+        unless properties.empty?
+          params = properties.with_indifferent_access
+          formatted = params.map { |k, v| "#{k}: $#{query.register_parameter(v)}" }.join(', ')
+          base << " {#{formatted}}"
         end
+        base << ')'
+      end
 
-        # Combine the parts, ensuring correct spacing
-        # Combine the parts, ensuring correct spacing
-        # Combine the parts, ensuring correct spacing (original logic)
-        "(#{alias_part}#{labels_part}#{props_part})"
+      def freeze
+        super
+        labels.freeze
+        properties.freeze
+      end
+
+      private
+
+      # Utility used by Node & Relationship to make modified copies
+      def dup_with(**attrs)
+        copy = dup
+        attrs.each { |k, v| copy.public_send("#{k}=", v) }
+        copy
       end
     end
   end

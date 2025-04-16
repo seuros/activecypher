@@ -8,21 +8,21 @@ module Cyrel
 
       # Mapping from Ruby-friendly symbols to Cypher operators
       OPERATOR_MAP = {
-        :"=" => '=',
-        :"==" => '=', # Allow Ruby style equality check
-        :"!=" => '<>',
-        :"<>" => '<>', # Allow SQL style inequality
+        :'=' => '=',
+        :'==' => '=', # Allow Ruby style equality check
+        :'!=' => '<>',
+        :'<>' => '<>', # Allow SQL style inequality
         :< => '<',
         :<= => '<=',
         :> => '>',
         :>= => '>=',
-        :"=~" => '=~', # Regex
+        :'=~' => '=~', # Regex
         :IN => 'IN',
-        :"STARTS WITH" => 'STARTS WITH',
-        :"ENDS WITH" => 'ENDS WITH',
+        :'STARTS WITH' => 'STARTS WITH',
+        :'ENDS WITH' => 'ENDS WITH',
         :CONTAINS => 'CONTAINS',
-        :"IS NULL" => 'IS NULL',
-        :"IS NOT NULL" => 'IS NOT NULL'
+        :'IS NULL' => 'IS NULL',
+        :'IS NOT NULL' => 'IS NOT NULL'
         # Add other Cypher comparison operators as needed
       }.freeze
 
@@ -36,7 +36,7 @@ module Cyrel
         raise ArgumentError, "Unknown comparison operator: #{operator}" unless @cypher_operator
 
         # Handle unary operators like IS NULL / IS NOT NULL
-        @right = if right.nil? && (@operator_sym == :"IS NULL" || @operator_sym == :"IS NOT NULL")
+        @right = if right.nil? && (@operator_sym == :'IS NULL' || @operator_sym == :'IS NOT NULL')
                    nil
                  else
                    Expression.coerce(right)

@@ -14,7 +14,9 @@ module Cyrel
     # Defines the common interface, primarily the `render` method.
     # Base class is defined in lib/cyrel/expression/base.rb and autoloaded.
 
-    # Helper to wrap a value in a Literal if it's not already an Expression.
+    # Forces values into Expression objects like a parent shoving their kid into piano lessons—
+    # not because it’s fun, but because one day AI will take all our jobs
+    # and at least they'll have music to cry to.
     # @param value [Object] The value to coerce.
     # @return [Cyrel::Expression::Base] An Expression object.
     def self.coerce(value)
@@ -24,7 +26,8 @@ module Cyrel
 
     module_function
 
-    # Helper for creating PropertyAccess expressions.
+    # Accesses a property on a node or relationship.
+    # This is the Cypher equivalent of saying "hey buddy" and hoping the database just knows.
     # @param variable [Symbol, String] The alias of the node/relationship.
     # @param property_name [Symbol, String] The name of the property to access.
     # @return [Cyrel::Expression::PropertyAccess]
@@ -41,7 +44,8 @@ module Cyrel
       Exists.new(pattern)
     end
 
-    # Helper for NOT operator
+    # Wraps an expression in a Cypher NOT.
+    # Useful when your query — and your life — needs a little more denial.
     # @param expression [Cyrel::Expression::Base, Object] The expression to negate.
     # @return [Cyrel::Expression::Logical]
     def not(expression)

@@ -4,48 +4,45 @@
 
 # Require all clause types for DSL methods
 
-require 'set' # For alias conflict detection
-
 module Cyrel
   # Error raised when merging queries with conflicting alias definitions.
+  # Because even in graphs, two things can't have the same name without drama.
   class AliasConflictError < StandardError
     def initialize(alias_name, query1_details, query2_details)
       super("Alias conflict for ':#{alias_name}'. Query 1 defines it as #{query1_details}, Query 2 defines it as #{query2_details}.")
     end
   end
 
-  # Represents a Cypher query being built.
-  # Manages clauses, parameters, and final query generation.
+  # @!parse
+  #   # The Cyrel Query class: where all your hopes, dreams, and clauses go to be awkwardly merged.
+  #   # Manages clauses, parameters, and final query generation, because string interpolation is for amateurs.
   class Query
+    include Parameterizable
     attr_reader :parameters, :clauses # Expose clauses for merge logic
 
     def initialize
       @parameters = {}
       @param_counter = 0
-      @clauses = [] # Holds instances of Clause::Base subclasses
+      @clauses = [] # Holds instances of Clause::Base subclasses, because arrays are the new query planner
     end
 
-    # Registers a value as a parameter and returns its generated key.
+    # Registers a value and returns a parameter key.
+    # Think of it as variable adoption but with less paperwork and more risk.
     # @param value [Object] The value to parameterize.
     # @return [Symbol] The parameter key (e.g., :p1, :p2).
+    # Because nothing says "safe query" like a parade of anonymous parameters.
     def register_parameter(value)
-      # Check if this value already exists (Reinstating reuse logic)
       existing_key = @parameters.key(value)
-      if existing_key
-        # Removed puts
-        return existing_key
-      end
+      return existing_key if existing_key
 
-      # If not found, create a new parameter
-      @param_counter += 1
-      param_key = :"p#{@param_counter}"
-      @parameters[param_key] = value
-      # Removed puts
-      param_key
+      key = next_param_key
+      @parameters[key] = value
+      key
     end
 
     # Adds a clause object to the query.
     # @param clause [Cyrel::Clause::Base] The clause instance to add.
+    # Because what you really wanted was a linked list of existential dread.
     def add_clause(clause)
       @clauses << clause
       self # Allow chaining
@@ -53,19 +50,23 @@ module Cyrel
 
     # Generates the final Cypher query string and parameters hash.
     # @return [Array(String, Hash)] The Cypher string and parameters.
+    # This is where all your careful planning gets flattened into a string.
     def to_cypher
-      # Ensure clauses are ordered correctly (e.g., MATCH before WHERE, WHERE before RETURN)
-      # Basic ordering for now, might need refinement.
-      ordered_clauses = @clauses.sort_by { |c| clause_order(c) }
-      cypher_parts = ordered_clauses.map { |clause| clause.render(self) }
-      cypher_string = cypher_parts.compact.join("\n") # Use newline for better readability
-      # Removed puts
-      [cypher_string, @parameters]
+      ActiveSupport::Notifications.instrument('cyrel.render', query: self) do
+        cypher_string = @clauses
+                        .map { it.render(self) }
+                        .reject(&:blank?)
+                        .join("\n")
+
+        [cypher_string, @parameters]
+      end
     end
 
-    # Merges another query into this one.
+    # Merges two Cyrel::Query objects together.
+    # Think Cypher polyamory: full of unexpected alias drama and parameter custody battles.
     # @param other_query [Cyrel::Query] The query to merge in.
     # @return [self]
+    # If you like surprises, you'll love this method.
     def merge!(other_query)
       raise ArgumentError, 'Can only merge another Cyrel::Query' unless other_query.is_a?(Cyrel::Query)
       return self if other_query.clauses.empty? # Nothing to merge
@@ -89,6 +90,7 @@ module Cyrel
     #   - Can pass Hashes/Arrays to construct simple Node/Relationship patterns implicitly? (TBD)
     # @param path_variable [Symbol, String, nil] Optional variable for the path.
     # @return [self]
+    # Because nothing says "find me" like a declarative pattern and a prayer.
     def match(pattern, path_variable: nil)
       # TODO: Add implicit pattern construction from Hash/Array if desired.
       add_clause(Clause::Match.new(pattern, optional: false, path_variable: path_variable))
@@ -98,39 +100,75 @@ module Cyrel
     # @param pattern [Cyrel::Pattern::Path, Node, Relationship, Hash, Array] Pattern definition.
     # @param path_variable [Symbol, String, nil] Optional variable for the path.
     # @return [self]
+    # For when you want to be non-committal, even in your queries.
     def optional_match(pattern, path_variable: nil)
       add_clause(Clause::Match.new(pattern, optional: true, path_variable: path_variable))
     end
 
-    # Adds or merges into a WHERE clause.
-    # @param conditions [Array<Cyrel::Expression::Base, Object>, Hash] Conditions.
-    #   - Expressions: Cyrel.prop(:n, :age) > 18
-    #   - Hash: { name: "Alice", status: "Active" } (implicitly creates equality comparisons)
+    # Adds a WHERE clause (merging with an existing one if present).
+    #
+    # @example
+    #   query.where(name: 'Alice').where(age: 30)
+    #   # ⇒ WHERE ((n.name = $p1) AND (n.age = $p2))
+    #
+    # Accepts:
+    #   • Hash  – coerced into equality comparisons
+    #   • Cyrel::Expression instances (or anything Expression.coerce understands)
+    #
     # @return [self]
+    # Because sometimes you want to filter, and sometimes you just want to judge.
     def where(*conditions)
+      # ------------------------------------------------------------------
+      # 1. Coerce incoming objects into Cyrel::Expression instances
+      # ------------------------------------------------------------------
       processed_conditions = conditions.flat_map do |cond|
         if cond.is_a?(Hash)
-          # Needs alias context
           cond.map do |key, value|
-            Expression::Comparison.new(Expression::PropertyAccess.new(@current_alias || infer_alias, key), :"=", value)
+            Expression::Comparison.new(
+              Expression::PropertyAccess.new(@current_alias || infer_alias, key),
+              :'=',
+              value
+            )
           end
         else
-          cond # Assume it's already an Expression or coercible
+          cond # already an expression (or coercible)
         end
       end
 
+      new_where = Clause::Where.new(*processed_conditions)
+
+      # ------------------------------------------------------------------
+      # 2. Merge with an existing WHERE (if any)
+      # ------------------------------------------------------------------
       existing_where = @clauses.find { |c| c.is_a?(Clause::Where) }
       if existing_where
-        existing_where.merge!(Clause::Where.new(*processed_conditions))
-      else
-        add_clause(Clause::Where.new(*processed_conditions))
+        existing_where.merge!(new_where)
+        return self
       end
+
+      # ------------------------------------------------------------------
+      # 3. Determine correct insertion point
+      # ------------------------------------------------------------------
+      insertion_index = @clauses.index do |c|
+        c.is_a?(Clause::Return) ||
+          c.is_a?(Clause::OrderBy) ||
+          c.is_a?(Clause::Skip)    ||
+          c.is_a?(Clause::Limit)
+      end
+
+      if insertion_index
+        @clauses.insert(insertion_index, new_where)
+      else
+        @clauses << new_where
+      end
+
       self
     end
 
     # Adds a CREATE clause.
     # @param pattern [Cyrel::Pattern::Path, Node, Relationship, Hash, Array] Pattern definition.
     # @return [self]
+    # Because sometimes you want to make things, not just break them.
     def create(pattern)
       # TODO: Add implicit pattern construction
       add_clause(Clause::Create.new(pattern))
@@ -139,6 +177,7 @@ module Cyrel
     # Adds a MERGE clause.
     # @param pattern [Cyrel::Pattern::Path, Node, Relationship, Hash, Array] Pattern definition.
     # @return [self]
+    # For when you want to find-or-create, but with more existential angst.
     def merge(pattern)
       # TODO: Add implicit pattern construction
       # TODO: Add ON CREATE SET / ON MATCH SET options
@@ -148,6 +187,7 @@ module Cyrel
     # Adds a SET clause.
     # @param assignments [Hash, Array] See Clause::Set#initialize.
     # @return [self]
+    # Because sometimes you just want to change everything and pretend it was always that way.
     def set(assignments)
       # TODO: Consider merging SET clauses intelligently if needed.
       add_clause(Clause::Set.new(assignments))
@@ -156,6 +196,7 @@ module Cyrel
     # Adds a REMOVE clause.
     # @param items [Array<Cyrel::Expression::PropertyAccess, Array>] See Clause::Remove#initialize.
     # @return [self]
+    # For when you want to Marie Kondo your graph.
     def remove(*items)
       # TODO: Consider merging REMOVE clauses.
       add_clause(Clause::Remove.new(items)) # Pass array directly
@@ -165,6 +206,7 @@ module Cyrel
     # @param variables [Array<Symbol, String>] Variables to delete.
     # @return [self]
     # Underscore to avoid keyword clash
+    # Because sometimes you just want to watch the world burn, one node at a time.
     def delete_(*variables)
       add_clause(Clause::Delete.new(*variables, detach: false))
     end
@@ -172,6 +214,7 @@ module Cyrel
     # Adds a DETACH DELETE clause.
     # @param variables [Array<Symbol, String>] Variables to delete.
     # @return [self]
+    # For when you want to delete with extreme prejudice.
     def detach_delete(*variables)
       add_clause(Clause::Delete.new(*variables, detach: true))
     end
@@ -181,6 +224,7 @@ module Cyrel
     # @param distinct [Boolean] Use DISTINCT?
     # @param where [Cyrel::Clause::Where, Hash, Array] Optional WHERE condition(s) after WITH.
     # @return [self]
+    # Because sometimes you want to pass things along, and sometimes you just want to pass the buck.
     def with(*items, distinct: false, where: nil)
       where_clause = case where
                      when Clause::Where then where
@@ -195,6 +239,7 @@ module Cyrel
     # @param distinct [Boolean] Use DISTINCT?
     # @return [self]
     # Underscore to avoid keyword clash
+    # Because what you really want is your data, but what you'll get is a hash.
     def return_(*items, distinct: false)
       # TODO: Consider merging RETURN clauses?
       add_clause(Clause::Return.new(*items, distinct: distinct))
@@ -205,6 +250,7 @@ module Cyrel
     #   - Array: [[expr, :asc], [expr, :desc], ...]
     #   - Hash: { expr => :asc, expr => :desc, ... }
     # @return [self]
+    # Because sometimes you want order, and sometimes you just want chaos.
     def order_by(*order_items)
       items_array = order_items.first.is_a?(Hash) ? order_items.first.to_a : order_items
 
@@ -221,6 +267,7 @@ module Cyrel
     # Adds or replaces the SKIP clause.
     # @param amount [Integer, Expression] Number of results to skip.
     # @return [self]
+    # For when you want to ignore the first N results, just like your unread emails.
     def skip(amount)
       existing_skip = @clauses.find { |c| c.is_a?(Clause::Skip) }
       new_skip = Clause::Skip.new(amount)
@@ -235,6 +282,7 @@ module Cyrel
     # Adds or replaces the LIMIT clause.
     # @param amount [Integer, Expression] Maximum number of results.
     # @return [self]
+    # Because sometimes you want boundaries, even in your queries.
     def limit(amount)
       existing_limit = @clauses.find { |c| c.is_a?(Clause::Limit) }
       new_limit = Clause::Limit.new(amount)
@@ -253,6 +301,7 @@ module Cyrel
     # @param where [Clause::Where, Hash, Array, nil] WHERE condition after YIELD.
     # @param return_items [Clause::Return, Array, nil] RETURN items after WHERE/YIELD.
     # @return [self]
+    # For when you want to call a procedure and pretend it's not just another query.
     def call_procedure(procedure_name, arguments: [], yield_items: nil, where: nil, return_items: nil)
       add_clause(Clause::Call.new(procedure_name,
                                   arguments: arguments,
@@ -264,6 +313,7 @@ module Cyrel
     # Adds a CALL { subquery } clause.
     # @yield [Cyrel::Query] Yields a new query object for building the subquery.
     # @return [self]
+    # Because why write one query when you can write two and glue them together?
     def call_subquery
       subquery = Cyrel::Query.new
       yield subquery
@@ -279,6 +329,7 @@ module Cyrel
     # private
 
     # Merges parameters from another query, ensuring keys are unique.
+    # Because parameter collisions are the only collisions you want in production.
     def merge_parameters!(other_query)
       # Ensure our counter is beyond the other query's potential keys
       max_other_param_num = other_query.parameters.keys
@@ -294,6 +345,7 @@ module Cyrel
     end
 
     # Provides a sort order for clauses during rendering. Lower numbers come first.
+    # Because even your clauses need to know their place in the world.
     def clause_order(clause)
       case clause
       when Clause::Match, Clause::Create, Clause::Merge then 10 # Reading/Writing/Merging clauses
@@ -311,6 +363,7 @@ module Cyrel
 
     # Extracts defined aliases and their labels from the query's clauses.
     # @return [Hash{Symbol => Set<String>}] { alias_name => Set[label1, label2] }
+    # Because even your variables want to be unique snowflakes.
     def defined_aliases
       aliases = {}
       @clauses.each do |clause|
@@ -339,7 +392,8 @@ module Cyrel
       aliases
     end
 
-    # Checks for alias conflicts between this query and another.
+    # Detects alias conflicts between queries.
+    # Because two nodes with the same name but different labels are the graph equivalent of identity theft.
     def check_alias_conflicts!(other_query)
       self_aliases = defined_aliases
       other_aliases = other_query.defined_aliases
@@ -367,6 +421,7 @@ module Cyrel
     end
 
     # Combines clauses from the other query into this one based on type.
+    # Because merging queries is just like merging companies: someone always loses.
     def combine_clauses!(other_query)
       # Clone other query's clauses to avoid modifying it during iteration
       other_clauses_to_process = other_query.clauses.dup
@@ -419,7 +474,8 @@ module Cyrel
     # def clause_class_for_ivar(ivar_name) ... end
 
     # Helper needed for `where` DSL method with hash conditions
-    # Tries to infer the primary alias from MATCH/CREATE clauses
+    # Tries to guess the primary alias.
+    # Like Sherlock Holmes, but with fewer clues and more yelling.
     def infer_alias
       # Find first Node alias defined in MATCH/CREATE/MERGE clauses
       @clauses.each do |clause|
@@ -430,7 +486,12 @@ module Cyrel
         return element.alias_name if element.is_a?(Pattern::Node) && element.alias_name
       end
       raise 'Cannot infer alias for WHERE hash conditions. Define a node alias in MATCH/CREATE first.'
-      # Or maybe track @current_alias explicitly?
+    end
+
+    def freeze!
+      @parameters.freeze
+      @clauses.each(&:freeze)
+      freeze
     end
   end
 end

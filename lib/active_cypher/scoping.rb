@@ -88,9 +88,7 @@ module ActiveCypher
       def default_scope(body = nil, &block)
         body = block if block_given?
 
-        unless body.nil? || body.is_a?(Proc)
-          raise ArgumentError, 'The default scope body must be a Proc or lambda, or nil to remove.'
-        end
+        raise ArgumentError, 'The default scope body must be a Proc or lambda, or nil to remove.' unless body.nil? || body.is_a?(Proc)
 
         self._default_scope = body
       end

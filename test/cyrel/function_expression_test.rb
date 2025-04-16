@@ -42,7 +42,9 @@ class FunctionExpressionTest < ActiveSupport::TestCase
     match_node = Cyrel::Pattern::Node.new(:person, labels: 'Person')
     # Use the Cyrel.avg helper and RawExpressionString for alias
     avg_expr = Cyrel.avg(Cyrel.prop(:person, :age))
-    return_expr = Cyrel::Clause::With::RawExpressionString.new("#{avg_expr.render(Cyrel::Query.new)} AS averageAge") # Render avg expression within raw string
+    return_expr = Cyrel::Clause::With::RawExpressionString.new(
+      "#{avg_expr.render(Cyrel::Query.new)} AS averageAge"
+    )
 
     query = Cyrel::Query.new
                         .match(match_node) # Match all persons

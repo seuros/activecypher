@@ -34,15 +34,16 @@ module Cyrel
       end
 
       def ==(other)
-        Comparison.new(self, :"=", other) # Use = for Cypher equality
+        Comparison.new(self, :'=', other) # Use = for Cypher equality
       end
+      # alias_method must be called at the class level, not inside a method
 
       def !=(other)
-        Comparison.new(self, :"<>", other) # Use <> for Cypher inequality
+        Comparison.new(self, :'<>', other) # Use <> for Cypher inequality
       end
 
       def =~(other)
-        Comparison.new(self, :"=~", other) # Regex match
+        Comparison.new(self, :=~, other) # Regex match
       end
 
       def +(other)
@@ -68,6 +69,8 @@ module Cyrel
       def ^(other)
         Operator.new(self, :^, other) # Exponentiation
       end
+      # Add eq as an alias for == at the class level
+      alias eq ==
 
       # Logical operators require special handling as Ruby's `and`, `or`, `not`
       # have different precedence and short-circuiting behavior.
@@ -85,6 +88,14 @@ module Cyrel
       # These might be better represented as specific Comparison or FunctionCall types.
 
       # NOTE: `coerce` method moved to the Expression module itself.
+    end
+    require_relative 'alias' # Explicitly require the Alias class
+
+    # Creates an aliased version of this expression.
+    # @param alias_name [Symbol, String] The alias to assign.
+    # @return [Cyrel::Expression::Alias]
+    def as(alias_name)
+      Alias.new(self, alias_name)
     end
   end
 end

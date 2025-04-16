@@ -32,7 +32,7 @@ module Cyrel
         keyword = @optional ? 'OPTIONAL MATCH' : 'MATCH'
         path_assignment = @path_variable ? "#{@path_variable} = " : ''
         pattern_string = @pattern.render(query)
-        # Removed puts statements
+
         "#{keyword} #{path_assignment}#{pattern_string}"
       end
     end

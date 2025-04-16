@@ -1,159 +1,188 @@
 # frozen_string_literal: true
 
 require 'active_support/core_ext/module/delegation'
-require 'cyrel' # Assuming cyrel is available
 
 module ActiveCypher
-  # Represents a chainable, lazily evaluated Cypher query.
-  # Instances are typically created by calling query methods on ActiveCypher::Base subclasses.
+  # Chainable, lazily evaluated Cypher query.
+  # Because what you really want is to pretend your database is just a big Ruby array.
   class Relation
     include Enumerable
 
     attr_reader :model_class, :cyrel_query
 
-    # Methods that trigger query execution when called on a Relation
+    # Methods that trigger query execution
+    # Because nothing says "performance" like loading everything at once.
     LOAD_METHODS = %i[each to_a first last count size length any? empty?].freeze
 
-    # @param model_class [Class < ActiveCypher::Base] The model class this relation queries.
-    # @param cyrel_query [Cyrel::Query] The underlying Cyrel query object being built.
+    # ------------------------------------------------------------------
+    # Construction
+    # ------------------------------------------------------------------
+    # Initializes a Relation. Because direct SQL was too mainstream.
+    # @param model_class [Class] The model class for the relation
+    # @param cyrel_query [Object, nil] The Cyrel query object
     def initialize(model_class, cyrel_query = nil)
       @model_class = model_class
-      # Initialize a basic Cyrel query if none is provided
-      # This assumes Cyrel has a way to start a query targeting a node type
-      @cyrel_query = cyrel_query || Cyrel.match(Cyrel.node(model_class.label_name).as(:n)).return(:n)
-      @records = nil # Cache for loaded records
+      @cyrel_query = cyrel_query || default_query
+      @records     = nil
     end
 
-    # --- Query Building Methods ---
-
-    # Adds a WHERE condition.
-    # Currently supports basic hash conditions (equality).
-    # @param conditions [Hash] Conditions hash (e.g., { name: 'Alice', age: 30 }).
-    # @return [ActiveCypher::Relation] A new relation with the added condition.
+    # ------------------------------------------------------------------
+    # Query‑builder helpers
+    # ------------------------------------------------------------------
+    # Because chaining methods is more fun than writing actual queries.
+    # @param conditions [Hash, Cyrel::Expression::Base] The conditions for the where clause
+    # @return [Relation] A new relation with the where clause applied
     def where(conditions)
-      # TODO: Integrate with Cyrel's WHERE clause building
-      new_query = @cyrel_query # Placeholder
-      conditions.each do |key, value|
-        # Example Cyrel integration (adjust based on actual Cyrel API)
-        # node_alias = @cyrel_query.root_node_alias || :n # Need a way to get the main node alias
-        # new_query = new_query.where(Cyrel.node(node_alias)[key].eq(value))
+      new_query = @cyrel_query.clone
+      node_alias = :n
+
+      case conditions
+      when Hash
+        conditions.each do |key, value|
+          expr      = Cyrel.prop(node_alias, key).eq(value)
+          new_query = new_query.where(expr)
+        end
+      when Cyrel::Expression::Base
+        new_query = new_query.where(conditions)
+      else
+        raise ArgumentError,
+              "Unsupported type for #where: #{conditions.class}. " \
+              'Pass a Hash or Cyrel::Expression.'
       end
+
       spawn(new_query)
     end
 
-    # Adds a LIMIT clause.
-    # @param value [Integer] The maximum number of records to return.
-    # @return [ActiveCypher::Relation] A new relation with the limit applied.
-    def limit(_value)
-      # TODO: Integrate with Cyrel's LIMIT clause building
-      new_query = @cyrel_query # Placeholder
-      # Example Cyrel integration: new_query = new_query.limit(value)
-      spawn(new_query)
+    # Because sometimes you want less data, but never less abstraction.
+    # @param value [Integer] The limit value
+    # @return [Relation]
+    def limit(value)
+      spawn(@cyrel_query.clone.limit(value))
     end
 
-    # Adds an ORDER BY clause.
-    # @param args [Hash, Symbol, String] Ordering criteria (e.g., :name, { age: :desc }).
-    # @return [ActiveCypher::Relation] A new relation with the ordering applied.
+    # ORDER support: coming soon, like your next vacation.
+    # @return [Relation]
     def order(*_args)
-      # TODO: Integrate with Cyrel's ORDER BY clause building
-      new_query = @cyrel_query # Placeholder
-      # Example Cyrel integration: new_query = new_query.order(...)
-      spawn(new_query)
+      # TODO: Implement proper ORDER support
+      spawn(@cyrel_query)
     end
 
-    # Merges the conditions from another Relation or scope into this one.
-    # Placeholder implementation. Needs actual Cyrel query merging logic.
-    # @param other [ActiveCypher::Relation, Hash] The relation or conditions to merge.
-    # @return [ActiveCypher::Relation] A new relation with merged conditions.
+    # Merges another relation, because why not double the confusion.
+    # @param _other [Relation]
+    # @return [Relation]
     def merge(_other)
-      # TODO: Implement merging of Cyrel query objects.
-      # This needs to combine WHERE clauses, potentially LIMIT, ORDER etc.
-      # For now, just return a clone of the current relation's query.
-      spawn(@cyrel_query.clone) # Placeholder
+      spawn(@cyrel_query.clone)
     end
 
-    # --- Query Execution Methods ---
-
-    # Executes the query and yields each resulting model instance.
-    # Implements the Enumerable interface.
-    def each(&block)
+    # ------------------------------------------------------------------
+    # Enumerable / loader
+    # ------------------------------------------------------------------
+    # Pretend this is just an array. Your database will never know.
+    # @yield [record] Yields each record in the relation
+    def each(&)
       load_records unless loaded?
-      @records.each(&block)
+      @records.each(&)
     end
 
-    # Returns the first record matching the query.
-    # @return [ActiveCypher::Base, nil] The first record or nil.
+    # Because everyone wants to be first.
+    # @return [Object, nil] The first record
     def first
-      # TODO: Optimize by adding LIMIT 1 to Cyrel query before execution
       load_records unless loaded?
       @records.first
     end
 
-    # Returns the last record matching the query.
-    # Requires ordering to be meaningful.
-    # @return [ActiveCypher::Base, nil] The last record or nil.
+    # Or last, if you're feeling dramatic.
+    # @return [Object, nil] The last record
     def last
-      # TODO: Optimize? Might require reversing order and taking first.
       load_records unless loaded?
       @records.last
     end
 
-    # Returns the count of records matching the query.
-    # @return [Integer] The count.
+    # Counting records: the only math most devs trust.
+    # @return [Integer] The number of records
     def count
-      # TODO: Optimize by changing Cyrel query to RETURN count(*)
       load_records unless loaded?
       @records.count
     end
-    alias size count
+    alias size   count
     alias length count
 
-    # --- Internal Methods ---
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
-    # Returns true if the records for this relation have been loaded.
+    # Checks if we've already loaded the records, or if we're still living in denial.
+    # @return [Boolean]
     def loaded?
       !@records.nil?
     end
 
-    # Resets the loaded records cache.
+    # Resets the loaded records, for when you want to pretend nothing ever happened.
+    # @return [void]
     def reset!
       @records = nil
     end
 
     private
 
-    # Executes the Cyrel query via the adapter and maps results to model instances.
+    # Default: MATCH (n:Label) RETURN n, elementId(n) AS internal_id
+    # Because writing Cypher by hand is for people with too much free time.
+    # @return [Object] The default Cyrel query
+    def default_query
+      label      = model_class.model_name.element
+      node_alias = :n
+
+      Cyrel
+        .match(Cyrel.node(label).as(node_alias))
+        .return_(node_alias, Cyrel.element_id(node_alias).as(:internal_id))
+    end
+
+    # Actually loads the records from the database, shattering the illusion of laziness.
+    # @return [void]
     def load_records
-      cypher_string = @cyrel_query.to_cypher # Assumes Cyrel has a to_cypher method
-      params = {} # TODO: Extract params from Cyrel query if needed
-      raw_results = model_class.connection.execute_cypher(cypher_string, params, 'Load Relation')
-
-      # Map raw results (assuming adapter returns array of hashes)
-      @records = map_results(raw_results)
-    rescue StandardError => e
-      # Log error
-      @records = [] # Avoid repeated errors
-      raise e
+      cypher, params = @cyrel_query.to_cypher
+      raw            = model_class.connection.execute_cypher(
+        cypher, params || {}, 'Load Relation'
+      )
+      @records = map_results(raw)
     end
 
-    # Maps raw database results to model instances.
-    # @param raw_results [Array] Array of result hashes from the adapter.
-    # @return [Array<ActiveCypher::Base>] Array of model instances.
+    # Maps raw database results into something you can almost believe is a real object.
+    # @param raw_results [Array<Hash, Array>] The raw results from the database
+    # @return [Array<Object>] The mapped records
     def map_results(raw_results)
-      # This assumes the query returns the node data under the alias used (e.g., :n)
-      # and the adapter returns hashes representing node properties.
-      node_alias = :n # TODO: Get this dynamically from @cyrel_query if possible
-      raw_results.map do |result_hash|
-        node_data = result_hash[node_alias]
-        # Instantiate the model, marking it as not a new record
-        model_class.new(node_data || {}, new_record: false) if node_data
-      end.compact
+      raw_results.map do |row|
+        # ------------------------------------------------------------
+        # 1. Pull out the node payload and the elementId string
+        # ------------------------------------------------------------
+        if row.is_a?(Hash)
+          node_payload = row[:n] || row['n'] || row
+          element_id   = row[:internal_id] || row['internal_id']
+        else # Array row: [node, id]
+          node_payload, element_id = row
+        end
+
+        # ------------------------------------------------------------
+        # 2. If the node is still in Bolt array form [78, [...]],
+        #    convert it to { "name"=>"Bob", ... }
+        # ------------------------------------------------------------
+        if node_payload.is_a?(Array) && node_payload.first == 78
+          # Re‑use the adapter's private helper for consistency
+          node_payload = model_class.connection
+                                    .send(:process_node, node_payload)
+        end
+
+        # Now we have a plain hash of properties
+        attrs = node_payload.with_indifferent_access
+        attrs[:internal_id] = element_id if element_id
+        # Use instantiate instead of new to mark records as persisted
+        model_class.instantiate(attrs)
+      end
     end
 
-    # Creates a new Relation instance based on the current one,
-    # but with a modified Cyrel query. Used by query-building methods.
-    # @param new_query [Cyrel::Query] The modified Cyrel query.
-    # @return [ActiveCypher::Relation] The new relation instance.
+    # Spawns a new Relation, because immutability is trendy.
+    # @param new_query [Object] The new Cyrel query
+    # @return [Relation]
     def spawn(new_query)
       self.class.new(@model_class, new_query)
     end

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      neo4j:
+        image: neo4j:latest # Neo4j 2025‑LTS is the current latest tag
+        ports:
+          - 7687:7687 # Bolt
+        env:
+          NEO4J_AUTH: neo4j/activecypher
+        options: >-
+          --health-cmd="cypher-shell -u neo4j -p activecypher 'RETURN 1'"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+      memgraph:
+        image: memgraph/memgraph-mage:latest # 3.x series
+        ports:
+          - "7688:7688" # Bolt (host:container)
+          - "7444:7444" # REST / Lab
+        env:
+          MEMGRAPH_USER: memgraph
+          MEMGRAPH_PASSWORD: activecypher
+          MEMGRAPH_BOLT_PORT: 7688 # keeps everything on one port
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby 3.4
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4
+          bundler-cache: true
+
+      - name: Wait for services to accept TCP connections
+        run: |
+          for svc in 7687 7688; do
+            printf "⏳ waiting on port %s … " "$svc"
+            until nc -z 127.0.0.1 "$svc"; do sleep 2; done
+            echo "ready"
+          done
+
+      - name: Run Minitest suite
+        env:
+          BOLT_URI: bolt://neo4j:activecypher@localhost:7687
+          BOLT_USER: neo4j
+          BOLT_PASS: activecypher
+          TEST_NEO4J_USER: neo4j
+          TEST_NEO4J_PASS: activecypher
+          TEST_NEO4J_HOST: localhost
+          TEST_NEO4J_PORT: 7687
+          TEST_MEMG_USER: memgraph
+          TEST_MEMG_PASS: activecypher
+          TEST_MEMG_HOST: localhost
+          TEST_MEMG_PORT: 7688
+        run: |
+          bin/rails test
