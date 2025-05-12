@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.4.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.3.0...active_cypher/v0.4.0) (2025-05-12)
+
+
+### Features
+
+* Re-added Instrumentation to ActiveCypher ([eccf775](https://github.com/seuros/activecypher/commit/eccf775fb1f4d79e9d856184ace21ec6822de797))
+* readd instrumentation ([d6658fa](https://github.com/seuros/activecypher/commit/d6658fa1e2231b36f60a512f8418437520abe8ea))
+
 ## [0.3.0](https://github.com/seuros/activecypher/compare/active_cypher-v0.2.0...active_cypher/v0.3.0) (2025-05-12)
 
 
