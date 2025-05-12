@@ -4,10 +4,6 @@ require 'test_helper'
 
 module ActiveCypher
   class ConnectionUrlResolverTest < ActiveSupport::TestCase
-    def setup
-      # Nothing to set up
-    end
-
     def test_neo4j_minimal_url
       resolver = ConnectionUrlResolver.new('neo4j://localhost')
       config = resolver.to_hash
