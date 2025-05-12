@@ -132,7 +132,7 @@ module ActiveCypher
     # @param key [String, Symbol] The key to check
     # @return [Boolean] True if the key contains sensitive information
     def sensitive_key?(key)
-      return true if key.to_s.match?(/password|token|secret|credential|key/i)
+      return true if key.to_s.match?(/\b(password|token|secret|credential|key)\b/i)
 
       # Check against Rails filter parameters if available
       if defined?(Rails) && Rails.application
