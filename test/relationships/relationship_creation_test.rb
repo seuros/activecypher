@@ -16,11 +16,6 @@ class RelationshipCreationTest < ActiveSupport::TestCase
     assert @chess.persisted?, 'HobbyNode should be persisted'
   end
 
-  teardown do
-    # Clean up after each test
-    PersonNode.connection.execute_cypher('MATCH (n) DETACH DELETE n')
-  end
-
   test 'creates relationship without properties' do
     # Create relationship without properties
     rel = EnjoysRelationship.create({}, from_node: @alice, to_node: @chess)

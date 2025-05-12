@@ -1,28 +1,16 @@
-shared:
-  ssl: false  # Because encryption is for people who deploy to the public internet on purpose
-
 development:
-  primary: &local_memgraph
-      adapter: neo4j  # Because you like your graphs with a touch of existential dread
-      uri: neo4j://localhost:7687  # Port 7687: also known as Neo4j’s VIP lounge
-      username: neo4j  # Default username because who has time for originality
-      password: neo4j  # Seriously. Change this. Right now. I can see you not doing it.
-      multi_db: false  # One DB to rule them all, because multiple would involve effort
+  primary:
+    adapter: neo4j # Because you like your graphs with a touch of existential dread
+    url: neo4j://neo4j:neo4j@localhost:7687 # VIP port, VIP credentials (change them, seriously)
+    multi_db: false # One DB to rule them all
 
 test:
   primary:
-    <<: *local_memgraph   # Reusing the dev config like a true copy-paste warrior
-    uri: bolt://localhost:9876  # Different port, same chaos
+    url: neo4j://neo4j:neo4j@localhost:9876 # Different port, same chaos
+    multi_db: false
 
 production:
   primary:
-    adapter:  memgraph  # Yes, it’s still memgraph... for now...
-    uri: bolt+s://<%= ENV["MG_HOST"] %>:7687  # Now with SSL, because prod gets the good stuff
-    username: <%= ENV["MG_USER"] %>  # You should probably not hardcode "admin"
-    password: <%= ENV["MG_PASS"] %>  # Hopefully not "password123"
-    ssl: true  # SSL: Because “oops, we got hacked” is a bad press release
-    multi_db: <%= ENV.fetch("MG_MULTI_DB", "false") %>  # Default is "false" because complexity is scary and licensing is expensive
-
-# Bonus content:
-# Neo4j used to run prod but got demoted when Memgraph bought us lunch
-# RIP Neo4j: gone but not forgotten... mostly because we still pay for the license
+    adapter: memgraph # Yes, still memgraph... for now...
+    url: memgraph+ssc://<%= ENV["MG_USER"] %>:<%= ENV["MG_PASS"] %>@<%= ENV["MG_HOST"] %>:7687
+    multi_db: <%= ENV.fetch("MG_MULTI_DB", "false") %> # Because complexity is a luxury

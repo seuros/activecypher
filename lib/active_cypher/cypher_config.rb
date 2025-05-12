@@ -21,6 +21,7 @@ module ActiveCypher
         return {}.with_indifferent_access if name.to_s == '*'
         # If silent missing is set, return nil for specific connection
         return nil if ENV['ACTIVE_CYPHER_SILENT_MISSING'] == 'true'
+
         # Otherwise, raise a descriptive error
         raise "Could not load ActiveCypher configuration. No such file - #{file}. Please run 'rails generate active_cypher:install' to create the configuration file."
       end

@@ -4,13 +4,13 @@ require 'test_helper'
 require 'active_cypher/cypher_config'
 
 class CypherConfigMissingFileTest < Minitest::Test
-  DUMMY_PATH = File.expand_path("../nonexistent_cypher_databases.yml", __FILE__)
+  DUMMY_PATH = File.expand_path('nonexistent_cypher_databases.yml', __dir__)
 
   def setup
     @original_default_path = ActiveCypher::CypherConfig.method(:default_path)
     # Stub default_path to a guaranteed-nonexistent file
     ActiveCypher::CypherConfig.singleton_class.define_method(:default_path) { DUMMY_PATH }
-    @original_env = ENV['ACTIVE_CYPHER_SILENT_MISSING']
+    @original_env = ENV.fetch('ACTIVE_CYPHER_SILENT_MISSING', nil)
   end
 
   def teardown
@@ -22,7 +22,7 @@ class CypherConfigMissingFileTest < Minitest::Test
   def test_for_star_returns_empty_hash_when_file_missing
     result = ActiveCypher::CypherConfig.for('*')
     assert_kind_of Hash, result
-    assert result.empty?, "Expected empty hash when config file is missing"
+    assert result.empty?, 'Expected empty hash when config file is missing'
   end
 
   def test_for_specific_connection_raises_error_by_default

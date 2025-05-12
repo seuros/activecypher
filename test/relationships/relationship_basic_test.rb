@@ -8,11 +8,6 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     PersonNode.connection.execute_cypher('MATCH (n) DETACH DELETE n')
   end
 
-  def teardown
-    # Clean up after tests
-    PersonNode.connection.execute_cypher('MATCH (n) DETACH DELETE n')
-  end
-
   test 'create relationship between nodes' do
     # Create nodes
     alice = PersonNode.create(name: 'Alice', age: 30)

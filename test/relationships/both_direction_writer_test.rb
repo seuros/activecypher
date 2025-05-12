@@ -16,11 +16,6 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
     assert @chess.persisted?, 'HobbyNode should be persisted'
   end
 
-  teardown do
-    # Clean up after each test
-    PersonNode.connection.execute_cypher('MATCH (n) DETACH DELETE n')
-  end
-
   test 'directional relationship can be created' do
     # Create a relationship directly
     rel = EnjoysRelationship.create({}, from_node: @bob, to_node: @chess)
