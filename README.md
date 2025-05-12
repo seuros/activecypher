@@ -30,35 +30,76 @@ $ gem install activecypher
 
 ## Configuration
 
-To configure ActiveCypher, create an initializer file in your Rails application (e.g., `config/initializers/active_cypher.rb`) and specify the connection details for your graph database. ActiveCypher provides built-in adapters for Neo4j and Memgraph using the Bolt protocol.
+**No manual initialization required!**
 
-Example configuration for Neo4j:
+ActiveCypher automatically loads your database configuration from `config/cypher_databases.yml` (similar to how Rails uses `database.yml`). You do **not** need to manually initialize or configure adapters in an initializer.
+
+To configure your graph database connections, simply run the install generator:
+
+```bash
+bin/rails generate active_cypher:install
+```
+
+This will create a `config/cypher_databases.yml` file in your Rails application. You can then define connections for different environments and roles. For example:
+
+```yaml
+# config/cypher_databases.yml
+
+development:
+  primary:
+    url: memgraph://memgraph:activecypher@localhost:7688
+    multi_db: false
+  neo4j:
+    url: neo4j://neo4j:activecypher@localhost:7687
+    multi_db: false
+
+test:
+  primary:
+    url: memgraph://memgraph:activecypher@localhost:7688
+    multi_db: false
+  neo4j:
+    url: neo4j://neo4j:activecypher@localhost:7687
+    multi_db: false
+
+production:
+  primary:
+    url: memgraph+ssl://user:pass@memgraph:7687
+    multi_db: false
+```
+
+ActiveCypher will automatically pick up the correct configuration for the current Rails environment.
+
+**You do not need to call any setup code in your test helper or application initializer.**  
+Connections are managed automatically, just like ActiveRecord.
+
+### Connecting Models to Different Databases
+
+You can configure each node (model) class to use a specific connection by using the `connects_to` class method. This allows you to route different models to different databases or roles.
+
+For example:
 
 ```ruby
-# config/initializers/active_cypher.rb
+# app/graph/application_graph_node.rb
+class ApplicationGraphNode < ActiveCypher::Base
+  self.abstract_class = true
 
-ActiveCypher.configure do |config|
-  config.adapter = ActiveCypher::ConnectionAdapters::Neo4jAdapter.new(
-    uri: "bolt://localhost:7687",
-    username: "neo4j",
-    password: "your_password"
-  )
+  connects_to writing: :primary,
+              reading: :primary
+end
+
+# app/graph/neo4j_record.rb
+class Neo4jRecord < ActiveCypher::Base
+  self.abstract_class = true
+
+  connects_to writing: :neo4j,
+              reading: :neo4j
 end
 ```
 
-Example configuration for Memgraph:
+- All models inheriting from `ApplicationGraphNode` will use the `primary` connection (e.g., Memgraph).
+- Models inheriting from `Neo4jRecord` will use the `neo4j` connection.
 
-```ruby
-# config/initializers/active_cypher.rb
-
-ActiveCypher.configure do |config|
-  config.adapter = ActiveCypher::ConnectionAdapters::MemgraphAdapter.new(
-    uri: "bolt://localhost:7688",
-    username: "memgraph",
-    password: "your_password"
-  )
-end
-```
+This makes it easy to work with multiple databases in the same application, and to direct reads/writes as needed.
 
 Refer to the test files (e.g., `test/bolt/connection_test.rb` and `test/bolt/session_test.rb`) for more usage examples.
 
