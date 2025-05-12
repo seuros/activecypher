@@ -8,6 +8,7 @@ module ActiveCypher
     # Concrete subclasses must provide protocol_handler_class, validate_connection, and execute_cypher.
     # It's like ActiveRecord::ConnectionAdapter, but for weirdos like me who use graph databases.
     class AbstractBoltAdapter < AbstractAdapter
+      include Instrumentation
       attr_reader :connection
 
       # Establish a connection if not already active.
@@ -15,29 +16,31 @@ module ActiveCypher
       def connect
         return true if active?
 
-        # Determine host and port from config
-        host, port = if config[:uri]
-                       # Legacy URI format
-                       uri = URI(config[:uri])
-                       [uri.host, uri.port || 7687]
-                     else
-                       # New URL format via ConnectionUrlResolver
-                       [config[:host] || 'localhost', config[:port] || 7687]
-                     end
+        instrument_connection(:connect, config) do
+          # Determine host and port from config
+          host, port = if config[:uri]
+                         # Legacy URI format
+                         uri = URI(config[:uri])
+                         [uri.host, uri.port || 7687]
+                       else
+                         # New URL format via ConnectionUrlResolver
+                         [config[:host] || 'localhost', config[:port] || 7687]
+                       end
 
-        # Prepare auth token
-        auth = if config[:username]
-                 { scheme: 'basic', principal: config[:username], credentials: config[:password] }
-               else
-                 { scheme: 'none' }
-               end
+          # Prepare auth token
+          auth = if config[:username]
+                   { scheme: 'basic', principal: config[:username], credentials: config[:password] }
+                 else
+                   { scheme: 'none' }
+                 end
 
-        @connection = Bolt::Connection.new(
-          host, port, self,
-          auth_token: auth, timeout_seconds: config.fetch(:timeout, 15)
-        )
-        @connection.connect
-        validate_connection
+          @connection = Bolt::Connection.new(
+            host, port, self,
+            auth_token: auth, timeout_seconds: config.fetch(:timeout, 15)
+          )
+          @connection.connect
+          validate_connection
+        end
       end
 
       # Connection health check. If this returns false, you're probably in trouble.
@@ -45,9 +48,11 @@ module ActiveCypher
 
       # Clean disconnection. Resets the internal state.
       def disconnect
-        @connection&.close
-        @connection = nil
-        true
+        instrument_connection(:disconnect) do
+          @connection&.close
+          @connection = nil
+          true
+        end
       end
 
       # Runs a Cypher query via Bolt session.
@@ -55,11 +60,14 @@ module ActiveCypher
       def run(cypher, params = {}, context: 'Query', db: nil, access_mode: :write)
         connect
         logger.debug { "[#{context}] #{cypher} #{params.inspect}" }
-        session = Bolt::Session.new(connection, default_db: db)
-        result  = session.run(cypher, prepare_params(params), access_mode:)
-        rows    = result.respond_to?(:to_a) ? result.to_a : result
-        session.close
-        rows
+
+        instrument_query(cypher, params, context: context, metadata: { db: db, access_mode: access_mode }) do
+          session = Bolt::Session.new(connection, default_db: db)
+          result  = session.run(cypher, prepare_params(params), access_mode:)
+          rows    = result.respond_to?(:to_a) ? result.to_a : result
+          session.close
+          rows
+        end
       end
 
       # Convert access mode to database-specific format
@@ -84,7 +92,7 @@ module ActiveCypher
       # you will be publicly shamed by a NotImplementedError.
       def protocol_handler_class = raise(NotImplementedError)
       def validate_connection = raise(NotImplementedError)
-      def execute_cypher(*) = raise(NotImplementedError)
+      def execute_cypher(*) = raise(NotImplementedError, "#{self.class} must implement #execute_cypher")
 
       private
 

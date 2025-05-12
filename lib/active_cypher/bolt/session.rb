@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 require 'async'
-
 module ActiveCypher
   module Bolt
     # A Session is the primary unit of work in the Bolt Protocol.
     # It maintains a connection to the database server and allows running queries.
     class Session
+      include Instrumentation
       attr_reader :connection, :database
 
       def initialize(connection, database: nil)
@@ -34,13 +34,15 @@ module ActiveCypher
         # For Memgraph, explicitly set db to nil
         db = nil if @connection.adapter.is_a?(ConnectionAdapters::MemgraphAdapter)
 
-        if @current_transaction&.active?
-          # If we have an active transaction, run the query within it
-          @current_transaction.run(query, parameters)
-        else
-          # Auto-transaction mode: each query gets its own transaction
-          run_transaction(mode, db: db) do |tx|
-            tx.run(query, parameters)
+        instrument_query(query, parameters, context: 'Session#run', metadata: { mode: mode, db: db }) do
+          if @current_transaction&.active?
+            # If we have an active transaction, run the query within it
+            @current_transaction.run(query, parameters)
+          else
+            # Auto-transaction mode: each query gets its own transaction
+            run_transaction(mode, db: db) do |tx|
+              tx.run(query, parameters)
+            end
           end
         end
       end
@@ -55,40 +57,46 @@ module ActiveCypher
       def begin_transaction(db: nil, access_mode: :write, tx_timeout: nil, tx_metadata: nil)
         raise ConnectionError, 'Already in a transaction' if @current_transaction&.active?
 
-        # Send BEGIN message with appropriate metadata
-        begin_meta = {}
-        # For Memgraph, NEVER set a database name - it doesn't support them
-        if @connection.adapter.is_a?(ConnectionAdapters::MemgraphAdapter)
-          # Explicitly don't set db for Memgraph
-          begin_meta['adapter'] = 'memgraph'
-          # Force db to nil for Memgraph
-          nil
-        elsif db || @database
-          begin_meta['db'] = db || @database
-        end
-        begin_meta['mode'] = access_mode == :read ? 'r' : 'w'
-        begin_meta['tx_timeout'] = tx_timeout if tx_timeout
-        begin_meta['tx_metadata'] = tx_metadata if tx_metadata
-        begin_meta['bookmarks'] = @bookmarks if @bookmarks&.any?
+        metadata = { access_mode: access_mode }
+        metadata[:db] = db if db
+        metadata[:timeout] = tx_timeout if tx_timeout
 
-        begin_msg = Messaging::Begin.new(begin_meta)
-        @connection.write_message(begin_msg)
+        instrument_transaction(:begin, nil, metadata: metadata) do
+          # Send BEGIN message with appropriate metadata
+          begin_meta = {}
+          # For Memgraph, NEVER set a database name - it doesn't support them
+          if @connection.adapter.is_a?(ConnectionAdapters::MemgraphAdapter)
+            # Explicitly don't set db for Memgraph
+            begin_meta['adapter'] = 'memgraph'
+            # Force db to nil for Memgraph
+            nil
+          elsif db || @database
+            begin_meta['db'] = db || @database
+          end
+          begin_meta['mode'] = access_mode == :read ? 'r' : 'w'
+          begin_meta['tx_timeout'] = tx_timeout if tx_timeout
+          begin_meta['tx_metadata'] = tx_metadata if tx_metadata
+          begin_meta['bookmarks'] = @bookmarks if @bookmarks&.any?
 
-        # Read response to BEGIN
-        response = @connection.read_message
+          begin_msg = Messaging::Begin.new(begin_meta)
+          @connection.write_message(begin_msg)
 
-        case response
-        when Messaging::Success
-          # BEGIN succeeded, create a new transaction
-          @current_transaction = Transaction.new(self, @bookmarks, response.metadata)
-        when Messaging::Failure
-          # BEGIN failed
-          code = response.metadata['code']
-          message = response.metadata['message']
-          @connection.reset!
-          raise QueryError, "Failed to begin transaction: #{code} - #{message}"
-        else
-          raise ProtocolError, "Unexpected response to BEGIN: #{response.class}"
+          # Read response to BEGIN
+          response = @connection.read_message
+
+          case response
+          when Messaging::Success
+            # BEGIN succeeded, create a new transaction
+            @current_transaction = Transaction.new(self, @bookmarks, response.metadata)
+          when Messaging::Failure
+            # BEGIN failed
+            code = response.metadata['code']
+            message = response.metadata['message']
+            @connection.reset!
+            raise QueryError, "Failed to begin transaction: #{code} - #{message}"
+          else
+            raise ProtocolError, "Unexpected response to BEGIN: #{response.class}"
+          end
         end
       end
 
@@ -181,20 +189,24 @@ module ActiveCypher
       def reset
         return if @current_transaction.nil?
 
-        # Mark the current transaction as no longer active
-        complete_transaction(@current_transaction)
+        instrument('session.reset') do
+          # Mark the current transaction as no longer active
+          complete_transaction(@current_transaction)
 
-        # Reset the connection
-        @connection.reset!
+          # Reset the connection
+          @connection.reset!
+        end
       end
 
       # Close the session and any active transaction.
       def close
-        # If there's an active transaction, try to roll it back
-        @current_transaction&.rollback if @current_transaction&.active?
+        instrument('session.close') do
+          # If there's an active transaction, try to roll it back
+          @current_transaction&.rollback if @current_transaction&.active?
 
-        # Mark current transaction as complete
-        complete_transaction(@current_transaction) if @current_transaction
+          # Mark current transaction as complete
+          complete_transaction(@current_transaction) if @current_transaction
+        end
       end
     end
   end
