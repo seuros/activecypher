@@ -38,5 +38,13 @@ end
 # Make sure the tmp directory exists for generator tests
 FileUtils.mkdir_p(File.expand_path('tmp', __dir__))
 
+# Cleanup app/graph before running tests to avoid class collision issues
+graph_dir = File.expand_path('../app/graph', __dir__)
+if Dir.exist?(graph_dir)
+  Dir.glob(File.join(graph_dir, '**', '*')).each do |file|
+    FileUtils.rm_rf(file)
+  end
+end
+
 ActiveSupport::TestCase.include ActiveCypherTest::PersistedHelper
 Rails::Generators::TestCase.include GeneratorTestHelpers
