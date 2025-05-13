@@ -43,15 +43,13 @@ module ActiveCypher
         base.end_with?(suffix) ? base : "#{base}#{suffix}"
       end
 
-
-
       def check_runtime_class_collision
         suffix = relationship_suffix
         base = name.camelize
         class_name_with_suffix = base.end_with?(suffix) ? base : "#{base}#{suffix}"
-        if class_name_with_suffix.safe_constantize.present?
-          raise Thor::Error, "Class collision: #{class_name_with_suffix} is already defined"
-        end
+        return unless class_name_with_suffix.safe_constantize.present?
+
+        raise Thor::Error, "Class collision: #{class_name_with_suffix} is already defined"
       end
 
       def relationship_type

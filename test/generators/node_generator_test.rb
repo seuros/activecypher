@@ -18,7 +18,7 @@ class NodeGeneratorTest < Rails::Generators::TestCase
 
   def cleanup_graph_directory
     graph_dir = File.expand_path('../../app/graph', __dir__)
-    FileUtils.rm_rf(graph_dir) if Dir.exist?(graph_dir)
+    FileUtils.rm_rf(graph_dir)
     FileUtils.mkdir_p(graph_dir)
   end
 
