@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.4.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.4.0...active_cypher/v0.4.1) (2025-05-13)
+
+
+### Bug Fixes
+
+* Fix generator templates and enforce class collision checks ([8ad926a](https://github.com/seuros/activecypher/commit/8ad926a264904dcc54842baa86ab7924edd33dfc))
+* Fix generator templates and enforce class collision checks ([3725218](https://github.com/seuros/activecypher/commit/372521819860e24be785d6fd18f73dc105245196))
+
 ## [0.4.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.3.0...active_cypher/v0.4.0) (2025-05-12)
 
 
