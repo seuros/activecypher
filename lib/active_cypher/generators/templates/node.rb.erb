@@ -1,10 +1,14 @@
 # frozen_string_literal: true
-class <%= class_name %> < ApplicationGraphNode
-  <% labels_list.each do |lbl| %>
-  label :<%= lbl %>
-    <% end %>
 
-    <% attributes.each do |attr| -%>
-    attribute :<%= attr.name %>, :<%= attr.type || "string" %>
-  <% end -%>
+class <%= class_name %> < ApplicationGraphNode
+<% if labels_list.any? -%>
+<% labels_list.each do |lbl| -%>
+  label :<%= lbl %>
+<% end -%>
+<% end -%>
+<% if attributes.any? -%>
+<% attributes.each do |attr| -%>
+  attribute :<%= attr.name %>, :<%= attr.type || "string" %>
+<% end -%>
+<% end -%>
 end

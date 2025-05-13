@@ -9,3 +9,4 @@
 Gemfile.lock
 .idea
 /test/dummy/log/*
+/test/tmp

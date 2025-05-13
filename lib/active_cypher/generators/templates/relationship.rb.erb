@@ -2,10 +2,11 @@
 
 class <%= class_name %> < ApplicationGraphRelationship
   from_class :<%= options[:from] %>
-    to_class   :<%= options[:to]   %>
-    type       :<%= relationship_type %>
-
-    <% attributes.each do |attr| -%>
-    attribute :<%= attr.name %>, :<%= attr.type || "string" %>
-  <% end -%>
+  to_class   :<%= options[:to] %>
+  type       :<%= relationship_type %>
+<% if attributes.any? -%>
+<% attributes.each do |attr| -%>
+  attribute :<%= attr.name %>, :<%= attr.type || "string" %>
+<% end -%>
+<% end -%>
 end
