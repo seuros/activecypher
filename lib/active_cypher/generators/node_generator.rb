@@ -22,7 +22,7 @@ module ActiveCypher
 
       def create_node_file
         check_runtime_class_collision
-        template 'node.rb.erb', File.join('app/graph', class_path, "#{node_file_name}.rb")
+        template 'node.rb.erb', File.join('app/graph', class_path, "#{file_name}.rb")
       end
 
       private
@@ -31,9 +31,9 @@ module ActiveCypher
         suffix = node_suffix
         base = name.camelize
         class_name_with_suffix = base.end_with?(suffix) ? base : "#{base}#{suffix}"
-        if Object.const_defined?(class_name_with_suffix)
-          raise Thor::Error, "Class collision: #{class_name_with_suffix} is already defined"
-        end
+        return unless class_name_with_suffix.safe_constantize
+
+        raise Thor::Error, "Class collision: #{class_name_with_suffix} is already defined"
       end
 
       def node_suffix
@@ -50,12 +50,6 @@ module ActiveCypher
         suffix = "_#{node_suffix.underscore}"
         base.end_with?(suffix) ? base : "#{base}#{suffix}"
       end
-
-      def node_file_name
-        file_name
-      end
-
-      private
 
       # helper for ERB
       def labels_list

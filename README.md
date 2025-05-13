@@ -202,6 +202,26 @@ If you specify a name that already ends with `Node`, the generator will not doub
 
 You can customize the suffix with `--suffix=CustomSuffix`.
 
+#### Adding Attributes
+
+You can pass attributes as `name:type` arguments, just like Rails generators:
+
+```bash
+bin/rails generate active_cypher:node Planet name:string mass:float
+```
+
+This generates a node class with `attribute :name, :string` and `attribute :mass, :float`.
+
+#### Adding Labels
+
+You can specify Cypher labels with the `--labels` option (comma-separated):
+
+```bash
+bin/rails generate active_cypher:node SpaceStation --labels=Orbital,Habitat
+```
+
+This will add `label :Orbital` and `label :Habitat` to the generated class.
+
 ### Relationship Generator
 
 By default, relationship classes are suffixed with `Rel`. For example:
