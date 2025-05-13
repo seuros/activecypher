@@ -23,7 +23,7 @@ module ActiveCypher
 
       def create_relationship_file
         check_runtime_class_collision
-        template 'relationship.rb.erb', File.join('app/graph', class_path, "#{relationship_file_name}.rb")
+        template 'relationship.rb.erb', File.join('app/graph', class_path, "#{file_name}.rb")
       end
 
       private
@@ -43,9 +43,7 @@ module ActiveCypher
         base.end_with?(suffix) ? base : "#{base}#{suffix}"
       end
 
-      def relationship_file_name
-        file_name
-      end
+
 
       def check_runtime_class_collision
         suffix = relationship_suffix
