@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class HobbyNode < ApplicationGraphNode
+  # Define a single custom label
+  label :Activity
   attribute :name,        :string
   attribute :category,    :string
   attribute :skill_level, :string

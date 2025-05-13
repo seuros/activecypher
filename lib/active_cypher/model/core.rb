@@ -24,6 +24,50 @@ module ActiveCypher
         cattr_accessor :connection, instance_accessor: false
         class_attribute :configurations, instance_accessor: false,
                                          default: ActiveSupport::HashWithIndifferentAccess.new
+
+        # Add class attribute to store custom labels
+        class_attribute :custom_labels, default: Set.new
+      end
+
+      class_methods do
+        # Define a label for the model. Can be called multiple times to add multiple labels.
+        # @param label_name [Symbol, String] The label name
+        # @return [Set] The collection of custom labels
+        #
+        # @example Single label
+        #   class PetNode < ApplicationGraphNode
+        #     label :Pet
+        #   end
+        #
+        # @example Multiple labels
+        #   class PetNode < ApplicationGraphNode
+        #     label :Pet
+        #     label :Animal
+        #   end
+        def label(label_name)
+          # Convert to symbol for consistency
+          label_sym = label_name.to_sym
+
+          # Add to the collection (Set ensures uniqueness)
+          self.custom_labels = custom_labels.dup.add(label_sym)
+        end
+
+        # Get all labels for this model
+        # @return [Array<Symbol>] All labels for this model
+        def labels
+          # Return custom labels if any exist, otherwise use default label
+          custom_labels.empty? ? [model_name.element.to_sym] : custom_labels.to_a
+        end
+
+        # Returns the primary label for the model
+        # @return [Symbol] The primary label
+        def label_name
+          # Override the method from Querying module to use the first custom label if any exist
+          return custom_labels.first if custom_labels.any?
+
+          # Otherwise fall back to default behavior
+          super
+        end
       end
 
       attr_reader :new_record

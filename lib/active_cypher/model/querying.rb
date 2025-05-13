@@ -45,8 +45,11 @@ module ActiveCypher
         def find(internal_db_id)
           node_alias = :n
 
+          # Always use just the primary label for database operations
+          label = label_name
+          
           query = Cyrel
-                  .match(Cyrel.node(label_name).as(node_alias))
+                  .match(Cyrel.node(node_alias, labels: [label]))
                   .where(Cyrel.element_id(node_alias).eq(internal_db_id))
                   .return_(node_alias, Cyrel.element_id(node_alias).as(:internal_id))
                   .limit(1)

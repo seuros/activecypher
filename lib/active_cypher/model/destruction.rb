@@ -23,7 +23,9 @@ module ActiveCypher
           raise 'Record already destroyed' if destroyed?
 
           n      = :n
-          query  = Cyrel.match(Cyrel.node(self.class.label_name).as(n))
+          # Always use just the primary label for database operations
+          label = self.class.label_name
+          query  = Cyrel.match(Cyrel.node(n, labels: [label]))
                         .where(Cyrel.id(n).eq(internal_id))
                         .detach_delete(n)
 

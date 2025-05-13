@@ -16,9 +16,10 @@ module ActiveCypher
         # If this returns the right number, thank the database gods—or maybe just the back magick hiding in the adapter.
         def count
           cypher, params =
-            if respond_to?(:label_name)          # ⇒ node class
+            if respond_to?(:label_name) # ⇒ node class
+              # Always use just the primary label for database operations
               ["MATCH (n:#{label_name}) RETURN count(n) AS c", {}]
-            else                                 # ⇒ relationship class
+            else # ⇒ relationship class
               ["MATCH ()-[r:#{relationship_type}]-() RETURN count(r) AS c", {}] # ▲ undirected
             end
 

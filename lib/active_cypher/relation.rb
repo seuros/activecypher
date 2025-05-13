@@ -129,11 +129,15 @@ module ActiveCypher
     # Because writing Cypher by hand is for people with too much free time.
     # @return [Object] The default Cyrel query
     def default_query
-      label      = model_class.model_name.element
       node_alias = :n
 
+      # Always use just the primary label for database operations
+      label = model_class.respond_to?(:label_name) ? 
+              model_class.label_name : 
+              model_class.model_name.element.to_sym
+
       Cyrel
-        .match(Cyrel.node(label).as(node_alias))
+        .match(Cyrel.node(node_alias, labels: [label]))
         .return_(node_alias, Cyrel.element_id(node_alias).as(:internal_id))
     end
 
