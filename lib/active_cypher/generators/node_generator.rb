@@ -31,7 +31,7 @@ module ActiveCypher
         suffix = node_suffix
         base = name.camelize
         class_name_with_suffix = base.end_with?(suffix) ? base : "#{base}#{suffix}"
-        if Object.const_defined?(class_name_with_suffix)
+        if class_name_with_suffix.safe_constantize
           raise Thor::Error, "Class collision: #{class_name_with_suffix} is already defined"
         end
       end
