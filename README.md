@@ -131,11 +131,11 @@ class ConspiracyNode < ApplicationGraphNode
            class_name: 'PersonNode',
            relationship: 'BELIEVES_IN',
            direction: :in,
-           relationship_class: 'BelievesInRelationship'
+           relationship_class: 'BelievesInRel'
 end
 
-# app/graph/believes_in_relationship.rb
-class BelievesInRelationship < ApplicationGraphRelationship
+# app/graph/believes_in_rel.rb
+class BelievesInRel < ApplicationGraphRelationship
   from_class 'PersonNode'
   to_class   'ConspiracyNode'
   type       'BELIEVES_IN'
@@ -180,6 +180,46 @@ believable_conspiracies = ConspiracyNode.where('believability_index > ?', 5)
 ```
 
 *(See more detailed usage and advanced queries in the models and test files in `test/dummy/app/graph`.)*
+
+## Generators and Naming Conventions
+
+ActiveCypher provides Rails generators for quickly scaffolding node and relationship classes with consistent naming conventions.
+
+### Node Generator
+
+By default, node classes are suffixed with `Node`. For example:
+
+```bash
+bin/rails generate active_cypher:node Person
+```
+
+Generates:
+
+- `app/graph/person_node.rb`
+- Class: `PersonNode < ApplicationGraphNode`
+
+If you specify a name that already ends with `Node`, the generator will not double the suffix.
+
+You can customize the suffix with `--suffix=CustomSuffix`.
+
+### Relationship Generator
+
+By default, relationship classes are suffixed with `Rel`. For example:
+
+```bash
+bin/rails generate active_cypher:relationship BelievesIn --from=PersonNode --to=ConspiracyNode
+```
+
+Generates:
+
+- `app/graph/believes_in_rel.rb`
+- Class: `BelievesInRel < ApplicationGraphRelationship`
+
+If you specify a name that already ends with `Rel`, the generator will not double the suffix.
+
+You can customize the suffix with `--suffix=CustomSuffix`.
+
+---
 
 ## Features
 
