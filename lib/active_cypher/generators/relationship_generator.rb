@@ -7,6 +7,7 @@ module ActiveCypher
   module Generators
     class RelationshipGenerator < Rails::Generators::NamedBase
       source_root File.expand_path('templates', __dir__)
+      check_class_collision
 
       argument :attributes, type: :array,
                             default: [], banner: 'name:type name:type'
@@ -19,8 +20,7 @@ module ActiveCypher
                            desc: 'Cypher relationship type (defaults to class name)'
 
       def create_relationship_file
-        template 'relationship.rb.erb',
-                 File.join('app/graph', class_path, "#{file_name}.rb")
+        template 'relationship.rb.erb', File.join('app/graph', class_path, "#{file_name}.rb")
       end
 
       private

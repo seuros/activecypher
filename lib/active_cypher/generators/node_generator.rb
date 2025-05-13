@@ -7,6 +7,7 @@ module ActiveCypher
   module Generators
     class NodeGenerator < Rails::Generators::NamedBase
       source_root File.expand_path('templates', __dir__)
+      check_class_collision
 
       argument :attributes, type: :array,
                             default: [], banner: 'name:type name:type'
@@ -16,8 +17,7 @@ module ActiveCypher
                             default: ''
 
       def create_node_file
-        template 'node.rb.erb',
-                 File.join('app/graph', class_path, "#{file_name}.rb")
+        template 'node.rb.erb', File.join('app/graph', class_path, "#{file_name}.rb")
       end
 
       private
