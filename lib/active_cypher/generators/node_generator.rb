@@ -51,10 +51,6 @@ module ActiveCypher
         base.end_with?(suffix) ? base : "#{base}#{suffix}"
       end
 
-      def node_file_name
-        file_name
-      end
-
       private
 
       # helper for ERB
