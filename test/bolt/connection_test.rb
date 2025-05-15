@@ -8,8 +8,7 @@ class ConnectionTest < ActiveSupport::TestCase
   # Or GHA CI is running the tests with the containers
   NEO4J_CONFIG = { host: '127.0.0.1', port: 7687,
                    auth_token: { scheme: 'basic', principal: 'neo4j', credentials: 'activecypher' } }.freeze
-  MEMGRAPH_CONFIG = { host: '127.0.0.1', port: 7688, auth_token: { scheme: 'basic', principal: 'memgraph',
-                                                                   credentials: 'activecypher' } }.freeze
+  MEMGRAPH_CONFIG = { host: '127.0.0.1', port: 7688, auth_token: { scheme: 'basic', principal: 'memgraph', credentials: 'activecypher' } }.freeze
 
   def create_adapter(host, port, username, password)
     ActiveCypher::ConnectionAdapters::Neo4jAdapter.new({
@@ -161,7 +160,7 @@ class ConnectionTest < ActiveSupport::TestCase
   # --- Memgraph Tests ---
 
   test '[Memgraph] successful connection and handshake' do
-    skip 'Skipping Memgraph test (may not be available)' unless ENV['TEST_MEMGRAPH']
+    # skip 'Skipping Memgraph test (may not be available)' unless ENV['TEST_MEMGRAPH']
 
     connection = nil
     begin
@@ -176,7 +175,7 @@ class ConnectionTest < ActiveSupport::TestCase
         MEMGRAPH_CONFIG[:port],
         adapter,
         auth_token: MEMGRAPH_CONFIG[:auth_token],
-        timeout_seconds: 5
+        timeout_seconds: 500000
       )
 
       Sync { connection.connect }

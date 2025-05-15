@@ -387,6 +387,7 @@ module ActiveCypher
         # 1. Pack the message into a temporary buffer
         message_io = StringIO.new(+'', 'wb')
         writer = MessageWriter.new(message_io)
+        puts message
         writer.write(message)
         message_bytes = message_io.string
         message_size = message_bytes.bytesize
@@ -394,8 +395,12 @@ module ActiveCypher
         # Debug output if a label was provided
         dump(debug_label, message_bytes) if debug_label
 
+
+
         # 2. Write the chunk header and data
         chunk_header = [message_size].pack('n')
+
+
         write_raw(chunk_header)
         write_raw(message_bytes)
         write_raw("\x00\x00") # Chunk terminator

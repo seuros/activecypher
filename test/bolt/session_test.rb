@@ -38,6 +38,26 @@ class SessionTest < ActiveSupport::TestCase
     puts "Error during connection teardown: #{e.message}" if ENV['DEBUG']
   end
 
+  test '[Memgraph] session can run simple query and get result' do
+    connection = setup_connection(MEMGRAPH_CONFIG)
+    session = ActiveCypher::Bolt::Session.new(connection)
+
+    result = Sync do
+      session.run('RETURN 1 AS n')
+    end
+
+    assert_instance_of ActiveCypher::Bolt::Result, result
+    assert_equal [:n], result.fields.map(&:to_sym)
+
+    record = result.single # Consumes the result
+    assert_equal({ n: 1 }, record)
+
+    assert_equal false, result.open? # Should be consumed
+    assert_kind_of Hash, result.summary # Check summary is accessible
+  ensure
+    teardown_connection(connection)
+  end
+
   # --- Neo4j Tests ---
 
   test '[Neo4j] session can run simple query and get result' do
