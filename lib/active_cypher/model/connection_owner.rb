@@ -28,6 +28,15 @@ module ActiveCypher
         @@connection_handler ||= ActiveCypher::ConnectionHandler.new # rubocop:disable Style/ClassVars
         def connection_handler = @@connection_handler
 
+        # Returns the adapter class being used by this model
+        # @return [Class] The adapter class (e.g., Neo4jAdapter, MemgraphAdapter)
+        def adapter_class
+          conn = connection
+          return nil unless conn
+
+          conn.class
+        end
+
         # Temporarily switches the current role and shard for the duration of the block.
         # @param role [Symbol, nil] The role to switch to
         # @param shard [Symbol] The shard to switch to
@@ -44,6 +53,12 @@ module ActiveCypher
           ActiveCypher::RuntimeRegistry.current_role  = previous_role
           ActiveCypher::RuntimeRegistry.current_shard = previous_shard
         end
+      end
+
+      # Instance method to access the adapter class
+      # @return [Class] The adapter class (e.g., Neo4jAdapter, MemgraphAdapter)
+      def adapter_class
+        self.class.adapter_class
       end
     end
   end

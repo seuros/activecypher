@@ -131,8 +131,12 @@ module ActiveCypher
       def create_record
         props = attributes_for_persistence
         n = :n
-        label = self.class.label_name.to_s
-        node = Cyrel.node(n, labels: [label], properties: props)
+
+        # Use all labels for database operations
+        labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name.to_s]
+
+        # Create node with all labels
+        node = Cyrel.node(n, labels: labels, properties: props)
         query = Cyrel.create(node).return_(Cyrel.element_id(n).as(:internal_id))
         cypher, params = query.to_cypher
         params ||= {}
@@ -166,16 +170,32 @@ module ActiveCypher
         return true if changes.empty?
 
         n = :n
-        query = Cyrel.match(Cyrel.node(self.class.label_name).as(n))
-                     .where(Cyrel.id(n).eq(internal_id))
-                     .set(n => changes)
+
+        # Use all labels for database operations
+        labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name]
+
+        # Match node with all labels
+        query = Cyrel.match(Cyrel.node(n, labels: labels))
+                     .where(Cyrel.element_id(n).eq(internal_id)) # Use element_id explicitly
+
+        # Create separate SET clauses for each property to avoid overwriting existing properties
+        changes.each do |property, value|
+          query = query.set(Cyrel.prop(n, property) => value)
+        end
+
+        query = query.return_(n) # Return the updated node to confirm success
 
         cypher, params = query.to_cypher
         params ||= {}
 
-        self.class.connection.execute_cypher(cypher, params, 'Update')
-        changes_applied
-        true
+        result = self.class.connection.execute_cypher(cypher, params, 'Update')
+
+        if result.present? && result.first.present?
+          changes_applied
+          true
+        else
+          false
+        end
       end
     end
   end

@@ -98,6 +98,9 @@ Lint/EmptyClass:
 Lint/EmptyConditionalBody:
   Enabled: false # Sometimes a blank `if` is all we have left.
 
+Metrics/ParameterLists:
+  Enabled: false # Leave our well-meaning copy-paste spaghetti alone.
+
 Style/RedundantInterpolationUnfreeze:
   Enabled:
     false # Sometimes "#{"text"}" is the ketamine of string manipulation.
