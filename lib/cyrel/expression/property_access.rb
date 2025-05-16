@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'cyrel/expression/base'
+
 module Cyrel
   module Expression
     # Represents accessing a property on a variable (node or relationship alias).

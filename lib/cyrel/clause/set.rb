@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'cyrel/expression'
+require 'cyrel/expression/property_access'
+
 module Cyrel
   module Clause
     # Represents a SET clause in a Cypher query.
@@ -12,6 +15,7 @@ module Cyrel
       #   - Hash: { variable_or_prop_access => value_expression, ... }
       #     e.g., { Cyrel.prop(:n, :name) => "New Name", Cyrel.prop(:r, :weight) => 10 }
       #     e.g., { n: { name: "New Name", age: 30 } } # For SET n = properties or n += properties
+      #     e.g., { Cyrel.plus(:n) => { name: "New Name" } } # For SET n += { name: ... }
       #   - Array: [[variable, label_string], ...] # For SET n:Label
       #     e.g., [[:n, "NewLabel"], [:m, "AnotherLabel"]]
       #   Note: Mixing hash and array styles in one call is not directly supported, use multiple SET clauses if needed.
@@ -47,17 +51,20 @@ module Cyrel
         case assignments
         when Hash
           assignments.flat_map do |key, value|
-            if key.is_a?(Expression::PropertyAccess)
+            case key
+            when Expression::PropertyAccess
               # SET n.prop = value
               [[:property, key, Expression.coerce(value)]]
-            elsif key.is_a?(Symbol) || key.is_a?(String)
-              # SET n = properties or SET n += properties
-              # We need to decide which operator (= or +=). Defaulting to = for now.
-              # User might need to specify via a different method/option.
-              # Let's assume the value is a hash for this case.
+            when Symbol, String
+              # SET n = properties
               raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n = {props})' unless value.is_a?(Hash)
 
-              [[:variable_properties, key.to_sym, Expression.coerce(value)]]
+              [[:variable_properties, key.to_sym, Expression.coerce(value), :assign]]
+            when Cyrel::Plus
+              # SET n += properties
+              raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n += {props})' unless value.is_a?(Hash)
+
+              [[:variable_properties, key.variable.to_sym, Expression.coerce(value), :merge]]
             else
               raise ArgumentError, "Invalid key type in SET assignments hash: #{key.class}"
             end
@@ -78,15 +85,18 @@ module Cyrel
       end
 
       def render_assignment(assignment, query)
-        type, target, value = assignment
+        type, target, value, op = assignment
         case type
         when :property
           # target is PropertyAccess, value is Expression
           "#{target.render(query)} = #{value.render(query)}"
         when :variable_properties
           # target is variable symbol, value is Expression (Literal Hash)
-          # Using '=' operator here. Could add support for '+=' later.
-          "#{target} = #{value.render(query)}"
+          if op == :merge
+            "#{target} += #{value.render(query)}"
+          else
+            "#{target} = #{value.render(query)}"
+          end
         when :label
           # target is variable symbol, value is label string
           "#{target}:#{value}" # Labels are not parameterized
