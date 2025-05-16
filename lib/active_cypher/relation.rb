@@ -132,9 +132,11 @@ module ActiveCypher
       node_alias = :n
 
       # Always use just the primary label for database operations
-      label = model_class.respond_to?(:label_name) ? 
-              model_class.label_name : 
-              model_class.model_name.element.to_sym
+      label = if model_class.respond_to?(:label_name)
+                model_class.label_name
+              else
+                model_class.model_name.element.to_sym
+              end
 
       Cyrel
         .match(Cyrel.node(node_alias, labels: [label]))

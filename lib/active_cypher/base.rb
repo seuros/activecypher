@@ -24,7 +24,6 @@ module ActiveCypher
     include Model::Inspectable
 
     class << self
-
       # Attempts to retrieve a connection from the handler.
       # If you don't have a pool, you get to enjoy the fallback logic.
       # If you still don't have a connection, you get an error. It's the circle of life.

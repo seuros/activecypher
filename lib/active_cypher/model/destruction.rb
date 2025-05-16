@@ -22,7 +22,7 @@ module ActiveCypher
           raise 'Cannot destroy a new record' if new_record?
           raise 'Record already destroyed' if destroyed?
 
-          n      = :n
+          n = :n
           # Always use just the primary label for database operations
           label = self.class.label_name
           query  = Cyrel.match(Cyrel.node(n, labels: [label]))

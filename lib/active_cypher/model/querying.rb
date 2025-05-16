@@ -47,7 +47,7 @@ module ActiveCypher
 
           # Always use just the primary label for database operations
           label = label_name
-          
+
           query = Cyrel
                   .match(Cyrel.node(node_alias, labels: [label]))
                   .where(Cyrel.element_id(node_alias).eq(internal_db_id))

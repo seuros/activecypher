@@ -131,10 +131,10 @@ module ActiveCypher
       def create_record
         props = attributes_for_persistence
         n = :n
-        
+
         # Always use just the primary label for database operations
         label = self.class.label_name.to_s
-        
+
         # Create node with the primary label
         node = Cyrel.node(n, labels: [label], properties: props)
         query = Cyrel.create(node).return_(Cyrel.element_id(n).as(:internal_id))
@@ -170,10 +170,10 @@ module ActiveCypher
         return true if changes.empty?
 
         n = :n
-        
+
         # Always use just the primary label for database operations
         label = self.class.label_name
-        
+
         # Match node with the primary label
         query = Cyrel.match(Cyrel.node(n, labels: [label]))
                      .where(Cyrel.id(n).eq(internal_id))

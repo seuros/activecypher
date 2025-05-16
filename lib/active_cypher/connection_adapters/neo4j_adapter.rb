@@ -16,7 +16,7 @@ module ActiveCypher
       end
 
       # Explicit TX helpers — optional but handy.
-      def begin_transaction(**kwargs) = (@tx = @connection.session.begin_transaction(**kwargs))
+      def begin_transaction(**) = (@tx = @connection.session.begin_transaction(**))
       def commit_transaction(_)   = @tx&.commit
       def rollback_transaction(_) = @tx&.rollback
 
