@@ -16,6 +16,7 @@ module ActiveCypher
       assert_equal false, config[:ssl]
       assert_equal false, config[:ssc]
       assert_equal({}, config[:options])
+      assert_equal 'neo4j', config[:database]
     end
 
     def test_memgraph_with_auth
@@ -114,6 +115,47 @@ module ActiveCypher
 
       assert_equal 'neo4j', config[:adapter]
       assert_equal 'mydb', config[:database]
+    end
+
+    def test_neo4j_default_database
+      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687')
+      config = resolver.to_hash
+
+      assert_equal 'neo4j', config[:adapter]
+      assert_equal 'neo4j', config[:database]
+    end
+
+    def test_memgraph_default_database
+      resolver = ConnectionUrlResolver.new('memgraph://localhost:7687')
+      config = resolver.to_hash
+
+      assert_equal 'memgraph', config[:adapter]
+      assert_equal 'memgraph', config[:database]
+    end
+
+    def test_custom_database_path_overrides_default
+      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687/seuros')
+      config = resolver.to_hash
+
+      assert_equal 'neo4j', config[:adapter]
+      assert_equal 'seuros', config[:database]
+    end
+
+    def test_memgraph_with_custom_database_path
+      resolver = ConnectionUrlResolver.new('memgraph://localhost:7687/marissa')
+      config = resolver.to_hash
+
+      assert_equal 'memgraph', config[:adapter]
+      assert_equal 'marissa', config[:database]
+    end
+
+    def test_default_port_and_database
+      resolver = ConnectionUrlResolver.new('memgraph://localhost')
+      config = resolver.to_hash
+
+      assert_equal 'memgraph', config[:adapter]
+      assert_equal 'memgraph', config[:database]
+      assert_equal 7687, config[:port]
     end
 
     def test_default_port_when_not_specified
