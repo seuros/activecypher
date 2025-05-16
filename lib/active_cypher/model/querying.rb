@@ -45,14 +45,15 @@ module ActiveCypher
         def find(internal_db_id)
           node_alias = :n
 
-          # Always use just the primary label for database operations
-          label = label_name
+          # Use all labels if available, otherwise fall back to the primary label
+          labels = respond_to?(:labels) ? self.labels : [label_name]
 
           query = Cyrel
-                  .match(Cyrel.node(node_alias, labels: [label]))
+                  .match(Cyrel.node(node_alias, labels: labels))
                   .where(Cyrel.element_id(node_alias).eq(internal_db_id))
                   .return_(node_alias, Cyrel.element_id(node_alias).as(:internal_id))
                   .limit(1)
+          query.to_cypher
 
           Relation.new(self, query).first or
             raise ActiveCypher::RecordNotFound,

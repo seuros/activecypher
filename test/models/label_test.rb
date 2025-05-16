@@ -4,8 +4,8 @@ require 'test_helper'
 
 class LabelTest < ActiveSupport::TestCase
   test 'models use class name as default label' do
-    assert_equal [:person_node], PersonNode.labels
-    assert_equal :person_node, PersonNode.label_name
+    assert_equal [:Person], PersonNode.labels
+    assert_equal :Person, PersonNode.label_name
   end
 
   test 'models can define a custom label' do

@@ -11,12 +11,12 @@ module ActiveCypher
     include Logging
 
     # Let's just include every concern we can find, because why not.
+    include Model::Querying # Must be before Core so Core can override its methods
     include Model::Core
     include Model::Attributes
     include Model::ConnectionOwner
     include Model::Callbacks
     include Model::Persistence
-    include Model::Querying
     include Model::ConnectionHandling
     include Model::Destruction
     include Model::Abstract

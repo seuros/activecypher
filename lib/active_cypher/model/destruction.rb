@@ -23,24 +23,29 @@ module ActiveCypher
           raise 'Record already destroyed' if destroyed?
 
           n = :n
-          # Always use just the primary label for database operations
-          label = self.class.label_name
-          query  = Cyrel.match(Cyrel.node(n, labels: [label]))
-                        .where(Cyrel.id(n).eq(internal_id))
+          # Use all labels for database operations
+          labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name]
+          query  = Cyrel.match(Cyrel.node(n, labels: labels))
+                        .where(Cyrel.element_id(n).eq(internal_id))
                         .detach_delete(n)
+                        .return_('count(*) as deleted')
 
-          cypher = query.to_cypher
-          params = { id: internal_id }
+          cypher, params = query.to_cypher
+          params ||= {}
 
           # Here lies the true sorcery: one line to erase a node from existence.
           # If the database still remembers it, you may need to consult your local witch.
-          self.class.connection.execute_cypher(cypher, params, 'Destroy')
-          @destroyed = true
-          freeze # To make sure you can't Frankenstein it back to life. Lightning not included.
-          true
+          result = self.class.connection.execute_cypher(cypher, params, 'Destroy')
+          if result.present? && result.first.present? && (result.first[:deleted] || 0).positive?
+            @destroyed = true
+            freeze # To make sure you can't Frankenstein it back to life. Lightning not included.
+            true
+          else
+            false
+          end
         end
       rescue StandardError
-        false # Something went wrong. Don’t ask. Just walk away. Or blame the database, that's always fun. If it keeps happening, suspect back magick.
+        false # Something went wrong. Don't ask. Just walk away. Or blame the database, that's always fun. If it keeps happening, suspect back magick.
       end
 
       # Returns true if this object has achieved full existential closure.

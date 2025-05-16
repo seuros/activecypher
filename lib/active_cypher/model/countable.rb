@@ -17,8 +17,14 @@ module ActiveCypher
         def count
           cypher, params =
             if respond_to?(:label_name) # ⇒ node class
-              # Always use just the primary label for database operations
-              ["MATCH (n:#{label_name}) RETURN count(n) AS c", {}]
+              if respond_to?(:labels) && labels.any?
+                # Use all custom labels for COUNT operations
+                label_string = labels.map { |l| ":#{l}" }.join
+                ["MATCH (n#{label_string}) RETURN count(n) AS c", {}]
+              else
+                # Fall back to primary label
+                ["MATCH (n:#{label_name}) RETURN count(n) AS c", {}]
+              end
             else # ⇒ relationship class
               ["MATCH ()-[r:#{relationship_type}]-() RETURN count(r) AS c", {}] # ▲ undirected
             end

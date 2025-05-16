@@ -131,15 +131,17 @@ module ActiveCypher
     def default_query
       node_alias = :n
 
-      # Always use just the primary label for database operations
-      label = if model_class.respond_to?(:label_name)
-                model_class.label_name
-              else
-                model_class.model_name.element.to_sym
-              end
+      # Use all labels if available, otherwise fall back to primary label
+      labels = if model_class.respond_to?(:labels)
+                 model_class.labels
+               elsif model_class.respond_to?(:label_name)
+                 [model_class.label_name]
+               else
+                 [model_class.model_name.element.to_sym]
+               end
 
       Cyrel
-        .match(Cyrel.node(node_alias, labels: [label]))
+        .match(Cyrel.node(node_alias, labels: labels))
         .return_(node_alias, Cyrel.element_id(node_alias).as(:internal_id))
     end
 
