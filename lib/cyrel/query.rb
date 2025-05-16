@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'cyrel/parameterizable'
 # Require necessary clause and pattern types
 
 # Require all clause types for DSL methods
