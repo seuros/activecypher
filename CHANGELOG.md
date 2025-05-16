@@ -1,5 +1,20 @@
 ## [Unreleased]
 
+## [0.5.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.4.1...active_cypher/v0.5.0) (2025-05-16)
+
+
+### Features
+
+* Add consistent, descriptive comments to all Cyrel DSL helpers ([#9](https://github.com/seuros/activecypher/issues/9)) ([5a5824c](https://github.com/seuros/activecypher/commit/5a5824c27b0aedfa2304d6bd741c5e0b241abbb6))
+* expose adapter_class ([#8](https://github.com/seuros/activecypher/issues/8)) ([4ef9259](https://github.com/seuros/activecypher/commit/4ef92593b9d9ef66ae41262236401c98d051911f))
+
+
+### Bug Fixes
+
+* name node correctly ([c868d2b](https://github.com/seuros/activecypher/commit/c868d2b4d5f97a97076a2bd3913752d614ade98f))
+* name node correctly ([c6c3fed](https://github.com/seuros/activecypher/commit/c6c3fed440bbe4451b0e3c27273502d103892403))
+* name node correctly ([#6](https://github.com/seuros/activecypher/issues/6)) ([5d5fe9f](https://github.com/seuros/activecypher/commit/5d5fe9f1cbcdf78b97233efdf7e22142cc837c8e))
+
 ## [0.4.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.4.0...active_cypher/v0.4.1) (2025-05-13)
 
 
