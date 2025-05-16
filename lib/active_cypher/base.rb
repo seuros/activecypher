@@ -22,7 +22,6 @@ module ActiveCypher
     include Model::Abstract
     include Model::Countable
     include Model::Inspectable
-    include Model::NodeLabels
 
     class << self
 
