@@ -91,7 +91,7 @@ module ActiveCypher
       # Extract database from path, if present
       path_database = uri.path.empty? ? nil : uri.path.sub(%r{^/}, '')
       path_database = nil if path_database&.empty?
-      
+
       # Determine database using factory pattern:
       # 1. Use path database if specified
       # 2. Otherwise fall back to adapter name as default
