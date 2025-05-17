@@ -2,35 +2,16 @@
 # ActiveCypher graph‑DB connections
 # ───────────────────────────────────────────────
 
-shared:                     # applies to every env unless overridden
-  ssl: false                # Because encryption is for people who deploy to the public internet on purpose
-
 development:
-  # Neo4j: the existential dread edition
   neo4j:
-    url:      neo4j://neo4j:activecypher@localhost:7687  # VIP lounge
-    multi_db: false
+    url: neo4j://neo4j:activecypher@localhost:7687
 
-  # Memgraph: fast, snack‑sized, bought us lunch
   primary:
-    url:      memgraph://memgraph:activecypher@localhost:7688
-    multi_db: false                         # One DB to rule them all
+    url: memgraph://memgraph:activecypher@localhost:7688
 
 test:
-  primary:
-    url:      <%= ENV.fetch("TEST_MEMG_SSL", "false") == "true" ? "memgraph+ssl://" : "memgraph://" %><%= ENV.fetch("TEST_MEMG_USER", "memgraph") %>:<%= ENV.fetch("TEST_MEMG_PASS", "activecypher") %>@<%= ENV.fetch("TEST_MEMG_HOST", "localhost") %>:<%= ENV.fetch("TEST_MEMG_PORT", "7688") %>
-    multi_db: false
-
-  # ------ Neo4j connection -------------------
   neo4j:
-    url:      <%= ENV.fetch("TEST_NEO4J_SSL", "false") == "true" ? "neo4j+ssl://" : "neo4j://" %><%= ENV.fetch("TEST_NEO4J_USER", "neo4j") %>:<%= ENV.fetch("TEST_NEO4J_PASS", "activecypher") %>@<%= ENV.fetch("TEST_NEO4J_HOST", "localhost") %>:<%= ENV.fetch("TEST_NEO4J_PORT", "7687") %>
-    multi_db: false
+    url: neo4j://neo4j:activecypher@localhost:7687
 
-production:
   primary:
-    url:      memgraph+ssl://<%= ENV["MG_USER"] %>:<%= ENV["MG_PASS"] %>@<%= ENV.fetch("MG_HOST", "memgraph") %>:7687  # Prod gets the good stuff
-    multi_db: false                         # Complexity is scary (and licensing is expensive)
-
-# Bonus content:
-# Neo4j ran prod until Memgraph bribed us with kebabs.
-# RIP Neo4j licence fee – gone but not forgotten.
+    url: memgraph://memgraph:activecypher@localhost:7688

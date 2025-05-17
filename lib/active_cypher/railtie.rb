@@ -16,12 +16,10 @@ module ActiveCypher
     end
 
     initializer 'active_cypher.load_multi_db' do |_app|
-      configs = ActiveCypher::CypherConfig.for('*') # entire merged hash
-      %i[writing reading analytics].each do |role|
-        next unless (cfg = configs[role])
-
+      configs = ActiveCypher::CypherConfig.for('*')
+      configs.each do |name, cfg|
         pool = ActiveCypher::ConnectionPool.new(cfg)
-        ActiveCypher::Base.connection_handler.set(role, :default, pool)
+        ActiveCypher::Base.connection_handler.set(name.to_sym, :default, pool)
       end
     end
 
