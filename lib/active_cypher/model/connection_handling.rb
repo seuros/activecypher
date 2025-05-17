@@ -34,12 +34,8 @@ module ActiveCypher
             resolved_config = cfg
           end
 
-          path          = "active_cypher/connection_adapters/#{adapter_name}_adapter"
-          class_name    = "#{adapter_name}_adapter".camelize
-
-          require path
-          adapter_class = ActiveCypher::ConnectionAdapters.const_get(class_name)
-          self.connection = adapter_class.new(resolved_config)
+          # Use the Registry to create the adapter
+          self.connection = ActiveCypher::ConnectionAdapters::Registry.create_from_config(resolved_config)
           connection.connect
           connection
         rescue LoadError => e
@@ -57,13 +53,18 @@ module ActiveCypher
           mapping.deep_symbolize_keys.each do |role, db_key|
             spec = ActiveCypher::CypherConfig.for(db_key) # ← may raise KeyError
 
-            # If spec contains a URL, use ConnectionFactory
+            # If spec contains a URL, parse it using the Registry (via ConnectionUrlResolver)
             if spec[:url]
-              factory = ActiveCypher::ConnectionFactory.new(spec[:url])
-              spec = factory.config.merge(spec.except(:url)) if factory.valid?
+              resolver = ActiveCypher::ConnectionUrlResolver.new(spec[:url])
+              url_config = resolver.to_hash
+              raise ArgumentError, "Invalid connection URL: #{spec[:url]}" unless url_config
+
+              spec = url_config.merge(spec.except(:url))
             end
 
-            pool = ActiveCypher::ConnectionPool.new(spec)
+            # Use the Registry to create the adapter for the pool
+            adapter = ActiveCypher::ConnectionAdapters::Registry.create_from_config(spec)
+            pool = ActiveCypher::ConnectionPool.new(adapter.config)
             connection_handler.set(role.to_sym, :default, pool)
           rescue KeyError => e
             raise ActiveCypher::UnknownConnectionError,

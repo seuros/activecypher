@@ -15,6 +15,12 @@ module ActiveCypher
   # - memgraph+ssl://
   # - memgraph+ssc://
   #
+  # Database resolution:
+  # - If specified in path: neo4j://localhost:7687/custom_db → db=custom_db
+  # - Otherwise defaults based on adapter:
+  #   - neo4j://localhost:7687 → db=neo4j
+  #   - memgraph://localhost:7687 → db=memgraph
+  #
   # The output of to_hash follows a consistent pattern:
   # {
   #   adapter: "neo4j", # or "memgraph"
@@ -22,7 +28,7 @@ module ActiveCypher
   #   password: "pass",
   #   host: "localhost",
   #   port: 7687,
-  #   database: nil, # or optional
+  #   database: "neo4j", # or "memgraph" or custom path value
   #   ssl: true,
   #   ssc: false,
   #   options: {} # future-proof for params like '?timeout=30'
@@ -83,8 +89,13 @@ module ActiveCypher
       options = extract_query_params(uri.query)
 
       # Extract database from path, if present
-      database = uri.path.empty? ? nil : uri.path.sub(%r{^/}, '')
-      database = nil if database&.empty?
+      path_database = uri.path.empty? ? nil : uri.path.sub(%r{^/}, '')
+      path_database = nil if path_database&.empty?
+
+      # Determine database using factory pattern:
+      # 1. Use path database if specified
+      # 2. Otherwise fall back to adapter name as default
+      database = path_database || adapter
 
       # The to_s conversion handles nil values
       username = uri.user.to_s.empty? ? nil : CGI.unescape(uri.user)

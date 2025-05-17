@@ -12,31 +12,21 @@ module ActiveCypher
     class Driver
       DEFAULT_POOL_SIZE = ENV.fetch('BOLT_POOL_SIZE', 10).to_i
 
-      # Map URI schemes ➞ security/verification flags
-      # Because nothing says "enterprise" like six ways to spell 'bolt'.
-      SCHEMES = {
-        'bolt' => { secure: false, verify: true },
-        'bolt+s' => { secure: true, verify: true },
-        'bolt+ssc' => { secure: true, verify: false },
-        'neo4j' => { secure: false, verify: true },
-        'neo4j+s' => { secure: true, verify: true },
-        'neo4j+ssc' => { secure: true, verify: false }
-      }.freeze
-
       # Initializes the driver, because you can't spell "abstraction" without "action".
       #
       # @param uri [String] The Bolt URI
       # @param adapter [Object] The adapter instance
       # @param auth_token [Hash] Authentication token
       # @param pool_size [Integer] Connection pool size
-      def initialize(uri:, adapter:, auth_token:, pool_size: DEFAULT_POOL_SIZE)
-        @uri     = URI(uri)
-        scheme   = SCHEMES.fetch(@uri.scheme) { raise ArgumentError, "Unsupported Bolt scheme: #{@uri.scheme}" }
+      # @param secure [Boolean] Use SSL (default: false)
+      # @param verify_cert [Boolean] Verify SSL certificate (default: true)
+      def initialize(uri:, adapter:, auth_token:, pool_size: DEFAULT_POOL_SIZE, secure: false, verify_cert: true)
+        @uri = URI(uri)
 
         @adapter       = adapter
         @auth          = auth_token
-        @secure        = scheme[:secure]
-        @verify_cert   = scheme[:verify]
+        @secure        = secure
+        @verify_cert   = verify_cert
 
         # Create a connection pool with the specified size
         # Because one connection is never enough for true disappointment.

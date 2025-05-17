@@ -3,6 +3,9 @@
 module ActiveCypher
   module ConnectionAdapters
     class Neo4jAdapter < AbstractBoltAdapter
+      # Register this adapter with the registry
+      Registry.register('neo4j', self)
+
       def execute_cypher(cypher, params = {}, ctx = 'Query')
         connect
         session = connection.session # thin wrapper around Bolt::Session

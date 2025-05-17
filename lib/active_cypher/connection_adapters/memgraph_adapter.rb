@@ -3,6 +3,8 @@
 module ActiveCypher
   module ConnectionAdapters
     class MemgraphAdapter < AbstractBoltAdapter
+      # Register this adapter with the registry
+      Registry.register('memgraph', self)
       # Memgraph defaults to **implicit auto‑commit** transactions :contentReference[oaicite:1]{index=1},
       # so we simply run the Cypher and return the rows.
       def execute_cypher(cypher, params = {}, ctx = 'Query')

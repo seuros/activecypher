@@ -112,17 +112,6 @@ module ActiveCypher
 
       private
 
-      # # Internal method to initialize a record from the database
-      # # @param attributes [Hash] The attributes from the database
-      # # @return [self]
-      # def init_with_attributes(attrs)
-      #   binding.irb
-      #   assign_attributes(**attrs) if attrs
-      #   @new_record = false # Mark as not new when loading from DB
-      #   clear_changes_information
-      #   self
-      # end
-
       # Creates the record in the database using Cypher.
       #
       # @return [Boolean] true if the database accepted your offering.
