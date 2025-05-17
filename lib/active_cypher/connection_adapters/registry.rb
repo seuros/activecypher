@@ -46,12 +46,19 @@ module ActiveCypher
         def create_from_config(config, options = {})
           adapter_type = config[:adapter].to_s.downcase
           adapter_class = adapters[adapter_type]
-          raise ActiveCypher::ConnectionError, "No adapter registered for '#{adapter_type}'. The registry is silent." unless adapter_class
+          unless adapter_class
+            # Try to require the adapter file dynamically
+            begin
+              require "active_cypher/connection_adapters/#{adapter_type}_adapter"
+            rescue LoadError
+              # Ignore, will raise below
+            end
+            adapter_class = adapters[adapter_type]
+          end
+          raise ActiveCypher::ConnectionError, "No adapter registered for '#{adapter_type}'. The registry is silent (and so is require)." unless adapter_class
 
           full_config = config.merge(options)
           adapter_class.new(full_config)
-
-          # No fallback, just blow up with a cryptic error.
         end
 
         # Creates a Bolt driver from a connection URL, because sometimes you want to skip the foreplay and go straight to disappointment.

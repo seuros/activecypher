@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rails/railtie'
+require 'active_cypher/railtie'
 require 'active_cypher/logging'
 require 'active_cypher/cypher_config'
 
