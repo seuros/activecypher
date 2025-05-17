@@ -58,15 +58,20 @@ module ActiveCypher
     #
     #   WorksAtRelationship.connection  # -> PersonNode.connection
     #
-    def self.connection
-      return @connection if defined?(@connection) && @connection
+   def self.connection
+     # If a node_base_class is set (directly or by convention), always delegate to its connection
+     if (klass = node_base_class)
+       return klass.connection
+     end
 
-      begin
-        from_class.constantize.connection
-      rescue StandardError
-        nil
-      end
-    end
+     return @connection if defined?(@connection) && @connection
+
+     begin
+       from_class.constantize.connection
+     rescue StandardError
+       nil
+     end
+   end
 
     # --------------------------------------------------------------
     # DSL helpers
@@ -74,9 +79,50 @@ module ActiveCypher
     class_attribute :_from_class_name,   instance_writer: false
     class_attribute :_to_class_name,     instance_writer: false
     class_attribute :_relationship_type, instance_writer: false
+    class_attribute :_node_base_class,   instance_writer: false
 
     class << self
       attr_reader :last_internal_id
+
+      # DSL for setting or getting the node base class for connection delegation
+      def node_base_class(klass = nil)
+        if klass.nil?
+          # If not set, try convention: XxxRelationship -> XxxNode
+          return _node_base_class if _node_base_class
+          if self.name&.end_with?("Relationship")
+            node_base_name = self.name.sub(/Relationship\z/, "Node")
+            begin
+              node_base_klass = node_base_name.constantize
+              if node_base_klass.respond_to?(:abstract_class?) && node_base_klass.abstract_class?
+                self._node_base_class = node_base_klass
+                return node_base_klass
+              end
+            rescue NameError
+              # Do nothing, fallback to nil
+            end
+          end
+          return _node_base_class
+        end
+        # Only allow setting on abstract relationship base classes
+        if !self.abstract_class?
+          raise "Cannot set node_base_class on non-abstract relationship class #{self.name}"
+        end
+        unless klass.respond_to?(:abstract_class?) && klass.abstract_class?
+          raise ArgumentError, "node_base_class must be an abstract node base class (got #{klass})"
+        end
+        self._node_base_class = klass
+      end
+
+      # Prevent subclasses from overriding node_base_class
+      def inherited(subclass)
+        super
+        if self._node_base_class
+          subclass._node_base_class = self._node_base_class
+          def subclass.node_base_class(*)
+            raise "Cannot override node_base_class in subclass #{self.name}; it is locked to #{self._node_base_class}"
+          end
+        end
+      end
 
       # -- endpoints ------------------------------------------------
       def from_class(value = nil)

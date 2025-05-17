@@ -69,7 +69,7 @@ production:
 
 ActiveCypher will automatically pick up the correct configuration for the current Rails environment.
 
-**You do not need to call any setup code in your test helper or application initializer.**  
+**You do not need to call any setup code in your test helper or application initializer.**
 Connections are managed automatically, just like ActiveRecord.
 
 ### Connecting Models to Different Databases
@@ -144,6 +144,40 @@ class BelievesInRel < ApplicationGraphRelationship
   attribute :level_of_devotion,  :string # "casual", "zealot", "makes merch"
 end
 ```
+
+### Relationship Base and Node Base Convention (a.k.a. “Let’s Not Repeat Ourselves, Please”)
+
+ActiveCypher is here to save you from yourself (and your future self at 3am). When you define an abstract relationship base class—say, `ApplicationGraphRelationship`—ActiveCypher will, by convention, automatically pair it up with the corresponding abstract node base class (like `ApplicationGraphNode`). It’s like Tinder for your base classes, but with less ghosting and more database connections.
+
+- If your relationship base class is named `XxxRelationship`, and you have a node base class named `XxxNode` in the same namespace, ActiveCypher will ship them together faster than your favorite fandom.
+- You do **not** need to manually configure this association in most cases. Go ahead, be lazy. We encourage it.
+
+For example:
+
+```ruby
+# app/graph/application_graph_node.rb
+class ApplicationGraphNode < ActiveCypher::Base
+  self.abstract_class = true
+  connects_to writing: :primary, reading: :primary
+end
+
+# app/graph/application_graph_relationship.rb
+class ApplicationGraphRelationship < ActiveCypher::Relationship
+  self.abstract_class = true
+  # No need to specify node_base_class; ActiveCypher will play matchmaker and default to ApplicationGraphNode
+end
+```
+
+If you’re a control freak (or just like to break the rules), you can explicitly set the node base class in your relationship base using:
+
+```ruby
+class MyRelationshipBase < ActiveCypher::Relationship
+  self.abstract_class = true
+  node_base_class MyNodeBase
+end
+```
+
+This ensures all relationships inheriting from your abstract relationship base will always use the correct connection, and—just like your favorite coffee shop’s WiFi—cannot be overridden by random subclasses.
 
 **Example: Creating and Querying Nodes and Relationships**
 
