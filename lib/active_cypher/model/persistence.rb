@@ -127,16 +127,31 @@ module ActiveCypher
         # Use all labels for database operations
         labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name.to_s]
 
-        # Create node with all labels
-        node = Cyrel.node(n, labels: labels, properties: props)
-        query = Cyrel.create(node).return_(Cyrel.element_id(n).as(:internal_id))
-        cypher, params = query.to_cypher
-        params ||= {}
+        # For Memgraph, construct direct Cypher query
+        label_string = labels.map { |l| ":#{l}" }.join
 
-        data = self.class.connection.execute_cypher(cypher, params, 'Create')
+        # Handle properties for Cypher query
+        props_str = props.map do |k, v|
+          value_str = if v.nil?
+                        'NULL'
+                      elsif v.is_a?(String)
+                        "'#{v.gsub("'", "\\\\'")}'"
+                      elsif v.is_a?(Numeric) || v.is_a?(TrueClass) || v.is_a?(FalseClass)
+                        v.to_s
+                      else
+                        "'#{v.to_s.gsub("'", "\\\\'")}'"
+                      end
+          "#{k}: #{value_str}"
+        end.join(', ')
+
+        cypher = "CREATE (#{n}#{label_string} {#{props_str}}) " \
+                 "RETURN id(#{n}) AS internal_id"
+
+        data = self.class.connection.execute_cypher(cypher, {}, 'Create')
+
         return false if data.blank? || !data.first.key?(:internal_id)
 
-        self.internal_id = data.first[:internal_id].to_s
+        self.internal_id = data.first[:internal_id]
         @new_record = false
         changes_applied
         true
@@ -161,33 +176,32 @@ module ActiveCypher
         changes = changes_to_save
         return true if changes.empty?
 
-        n = :n
-
         # Use all labels for database operations
         labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name]
 
-        # Match node with all labels
-        query = Cyrel.match(Cyrel.node(n, labels: labels))
-                     .where(Cyrel.element_id(n).eq(internal_id)) # Use element_id explicitly
+        label_string = labels.map { |l| ":#{l}" }.join
+        set_clauses = changes.map do |property, value|
+          # Handle different value types appropriately
+          if value.nil?
+            "n.#{property} = NULL"
+          elsif value.is_a?(String)
+            "n.#{property} = '#{value.gsub("'", "\\\\'")}'"
+          elsif value.is_a?(Numeric) || value.is_a?(TrueClass) || value.is_a?(FalseClass)
+            "n.#{property} = #{value}"
+          else
+            "n.#{property} = '#{value.to_s.gsub("'", "\\\\'")}'"
+          end
+        end.join(', ')
 
-        # Create separate SET clauses for each property to avoid overwriting existing properties
-        changes.each do |property, value|
-          query = query.set(Cyrel.prop(n, property) => value)
-        end
+        cypher = "MATCH (n#{label_string}) " \
+                 "WHERE id(n) = #{internal_id} " \
+                 "SET #{set_clauses} " \
+                 'RETURN n'
 
-        query = query.return_(n) # Return the updated node to confirm success
+        self.class.connection.execute_cypher(cypher, {}, 'Update')
 
-        cypher, params = query.to_cypher
-        params ||= {}
-
-        result = self.class.connection.execute_cypher(cypher, params, 'Update')
-
-        if result.present? && result.first.present?
-          changes_applied
-          true
-        else
-          false
-        end
+        changes_applied
+        true
       end
     end
   end

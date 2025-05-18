@@ -22,7 +22,9 @@ module Cyrel
       Expression::FunctionCall.new(:elementId, Clause::Return::RawIdentifier.new(node_variable.to_s))
     end
 
-    alias id element_id
+    def id(node_variable)
+      Expression::FunctionCall.new(:id, Clause::Return::RawIdentifier.new(node_variable.to_s))
+    end
 
     # Because apparently, COUNT(*) isn’t obvious enough.
     # Handles the 'give me everything and make it snappy' use case.

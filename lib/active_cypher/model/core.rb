@@ -12,7 +12,7 @@ module ActiveCypher
         include ActiveCypher::Associations
         include ActiveCypher::Scoping
 
-        attribute :internal_id, :string
+        attribute :internal_id, :integer
 
         class_attribute :configurations, instance_accessor: false,
                                          default: ActiveSupport::HashWithIndifferentAccess.new

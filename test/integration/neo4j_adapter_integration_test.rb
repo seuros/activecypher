@@ -4,23 +4,13 @@ require 'test_helper'
 
 class Neo4jAdapterIntegrationTest < ActiveSupport::TestCase
   def setup
-    clear_database
+    connection.execute_cypher('MATCH (n) DETACH DELETE n')
 
     assert_changes -> { connection.execute_cypher('MATCH (n) RETURN count(n) AS count', {})[0][:count].to_i }, 2 do
-      connection.execute_cypher(
-        "CREATE (:Company {name: 'Acme Corp', founding_year: 1990, active: true}), (:Company {name: 'Globex Inc', founding_year: 1980, active: false})",
-        {} # Pass empty params explicitly
-      )
+      CompanyNode.create(name: 'Acme Corp', founding_year: 1990, active: true)
+      CompanyNode.create(name: 'Globex Inc', founding_year: 1980, active: false)
     end
   end
-
-  def teardown
-    # Clean the database after each test
-    clear_database
-    CompanyNode.connection&.disconnect
-  end
-
-  # --- Test Cases ---
 
   def test_find_fetches_correct_node
     # Create a unique company for this test

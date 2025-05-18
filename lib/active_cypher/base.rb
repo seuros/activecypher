@@ -44,23 +44,18 @@ module ActiveCypher
       def connection
         # Determine the current role (e.g., :writing, :reading)
         # ActiveCypher::RuntimeRegistry.current_role defaults to :writing
-        role_to_use = ActiveCypher::RuntimeRegistry.current_role
-        shard_to_use = ActiveCypher::RuntimeRegistry.current_shard # Typically :default
-
-        # Find the pool for the current role and shard
-        if (pool = connection_handler.pool(role_to_use, shard_to_use))
-          return pool.connection
+        # Only use db_key for pool lookup
+        if respond_to?(:connects_to_mappings) && connects_to_mappings.is_a?(Hash)
+          db_key = connects_to_mappings[:writing] # or whichever role is appropriate
+          if db_key && (pool = connection_handler.pool(db_key))
+            return pool.connection
+          end
         end
 
-        # Fallback for models that might have a direct @connection (less common with connects_to)
-        # This part might be less relevant if all models use connects_to
-        if defined?(@connection) && @connection&.active?
-          # log_warn "Using direct @connection for #{name}. Consider using connects_to." # Optional warning
-          return @connection
-        end
+        return @connection if defined?(@connection) && @connection&.active?
 
         raise ActiveCypher::ConnectionNotEstablished,
-              "No connection pool found for graph #{name}, role=#{role_to_use.inspect}, shard=#{shard_to_use.inspect}. " \
+              "No connection pool found for graph #{name}, db_key=#{db_key.inspect}. " \
               'Ensure `connects_to` is configured for this model or its ancestors, ' \
               'and `cypher_databases.yml` has the corresponding entries.'
       end

@@ -5,7 +5,7 @@ module ActiveCypher
     # Manages transaction state (BEGIN/COMMIT/ROLLBACK) and runs queries within a transaction.
     class Transaction
       include Instrumentation
-      attr_reader :bookmarks, :metadata
+      attr_reader :bookmarks, :metadata, :connection
 
       # Initializes a new Transaction instance.
       #
@@ -35,10 +35,10 @@ module ActiveCypher
           # Send RUN message
           run_metadata = {}
           run_msg = Messaging::Run.new(query_str, parameters, run_metadata)
-          @connection.write_message(run_msg)
+          connection.write_message(run_msg)
 
           # Read response to RUN
-          response = @connection.read_message
+          response = connection.read_message
           qid = -1
           fields = []
 
@@ -53,7 +53,7 @@ module ActiveCypher
             pull_metadata = { 'n' => -1 }
             pull_metadata['qid'] = qid if qid != -1
             pull_msg = Messaging::Pull.new(pull_metadata)
-            @connection.write_message(pull_msg)
+            connection.write_message(pull_msg)
 
             # Process PULL response(s)
             records = []
@@ -61,7 +61,7 @@ module ActiveCypher
 
             # Read messages until we get a SUCCESS (or FAILURE)
             loop do
-              msg = @connection.read_message
+              msg = connection.read_message
               case msg
               when Messaging::Record
                 # Store record with raw values - processing will happen in the adapter
@@ -108,10 +108,10 @@ module ActiveCypher
         instrument_transaction(:commit, object_id) do
           # Send COMMIT message
           commit_msg = Messaging::Commit.new
-          @connection.write_message(commit_msg)
+          connection.write_message(commit_msg)
 
           # Read response to COMMIT
-          response = @connection.read_message
+          response = connection.read_message
 
           case response
           when Messaging::Success
@@ -163,10 +163,10 @@ module ActiveCypher
         instrument_transaction(:rollback, object_id) do
           # Send ROLLBACK message
           rollback_msg = Messaging::Rollback.new
-          @connection.write_message(rollback_msg)
+          connection.write_message(rollback_msg)
 
           # Read response to ROLLBACK
-          response = @connection.read_message
+          response = connection.read_message
 
           case response
           when Messaging::Success

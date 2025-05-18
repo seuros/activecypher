@@ -5,7 +5,7 @@ require 'timeout'
 
 module ActiveCypher
   class ConnectionPool
-    attr_reader :spec
+    attr_reader :spec, :connection_key
 
     def initialize(spec)
       @spec = spec.symbolize_keys
@@ -44,28 +44,10 @@ module ActiveCypher
         conn = @conn_ref.value
         return conn if conn&.active?
 
-        # Slow path —create a new connection with retry logic
-        retries = 0
-        max_retries = @spec[:max_retries]
-
-        begin
-          new_conn = build_connection
-          @conn_ref.set(new_conn)
-          @retry_count.set(0) # Reset retry count on success
-          return new_conn
-        rescue StandardError => e
-          retries += 1
-          if retries <= max_retries
-            # Exponential backoff
-            sleep_time = 0.1 * (2**(retries - 1))
-            sleep(sleep_time)
-            retry
-          else
-            # Track persistent failures
-            @retry_count.update { |count| count + 1 }
-            raise ConnectionError, "Failed to establish connection after #{max_retries} attempts: #{e.message}"
-          end
-        end
+        # Create a new connection
+        new_conn = build_connection
+        @conn_ref.set(new_conn)
+        return new_conn
       end
     end
     alias checkout connection

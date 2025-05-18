@@ -47,7 +47,7 @@ module ActiveCypher
     # --------------------------------------------------------------
     # Attributes
     # --------------------------------------------------------------
-    attribute :internal_id, :string
+    attribute :internal_id, :integer
 
     # --------------------------------------------------------------
     # Connection fallback
@@ -58,20 +58,20 @@ module ActiveCypher
     #
     #   WorksAtRelationship.connection  # -> PersonNode.connection
     #
-   def self.connection
-     # If a node_base_class is set (directly or by convention), always delegate to its connection
-     if (klass = node_base_class)
-       return klass.connection
-     end
+    def self.connection
+      # If a node_base_class is set (directly or by convention), always delegate to its connection
+      if (klass = node_base_class)
+        return klass.connection
+      end
 
-     return @connection if defined?(@connection) && @connection
+      return @connection if defined?(@connection) && @connection
 
-     begin
-       from_class.constantize.connection
-     rescue StandardError
-       nil
-     end
-   end
+      begin
+        from_class.constantize.connection
+      rescue StandardError
+        nil
+      end
+    end
 
     # --------------------------------------------------------------
     # DSL helpers
@@ -89,8 +89,9 @@ module ActiveCypher
         if klass.nil?
           # If not set, try convention: XxxRelationship -> XxxNode
           return _node_base_class if _node_base_class
-          if self.name&.end_with?("Relationship")
-            node_base_name = self.name.sub(/Relationship\z/, "Node")
+
+          if name&.end_with?('Relationship')
+            node_base_name = name.sub(/Relationship\z/, 'Node')
             begin
               node_base_klass = node_base_name.constantize
               if node_base_klass.respond_to?(:abstract_class?) && node_base_klass.abstract_class?
@@ -104,23 +105,22 @@ module ActiveCypher
           return _node_base_class
         end
         # Only allow setting on abstract relationship base classes
-        if !self.abstract_class?
-          raise "Cannot set node_base_class on non-abstract relationship class #{self.name}"
-        end
+        raise "Cannot set node_base_class on non-abstract relationship class #{name}" unless abstract_class?
         unless klass.respond_to?(:abstract_class?) && klass.abstract_class?
           raise ArgumentError, "node_base_class must be an abstract node base class (got #{klass})"
         end
+
         self._node_base_class = klass
       end
 
       # Prevent subclasses from overriding node_base_class
       def inherited(subclass)
         super
-        if self._node_base_class
-          subclass._node_base_class = self._node_base_class
-          def subclass.node_base_class(*)
-            raise "Cannot override node_base_class in subclass #{self.name}; it is locked to #{self._node_base_class}"
-          end
+        return unless _node_base_class
+
+        subclass._node_base_class = _node_base_class
+        def subclass.node_base_class(*)
+          raise "Cannot override node_base_class in subclass #{name}; it is locked to #{_node_base_class}"
         end
       end
 
@@ -206,8 +206,10 @@ module ActiveCypher
         raise 'Cannot destroy a new relationship' if new_record?
         raise 'Relationship already destroyed'    if destroyed?
 
-        cypher = 'MATCH ()-[r]-() WHERE elementId(r) = $id DELETE r'
-        params = { id: internal_id }
+        adapter = self.class.connection.id_handler
+
+        cypher = "MATCH ()-[r]-() WHERE #{adapter.with_direct_id(internal_id)} DELETE r"
+        params = {}
 
         self.class.connection.execute_cypher(cypher, params, 'Destroy Relationship')
         @destroyed = true
@@ -232,22 +234,31 @@ module ActiveCypher
       rel_ty = self.class.relationship_type
       arrow  = '->' # outgoing by default
 
-      parts  = []
-      parts << 'MATCH (a) WHERE elementId(a) = $from_id'
-      parts << 'MATCH (b) WHERE elementId(b) = $to_id'
-      parts << "CREATE (a)-[r:#{rel_ty}]#{arrow}(b)"
+      adapter = self.class.connection.id_handler
+      parts = []
+
+      # Build the Cypher query based on the adapter
+      id_clause = adapter.with_direct_node_ids(from_node.internal_id, to_node.internal_id)
+      parts << "MATCH (p), (h) WHERE #{id_clause}"
+      parts << "CREATE (p)-[r:#{rel_ty}]#{arrow}(h)"
       parts << 'SET r += $props' unless props.empty? # only if we have props
-      parts << 'RETURN elementId(r) AS rid'
+      parts << "RETURN #{adapter.return_id}"
 
       cypher = parts.join(' ')
-      params = {
-        from_id: from_node.internal_id,
-        to_id: to_node.internal_id,
-        props: props
-      }
+      params = { props: props }
 
-      row = self.class.connection.execute_cypher(cypher, params, 'Create Relationship').first
-      rid = row && (row[:rid] || row['rid']) or raise 'Relationship creation returned no id'
+      # Execute Cypher query
+      result = self.class.connection.execute_cypher(cypher, params, 'Create Relationship')
+
+      row = result.first
+
+      # Try different ways to access the ID
+      rid_sym = row && row[:rid]
+      rid_str = row && row['rid']
+
+      rid = rid_sym || rid_str
+
+      raise 'Relationship creation returned no id' if rid.nil?
 
       self.internal_id = rid
       self.class.instance_variable_set(:@last_internal_id, rid)
@@ -263,11 +274,14 @@ module ActiveCypher
       changes = changes_to_save
       return true if changes.empty?
 
+      adapter = self.class.connection.id_handler
+
       cypher = <<~CYPHER
-        MATCH ()-[r]-() WHERE elementId(r) = $id
+        MATCH ()-[r]-() WHERE #{adapter.with_direct_id(internal_id)}
         SET r += $props
       CYPHER
-      params = { id: internal_id, props: changes }
+
+      params = { props: changes }
 
       self.class.connection.execute_cypher(cypher, params, 'Update Relationship')
       changes_applied

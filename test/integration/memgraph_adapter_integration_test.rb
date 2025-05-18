@@ -11,7 +11,7 @@ class MemgraphAdapterIntegrationTest < ActiveSupport::TestCase
   end
 
   def teardown
-    ActiveCypher::Base.connection&.disconnect
+    PersonNode.connection&.disconnect
   end
 
   def test_find_fetches_correct_node
