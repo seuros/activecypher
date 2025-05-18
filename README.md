@@ -76,28 +76,32 @@ Connections are managed automatically, just like ActiveRecord.
 
 You can configure each node (model) class to use a specific connection by using the `connects_to` class method. This allows you to route different models to different databases or roles.
 
-For example:
+There are two syntaxes for `connects_to`:
+
+- **Full mapping** (separate writing/reading roles):
 
 ```ruby
-# app/graph/application_graph_node.rb
 class ApplicationGraphNode < ActiveCypher::Base
   self.abstract_class = true
 
   connects_to writing: :primary,
               reading: :primary
 end
+```
 
-# app/graph/neo4j_record.rb
+- **Shorthand** (same key for both roles):
+
+```ruby
 class Neo4jRecord < ActiveCypher::Base
   self.abstract_class = true
 
-  connects_to writing: :neo4j,
-              reading: :neo4j
+  # Equivalent to writing: :neo4j, reading: :neo4j
+  connects_to :neo4j
 end
 ```
 
 - All models inheriting from `ApplicationGraphNode` will use the `primary` connection (e.g., Memgraph).
-- Models inheriting from `Neo4jRecord` will use the `neo4j` connection.
+- Models inheriting from `Neo4jRecord` (or using `connects_to :neo4j`) will use the `neo4j` connection.
 
 This makes it easy to work with multiple databases in the same application, and to direct reads/writes as needed.
 

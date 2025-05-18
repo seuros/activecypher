@@ -1,5 +1,11 @@
 # frozen_string_literal: true
 
+require 'active_model'
+require 'active_model/validations'
+require 'active_model/callbacks'
+require 'active_model/attributes'
+require 'active_model/dirty'
+
 module ActiveCypher
   # @!parse
   #   # The One True Base Class. All node models must kneel before it.
@@ -8,18 +14,25 @@ module ActiveCypher
     # @!attribute [rw] connects_to_mappings
     #   @return [Hash] Because every base class needs a mapping it will never use directly.
     class_attribute :connects_to_mappings, default: {}
+
+    # Rails/ActiveModel foundations
     include Logging
+    include ActiveModel::Model
+    include ActiveModel::Validations
+    include ActiveModel::Callbacks
+    include ActiveModel::Attributes
+    include ActiveModel::Dirty
 
     # Let's just include every concern we can find, because why not.
-    include Model::Querying # Must be before Core so Core can override its methods
     include Model::Core
+    include Model::Callbacks
+    include Model::Labelling
+    include Model::Querying
+    include Model::Abstract
     include Model::Attributes
     include Model::ConnectionOwner
-    include Model::Callbacks
     include Model::Persistence
-    include Model::ConnectionHandling
     include Model::Destruction
-    include Model::Abstract
     include Model::Countable
     include Model::Inspectable
 
@@ -29,15 +42,27 @@ module ActiveCypher
       # If you still don't have a connection, you get an error. It's the circle of life.
       # @return [Object] The connection instance
       def connection
-        if (pool = connection_handler.pool(current_role, current_shard))
+        # Determine the current role (e.g., :writing, :reading)
+        # ActiveCypher::RuntimeRegistry.current_role defaults to :writing
+        role_to_use = ActiveCypher::RuntimeRegistry.current_role
+        shard_to_use = ActiveCypher::RuntimeRegistry.current_shard # Typically :default
+
+        # Find the pool for the current role and shard
+        if (pool = connection_handler.pool(role_to_use, shard_to_use))
           return pool.connection
         end
 
-        # fall back to a per‑model connection created by establish_connection
-        return @connection if defined?(@connection) && @connection&.active?
+        # Fallback for models that might have a direct @connection (less common with connects_to)
+        # This part might be less relevant if all models use connects_to
+        if defined?(@connection) && @connection&.active?
+          # log_warn "Using direct @connection for #{name}. Consider using connects_to." # Optional warning
+          return @connection
+        end
 
         raise ActiveCypher::ConnectionNotEstablished,
-              "No pool for role=#{current_role.inspect} shard=#{current_shard.inspect}"
+              "No connection pool found for graph #{name}, role=#{role_to_use.inspect}, shard=#{shard_to_use.inspect}. " \
+              'Ensure `connects_to` is configured for this model or its ancestors, ' \
+              'and `cypher_databases.yml` has the corresponding entries.'
       end
     end
 

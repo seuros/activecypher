@@ -3,7 +3,7 @@
 module ActiveCypher
   module Model
     # Mixin for anything that “owns” a connection (nodes, relationships, maybe
-    # graph‑level service objects later). 100 % framework‑agnostic.
+    # graph‑level service objects later). 100 % framework‑agnostic.
     # @note Because every object wants to feel important by "owning" something, even if it's just a connection.
     # Moroccan black magick and Ruby sorcery may be involved in keeping these connections alive.
     module ConnectionOwner
@@ -25,16 +25,21 @@ module ActiveCypher
         # One handler for all subclasses that include this concern
         # Because sharing is caring, except when it comes to connection pools.
         # Summoned by Ruby wizardry: this handler is conjured once and shared by all.
-        @@connection_handler ||= ActiveCypher::ConnectionHandler.new # rubocop:disable Style/ClassVars
-        def connection_handler = @@connection_handler
+        def connection_handler
+          # Share the handler with ancestors so pools configured upstream propagate.
+          if defined?(@connection_handler) && @connection_handler
+            @connection_handler
+          elsif superclass.respond_to?(:connection_handler)
+            superclass.connection_handler
+          else
+            @connection_handler = ActiveCypher::ConnectionHandler.new
+          end
+        end
 
         # Returns the adapter class being used by this model
         # @return [Class] The adapter class (e.g., Neo4jAdapter, MemgraphAdapter)
         def adapter_class
-          conn = connection
-          return nil unless conn
-
-          conn.class
+          connection&.class
         end
 
         # Temporarily switches the current role and shard for the duration of the block.

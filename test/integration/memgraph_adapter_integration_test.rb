@@ -6,24 +6,13 @@ class MemgraphAdapterIntegrationTest < ActiveSupport::TestCase
   def setup
     # Clean the database before each test
     clear_database
-
-    # Create initial data for fetching tests
-    begin
-      connection.execute_cypher(
-        "CREATE (:Person {name: 'Bob', age: 40, active: true}), (:Person {name: 'Charlie', age: 50, active: false})",
-        {} # Pass empty params explicitly
-      )
-    rescue ActiveCypher::Error => e
-      puts "[DEBUG Test] ERROR creating initial data in Memgraph: #{e.class} - #{e.message}"
-      raise # Fail setup if data creation fails
-    end
+    PersonNode.create(name: 'Bob', age: 30, active: true)
+    PersonNode.create(name: 'Charlie', age: 25, active: false)
   end
 
   def teardown
     ActiveCypher::Base.connection&.disconnect
   end
-
-  # --- Test Cases (Copied and adapted from Neo4j tests) ---
 
   def test_find_fetches_correct_node
     # Create a unique person for this test
