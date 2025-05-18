@@ -14,10 +14,13 @@ module ActiveCypher
       # If it already exists, we patch up its regrets.
       # If it fails, we return false, like cowards.
       #
+      # @param validate [Boolean] whether to run validations (default: true)
       # @return [Boolean] true if saved successfully, false if the database ghosted us.
       # Because nothing says "robust" like pretending persistence is easy.
       # If this works and you can't explain why, that's probably back magick.
-      def save
+      def save(validate: true)
+        return false if validate && !valid?
+
         # before_/after_create
         _run(:save) do
           if new_record?

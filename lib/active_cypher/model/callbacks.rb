@@ -1,29 +1,21 @@
 # frozen_string_literal: true
 
 module ActiveCypher
-  # <= matches your other concerns
   module Model
-    # @!parse
-    #   # Model::Callbacks provides lifecycle hooks for your models, so you can pretend you have control over what happens and when.
-    #   # Because nothing says "enterprise" like a callback firing at just the wrong moment.
-    #   # Under the hood, it’s all just a little bit of Ruby sorcery, callback witchcraft, and the occasional forbidden incantation from the callback crypt.
+    # @note Now containing even more callback-related Ruby sorcery!
     module Callbacks
       extend ActiveSupport::Concern
 
       EVENTS = %i[
-        initialize find validate create update save destroy
+        initialize find create update save destroy
       ].freeze
 
-      included do
-        include ActiveSupport::Callbacks
-        define_callbacks(*EVENTS)
-      end
+      included do |base|
+        base.define_callbacks(*EVENTS)
 
-      class_methods do
         %i[before after around].each do |kind|
           EVENTS.each do |evt|
-            define_method("#{kind}_#{evt}") do |*filters, &block|
-              # This is where the callback coven gathers to cast their hooks.
+            base.define_singleton_method("#{kind}_#{evt}") do |*filters, &block|
               set_callback(evt, kind, *filters, &block)
             end
           end

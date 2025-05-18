@@ -63,7 +63,7 @@ module ActiveCypher
 
         instrument_query(cypher, params, context: context, metadata: { db: db, access_mode: access_mode }) do
           session = Bolt::Session.new(connection, database: db)
-          result  = session.run(cypher, prepare_params(params), access_mode:)
+          result  = session.run(cypher, prepare_params(params), mode: access_mode)
           rows    = result.respond_to?(:to_a) ? result.to_a : result
           session.close
           rows

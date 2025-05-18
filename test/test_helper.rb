@@ -10,6 +10,7 @@ end
 require_relative 'dummy/config/environment'
 require 'rails/test_help'
 
+
 PropCheck::Property.configure do |c|
   c.n_runs = ENV.fetch('PROP_CHECK_RUNS', 50).to_i
 end

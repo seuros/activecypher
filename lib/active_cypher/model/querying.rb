@@ -9,11 +9,6 @@ module ActiveCypher
       extend ActiveSupport::Concern
 
       class_methods do
-        # -- default label -----------------------------------------------
-        # Returns the symbolic label name for the model, e.g., :user_node
-        # @return [Symbol] The label name for the model
-        def label_name = model_name.element.to_sym
-
         # -- basic query builders ----------------------------------------
         # Return a base Relation, applying the default scope if it exists
         # @return [Relation] The base relation for the model
