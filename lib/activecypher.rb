@@ -101,7 +101,10 @@ loader.ignore("#{__dir__}/active_cypher/railtie.rb")
 loader.ignore("#{__dir__}/active_cypher/generators")
 loader.ignore("#{__dir__}/activecypher.rb")
 loader.ignore("#{__dir__}/cyrel.rb")
-loader.inflector.inflect('activecypher' => 'ActiveCypher')
+loader.inflector.inflect(
+  'activecypher' => 'ActiveCypher',
+  'dsl_context' => 'DSLContext'
+)
 loader.push_dir("#{__dir__}/cyrel", namespace: Cyrel)
 loader.setup
 

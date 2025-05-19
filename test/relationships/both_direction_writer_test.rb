@@ -23,20 +23,19 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
 
     # Verify relationship exists in database with the correct direction
     # Should find when searching for p->h
+    adapter = PersonNode.connection.id_handler
     count_out = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @bob.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@bob.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 1, count_out, 'Expected one outgoing relationship'
 
     # Should find when searching for undirected p-h (either direction)
     count_either = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]-(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @bob.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@bob.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 1, count_either, 'Expected one relationship in either direction'
   end
@@ -53,20 +52,19 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
     assert rel2.persisted?
 
     # Verify there are two relationships between the nodes
+    adapter = PersonNode.connection.id_handler
     count = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @bob.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@bob.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 2, count, 'Expected two relationships between nodes'
 
     # Verify the properties are correct
     frequencies = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN r.frequency as frequency",
-      { person_id: @bob.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@bob.internal_id, @chess.internal_id)}
+       RETURN r.frequency as frequency"
     ).map { |row| row[:frequency] }
 
     assert_includes frequencies, 'daily', "Should have a relationship with frequency 'daily'"
@@ -79,11 +77,11 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
     assert rel.persisted?
 
     # Verify it exists
+    adapter = PersonNode.connection.id_handler
     count_before = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @bob.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@bob.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 1, count_before, 'Should have one relationship before deletion'
 
@@ -93,9 +91,8 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
     # Verify it's gone
     count_after = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @bob.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@bob.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 0, count_after, 'Should have no relationships after deletion'
   end

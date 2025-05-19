@@ -3,8 +3,31 @@
 module ActiveCypher
   module ConnectionAdapters
     class Neo4jAdapter < AbstractBoltAdapter
-      # Register this adapter with the registry
       Registry.register('neo4j', self)
+
+      # Use elementId() for Neo4j
+      ID_FUNCTION = 'elementId'
+
+      # Helper methods for Cypher query generation with IDs
+      def self.with_direct_id(id)
+        "elementId(r) = #{id}"
+      end
+
+      def self.with_param_id
+        'elementId(r) = $id'
+      end
+
+      def self.with_direct_node_ids(a_id, b_id)
+        "elementId(p) = #{a_id} AND elementId(h) = #{b_id}"
+      end
+
+      def self.with_param_node_ids
+        'elementId(p) = $from_id AND elementId(h) = $to_id'
+      end
+
+      def self.return_id
+        'elementId(r) AS rid'
+      end
 
       def execute_cypher(cypher, params = {}, ctx = 'Query')
         connect

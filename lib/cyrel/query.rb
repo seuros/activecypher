@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
+# Base DSL components
 require 'cyrel/parameterizable'
-# Require necessary clause and pattern types
+require 'cyrel/logging'
 
 # Require all clause types for DSL methods
 
@@ -19,6 +20,7 @@ module Cyrel
   #   # Manages clauses, parameters, and final query generation, because string interpolation is for amateurs.
   class Query
     include Parameterizable
+    include Logging
     attr_reader :parameters, :clauses # Expose clauses for merge logic
 
     def initialize
@@ -58,6 +60,9 @@ module Cyrel
                         .map { it.render(self) }
                         .reject(&:blank?)
                         .join("\n")
+
+        log_debug("QUERY: #{cypher_string}")
+        log_debug("PARAMS: #{@parameters.inspect}") unless @parameters.empty?
 
         [cypher_string, @parameters]
       end

@@ -27,11 +27,11 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     assert_equal chess.internal_id, rel.to_node.internal_id
 
     # Verify in database
+    PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: alice.internal_id, hobby_id: chess.internal_id }
+       WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}
+       RETURN COUNT(r) as count"
     )
     assert_equal 1, result[0][:count], 'Expected one relationship in database'
   end
@@ -55,11 +55,11 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     rel.save
 
     # Verify in database
+    PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN r.frequency as frequency",
-      { person_id: alice.internal_id, hobby_id: chess.internal_id }
+       WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}
+       RETURN r.frequency as frequency"
     )
     assert_equal 'daily', result[0][:frequency], 'Property should be updated in database'
   end
@@ -74,11 +74,11 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     rel.internal_id
 
     # Verify it exists in database with correct type and endpoints
+    PersonNode.connection.id_handler
     count = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: bob.internal_id, hobby_id: surf.internal_id }
+       WHERE id(p) = #{bob.internal_id} AND id(h) = #{surf.internal_id}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 1, count, 'Relationship should exist in database'
   end
@@ -92,11 +92,11 @@ class RelationshipBasicTest < ActiveSupport::TestCase
                                     from_node: alice, to_node: chess)
 
     # Verify it exists first
+    PersonNode.connection.id_handler
     count_before = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: alice.internal_id, hobby_id: chess.internal_id }
+       WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 1, count_before, 'Should have one relationship before deletion'
 
@@ -106,9 +106,8 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     # Verify it's gone
     count_after = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: alice.internal_id, hobby_id: chess.internal_id }
+       WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}
+       RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 0, count_after, 'Should have no relationships after deletion'
   end

@@ -4,10 +4,7 @@ require 'test_helper'
 
 class NodeLabelsIntegrationTest < ActiveSupport::TestCase
   setup do
-    # Clean up any existing nodes before each test
-    ConspiracyNode.connection.execute_cypher('MATCH (n:Conspiracy:Theory) DETACH DELETE n')
-    HobbyNode.connection.execute_cypher('MATCH (n:Activity) DETACH DELETE n')
-    MultiLabelTheoryNode.connection.execute_cypher('MATCH (n:FirstLabel:SecondLabel:ThirdLabel) DETACH DELETE n')
+    ApplicationGraphNode.connection.execute_cypher('MATCH (n) DETACH DELETE n')
   end
 
   test 'nodes with multiple labels are created with all labels' do
@@ -19,16 +16,26 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
     )
 
     # Query to check if the node has both labels
-    result = ConspiracyNode.connection.execute_cypher(
-      'MATCH (n:Conspiracy:Theory) WHERE elementId(n) = $id RETURN n',
-      { id: conspiracy.internal_id }
-    )
+    result =
+      ConspiracyNode.connection.execute_cypher(
+        "MATCH (n:Conspiracy:Theory) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
+      )
 
     assert_equal 1, result.size
-    # Access property in Neo4j bolt format array structure
+
+    # Access property in Neo4j/Memgraph bolt format array structure
     node_data = result.first[:n]
-    # For Neo4j bolt format: [78, [id, [labels], {properties}, "element_id"]]
-    properties = node_data[1][2]
+
+    # Extract properties based on format
+    properties = if node_data.is_a?(Array) && node_data.length >= 2 && node_data[1].is_a?(Array) && node_data[1].length >= 3
+                   # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                   node_data[1][2]
+                 elsif node_data.is_a?(Hash)
+                   node_data
+                 else
+                   {}
+                 end
+
     assert_equal "Birds Aren't Real", properties[:name]
   end
 
@@ -41,16 +48,26 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
     )
 
     # Query using the custom label
-    result = HobbyNode.connection.execute_cypher(
-      'MATCH (n:Activity) WHERE elementId(n) = $id RETURN n',
-      { id: hobby.internal_id }
-    )
+    result =
+      HobbyNode.connection.execute_cypher(
+        "MATCH (n:Activity) WHERE id(n) = #{hobby.internal_id} RETURN n"
+      )
 
     assert_equal 1, result.size
-    # Access property in Neo4j bolt format array structure
+
+    # Access property in Neo4j/Memgraph bolt format array structure
     node_data = result.first[:n]
-    # For Neo4j bolt format: [78, [id, [labels], {properties}, "element_id"]]
-    properties = node_data[1][2]
+
+    # Extract properties based on format
+    properties = if node_data.is_a?(Array) && node_data.length >= 2 && node_data[1].is_a?(Array) && node_data[1].length >= 3
+                   # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                   node_data[1][2]
+                 elsif node_data.is_a?(Hash)
+                   node_data
+                 else
+                   {}
+                 end
+
     assert_equal 'Bird Watching', properties[:name]
 
     # Verify it doesn't have the default class name label
@@ -70,27 +87,44 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
       believability_index: 2
     )
 
+    # Get the ID function type
+
     # Query using the first label
     conspiracy_result = ConspiracyNode.connection.execute_cypher(
-      'MATCH (n:Conspiracy) WHERE elementId(n) = $id RETURN n',
-      { id: conspiracy.internal_id }
-    )
+                            "MATCH (n:Conspiracy) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
+                          )
 
     # Query using the second label
     theory_result = ConspiracyNode.connection.execute_cypher(
-      'MATCH (n:Theory) WHERE elementId(n) = $id RETURN n',
-      { id: conspiracy.internal_id }
-    )
+                        "MATCH (n:Theory) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
+                      )
+
 
     assert_equal 1, conspiracy_result.size
     assert_equal 1, theory_result.size
 
-    # Access property in Neo4j bolt format array structure
+    # Access property in Neo4j/Memgraph bolt format array structure
     conspiracy_node = conspiracy_result.first[:n]
     theory_node = theory_result.first[:n]
-    # For Neo4j bolt format: [78, [id, [labels], {properties}, "element_id"]]
-    conspiracy_properties = conspiracy_node[1][2]
-    theory_properties = theory_node[1][2]
+
+    # Extract properties based on format
+    conspiracy_properties = if conspiracy_node.is_a?(Array) && conspiracy_node.length >= 2 && conspiracy_node[1].is_a?(Array) && conspiracy_node[1].length >= 3
+                              # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                              conspiracy_node[1][2]
+                            elsif conspiracy_node.is_a?(Hash)
+                              conspiracy_node
+                            else
+                              {}
+                            end
+
+    theory_properties = if theory_node.is_a?(Array) && theory_node.length >= 2 && theory_node[1].is_a?(Array) && theory_node[1].length >= 3
+                          # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                          theory_node[1][2]
+                        elsif theory_node.is_a?(Hash)
+                          theory_node
+                        else
+                          {}
+                        end
 
     assert_equal 'Flat Earth', conspiracy_properties[:name]
     assert_equal 'Flat Earth', theory_properties[:name]
@@ -161,18 +195,25 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
       level: 10
     )
 
-    # Query to check if the node has all three labels
     result = MultiLabelTheoryNode.connection.execute_cypher(
-      'MATCH (n:FirstLabel:SecondLabel:ThirdLabel) WHERE elementId(n) = $id RETURN n',
-      { id: theory.internal_id }
-    )
+        "MATCH (n:FirstLabel:SecondLabel:ThirdLabel) WHERE id(n) = #{theory.internal_id} RETURN n"
+      )
 
     assert_equal 1, result.size
 
-    # Access property in Neo4j bolt format array structure
+    # Access property in Neo4j/Memgraph bolt format array structure
     node_data = result.first[:n]
-    # For Neo4j bolt format: [78, [id, [labels], {properties}, "element_id"]]
-    properties = node_data[1][2]
+
+    # Extract properties based on format
+    properties = if node_data.is_a?(Array) && node_data.length >= 2 && node_data[1].is_a?(Array) && node_data[1].length >= 3
+                   # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                   node_data[1][2]
+                 elsif node_data.is_a?(Hash)
+                   node_data
+                 else
+                   {}
+                 end
+
     assert_equal 'Grand Unified Theory', properties[:name]
   end
 
@@ -185,34 +226,56 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
     )
 
     # Query using each of the three labels
-    first_result = MultiLabelTheoryNode.connection.execute_cypher(
-      'MATCH (n:FirstLabel) WHERE elementId(n) = $id RETURN n',
-      { id: theory.internal_id }
-    )
+    first_result =
+      MultiLabelTheoryNode.connection.execute_cypher(
+        "MATCH (n:FirstLabel) WHERE id(n) = #{theory.internal_id} RETURN n"
+      )
 
     second_result = MultiLabelTheoryNode.connection.execute_cypher(
-      'MATCH (n:SecondLabel) WHERE elementId(n) = $id RETURN n',
-      { id: theory.internal_id }
+      "MATCH (n:SecondLabel) WHERE id(n) = #{theory.internal_id} RETURN n"
     )
 
-    third_result = MultiLabelTheoryNode.connection.execute_cypher(
-      'MATCH (n:ThirdLabel) WHERE elementId(n) = $id RETURN n',
-      { id: theory.internal_id }
-    )
+    third_result =
+      MultiLabelTheoryNode.connection.execute_cypher(
+        "MATCH (n:ThirdLabel) WHERE id(n) = #{theory.internal_id} RETURN n"
+      )
 
     assert_equal 1, first_result.size
     assert_equal 1, second_result.size
     assert_equal 1, third_result.size
 
-    # Access property in Neo4j bolt format array structure
+    # Access property in Neo4j/Memgraph bolt format array structure
     first_node = first_result.first[:n]
     second_node = second_result.first[:n]
     third_node = third_result.first[:n]
 
-    # For Neo4j bolt format: [78, [id, [labels], {properties}, "element_id"]]
-    first_properties = first_node[1][2]
-    second_properties = second_node[1][2]
-    third_properties = third_node[1][2]
+    # Extract properties based on format
+    first_properties = if first_node.is_a?(Array) && first_node.length >= 2 && first_node[1].is_a?(Array) && first_node[1].length >= 3
+                         # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                         first_node[1][2]
+                       elsif first_node.is_a?(Hash)
+                         first_node
+                       else
+                         {}
+                       end
+
+    second_properties = if second_node.is_a?(Array) && second_node.length >= 2 && second_node[1].is_a?(Array) && second_node[1].length >= 3
+                          # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                          second_node[1][2]
+                        elsif second_node.is_a?(Hash)
+                          second_node
+                        else
+                          {}
+                        end
+
+    third_properties = if third_node.is_a?(Array) && third_node.length >= 2 && third_node[1].is_a?(Array) && third_node[1].length >= 3
+                         # For Neo4j/Memgraph bolt format: [78, [id, [labels], {properties}, "element_id"]]
+                         third_node[1][2]
+                       elsif third_node.is_a?(Hash)
+                         third_node
+                       else
+                         {}
+                       end
 
     assert_equal 'String Theory', first_properties[:name]
     assert_equal 'String Theory', second_properties[:name]

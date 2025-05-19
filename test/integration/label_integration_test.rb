@@ -4,17 +4,7 @@ require 'test_helper'
 
 class LabelIntegrationTest < ActiveSupport::TestCase
   setup do
-    # Clean up any existing test nodes
-    AnimalNode.connection.execute_cypher('MATCH (n:Animal) DETACH DELETE n')
-    CarNode.connection.execute_cypher('MATCH (n:Vehicle) DETACH DELETE n')
-    DefaultLabelNode.connection.execute_cypher('MATCH (n:default_label_node) DETACH DELETE n')
-  end
-
-  teardown do
-    # Reset connections to clear any pending transactions
-    AnimalNode.connection.reset! if AnimalNode.respond_to?(:connection) && AnimalNode.connection.respond_to?(:reset!)
-    CarNode.connection.reset! if CarNode.respond_to?(:connection) && CarNode.connection.respond_to?(:reset!)
-    DefaultLabelNode.connection.reset! if DefaultLabelNode.respond_to?(:connection) && DefaultLabelNode.connection.respond_to?(:reset!)
+    ApplicationGraphNode.connection.execute_cypher('MATCH (n) DETACH DELETE n')
   end
 
   test 'nodes are created with all custom labels' do
@@ -27,8 +17,7 @@ class LabelIntegrationTest < ActiveSupport::TestCase
 
     # Verify both labels exist via direct Cypher
     result = AnimalNode.connection.execute_cypher(
-      'MATCH (n:Animal:LivingBeing) WHERE elementId(n) = $id RETURN count(n) as count',
-      { id: animal.internal_id }
+      "MATCH (n:Animal:LivingBeing) WHERE id(n) = #{animal.internal_id} RETURN count(n) as count"
     )
 
     assert_equal 1, result.first[:count]
@@ -44,9 +33,9 @@ class LabelIntegrationTest < ActiveSupport::TestCase
     assert_equal 'Prius', found_car.model
 
     # Verify it doesn't have the default class name label
+
     missing_result = CarNode.connection.execute_cypher(
-      'MATCH (n:car_node) WHERE elementId(n) = $id RETURN n',
-      { id: car.internal_id }
+      "MATCH (n:car_node) WHERE id(n) = #{car.internal_id} RETURN n"
     )
 
     assert_empty missing_result
@@ -71,13 +60,11 @@ class LabelIntegrationTest < ActiveSupport::TestCase
 
     # Query using each label separately to verify both labels work
     animal_result = AnimalNode.connection.execute_cypher(
-      'MATCH (n:Animal) WHERE elementId(n) = $id RETURN count(n) as count',
-      { id: animal.internal_id }
+      "MATCH (n:Animal) WHERE id(n) = #{animal.internal_id} RETURN count(n) as count"
     )
 
     living_being_result = AnimalNode.connection.execute_cypher(
-      'MATCH (n:LivingBeing) WHERE elementId(n) = $id RETURN count(n) as count',
-      { id: animal.internal_id }
+      "MATCH (n:LivingBeing) WHERE id(n) = #{animal.internal_id} RETURN count(n) as count"
     )
 
     # Check results
@@ -124,13 +111,12 @@ class LabelIntegrationTest < ActiveSupport::TestCase
     car = CarNode.create(make: 'Tesla', model: 'Model 3')
 
     # Verify nodes exist before destroying them
+
     AnimalNode.connection.execute_cypher(
-      'MATCH (n:Animal:LivingBeing) WHERE elementId(n) = $id RETURN count(n) as count',
-      { id: animal.internal_id }
+      "MATCH (n:Animal:LivingBeing) WHERE id(n) = #{animal.internal_id} RETURN count(n) as count"
     )
     CarNode.connection.execute_cypher(
-      'MATCH (n:Vehicle) WHERE elementId(n) = $id RETURN count(n) as count',
-      { id: car.internal_id }
+      "MATCH (n:Vehicle) WHERE id(n) = #{car.internal_id} RETURN count(n) as count"
     )
 
     # Explicitly destroy and check results

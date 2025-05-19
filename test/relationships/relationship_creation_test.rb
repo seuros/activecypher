@@ -24,12 +24,14 @@ class RelationshipCreationTest < ActiveSupport::TestCase
     assert rel.persisted?, 'Relationship should be persisted'
     refute_nil rel.internal_id, 'Relationship should have an internal ID'
 
+    # Get adapter for proper ID handling
+    adapter = PersonNode.connection.id_handler
+
     # Verify relationship exists in database
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @alice.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@alice.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )
     assert_equal 1, result[0][:count], 'Expected one ENJOYS relationship in database'
   end
@@ -46,11 +48,11 @@ class RelationshipCreationTest < ActiveSupport::TestCase
     assert_equal 'daily', rel.frequency, 'Relationship property should be set'
 
     # Verify relationship exists in database with correct property
+    adapter = PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN r.frequency as frequency",
-      { person_id: @alice.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@alice.internal_id, @chess.internal_id)}
+       RETURN r.frequency as frequency"
     )
     assert_equal 'daily', result[0][:frequency], "Expected frequency property to be 'daily'"
   end
@@ -64,26 +66,27 @@ class RelationshipCreationTest < ActiveSupport::TestCase
     rel.save
 
     # Verify properties were updated in database
+    adapter = PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN r.frequency as frequency",
-      { person_id: @alice.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@alice.internal_id, @chess.internal_id)}
+       RETURN r.frequency as frequency"
     )
     assert_equal 'daily', result[0][:frequency], 'Expected frequency property to be updated'
   end
 
   test 'destroys relationship' do
     # Create relationship
+
     rel = EnjoysRelationship.create({ frequency: 'monthly' }, from_node: @alice, to_node: @chess)
     assert rel.persisted?
 
     # Count relationships before deletion
+    adapter = PersonNode.connection.id_handler
     result_before = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @alice.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@alice.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )
     assert_equal 1, result_before[0][:count], 'Expected one relationship before deletion'
 
@@ -93,9 +96,8 @@ class RelationshipCreationTest < ActiveSupport::TestCase
     # Count relationships after deletion
     result_after = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @alice.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@alice.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )
     assert_equal 0, result_after[0][:count], 'Expected no relationships after deletion'
   end
@@ -113,11 +115,11 @@ class RelationshipCreationTest < ActiveSupport::TestCase
     refute_equal rel1.internal_id, rel2.internal_id
 
     # Count relationships in database
+    adapter = PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
-       WHERE elementId(p) = $person_id AND elementId(h) = $hobby_id
-       RETURN COUNT(r) as count",
-      { person_id: @alice.internal_id, hobby_id: @chess.internal_id }
+       WHERE #{adapter.with_direct_node_ids(@alice.internal_id, @chess.internal_id)}
+       RETURN COUNT(r) as count"
     )
     assert_equal 2, result[0][:count], 'Expected two relationships in database'
   end
