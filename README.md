@@ -48,23 +48,18 @@ This will create a `config/cypher_databases.yml` file in your Rails application.
 development:
   primary:
     url: memgraph://memgraph:activecypher@localhost:7688
-    multi_db: false
   neo4j:
     url: neo4j://neo4j:activecypher@localhost:7687
-    multi_db: false
 
 test:
   primary:
     url: memgraph://memgraph:activecypher@localhost:7688
-    multi_db: false
   neo4j:
     url: neo4j://neo4j:activecypher@localhost:7687
-    multi_db: false
 
 production:
   primary:
-    url: memgraph+ssl://user:pass@memgraph:7687
-    multi_db: false
+    url: memgraph+ssc://user:pass@memgraph:7687
 ```
 
 ActiveCypher will automatically pick up the correct configuration for the current Rails environment.
