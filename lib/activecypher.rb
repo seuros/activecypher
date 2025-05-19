@@ -4,6 +4,7 @@ require 'active_support'
 require 'zeitwerk'
 require_relative 'cyrel'
 require_relative 'active_cypher/version'
+require_relative 'active_cypher/redaction'
 
 # ActiveCypher is a Ruby gem that provides an ActiveRecord-like interface for
 # interacting with Neo4j databases using Cypher queries.
