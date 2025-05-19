@@ -1,16 +1,11 @@
 development:
   primary:
-    adapter: neo4j # Because you like your graphs with a touch of existential dread
-    url: neo4j://neo4j:neo4j@localhost:7687 # VIP port, VIP credentials (change them, seriously)
-    multi_db: false # One DB to rule them all
+    url: ENV["GRAPH_URL"]
 
 test:
   primary:
-    url: neo4j://neo4j:neo4j@localhost:9876 # Different port, same chaos
-    multi_db: false
+    url: ENV["GRAPH_URL"]
 
 production:
   primary:
-    adapter: memgraph # Yes, still memgraph... for now...
-    url: memgraph+ssc://<%= ENV["MG_USER"] %>:<%= ENV["MG_PASS"] %>@<%= ENV["MG_HOST"] %>:7687
-    multi_db: <%= ENV.fetch("MG_MULTI_DB", "false") %> # Because complexity is a luxury
+    url: ENV["GRAPH_URL"]
