@@ -85,7 +85,9 @@ module ActiveCypher
             uri: uri,
             adapter: adapter,
             auth_token: auth_token,
-            pool_size: pool_size
+            pool_size: pool_size,
+            secure: config[:ssl] ? true : false,
+            verify_cert: config[:ssc] ? false : true
           )
         end
       end

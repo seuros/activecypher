@@ -18,7 +18,7 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
 
   test 'directional relationship can be created' do
     # Create a relationship directly
-    rel = EnjoysRelationship.create({}, from_node: @bob, to_node: @chess)
+    rel = EnjoysRel.create({}, from_node: @bob, to_node: @chess)
     assert rel.persisted?, 'Relationship should be persisted'
 
     # Verify relationship exists in database with the correct direction
@@ -42,10 +42,10 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
 
   test 'multiple relationships can exist between the same nodes' do
     # Create first relationship
-    rel1 = EnjoysRelationship.create({ frequency: 'daily' }, from_node: @bob, to_node: @chess)
+    rel1 = EnjoysRel.create({ frequency: 'daily' }, from_node: @bob, to_node: @chess)
 
     # Create second relationship
-    rel2 = EnjoysRelationship.create({ frequency: 'weekly' }, from_node: @bob, to_node: @chess)
+    rel2 = EnjoysRel.create({ frequency: 'weekly' }, from_node: @bob, to_node: @chess)
 
     # Verify both are persisted
     assert rel1.persisted?
@@ -73,7 +73,7 @@ class BothDirectionWriterTest < ActiveSupport::TestCase
 
   test 'relationships can be deleted' do
     # Create relationship
-    rel = EnjoysRelationship.create({}, from_node: @bob, to_node: @chess)
+    rel = EnjoysRel.create({}, from_node: @bob, to_node: @chess)
     assert rel.persisted?
 
     # Verify it exists

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class OwnsPetRelationship < ApplicationGraphRelationship
+class OwnsPetRel < ApplicationGraphRelationship
   from_class 'PersonNode'
   to_class   'PetNode'
   type       'OWNS_PET'

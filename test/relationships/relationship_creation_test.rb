@@ -18,7 +18,7 @@ class RelationshipCreationTest < ActiveSupport::TestCase
 
   test 'creates relationship without properties' do
     # Create relationship without properties
-    rel = EnjoysRelationship.create({}, from_node: @alice, to_node: @chess)
+    rel = EnjoysRel.create({}, from_node: @alice, to_node: @chess)
 
     # Verify relationship was created
     assert rel.persisted?, 'Relationship should be persisted'
@@ -38,7 +38,7 @@ class RelationshipCreationTest < ActiveSupport::TestCase
 
   test 'creates relationship and sets properties' do
     # Create relationship with properties
-    rel = EnjoysRelationship.create({ frequency: 'daily', since: Date.today }, from_node: @alice, to_node: @chess)
+    rel = EnjoysRel.create({ frequency: 'daily', since: Date.today }, from_node: @alice, to_node: @chess)
 
     # Verify relationship was created
     assert rel.persisted?, 'Relationship should be persisted'
@@ -59,7 +59,7 @@ class RelationshipCreationTest < ActiveSupport::TestCase
 
   test 'updates relationship properties' do
     # Create relationship with properties
-    rel = EnjoysRelationship.create({ frequency: 'weekly' }, from_node: @alice, to_node: @chess)
+    rel = EnjoysRel.create({ frequency: 'weekly' }, from_node: @alice, to_node: @chess)
 
     # Update properties
     rel.frequency = 'daily'
@@ -78,7 +78,7 @@ class RelationshipCreationTest < ActiveSupport::TestCase
   test 'destroys relationship' do
     # Create relationship
 
-    rel = EnjoysRelationship.create({ frequency: 'monthly' }, from_node: @alice, to_node: @chess)
+    rel = EnjoysRel.create({ frequency: 'monthly' }, from_node: @alice, to_node: @chess)
     assert rel.persisted?
 
     # Count relationships before deletion
@@ -104,10 +104,10 @@ class RelationshipCreationTest < ActiveSupport::TestCase
 
   test 'can create multiple relationships between same nodes' do
     # Create first relationship
-    rel1 = EnjoysRelationship.create({ frequency: 'daily' }, from_node: @alice, to_node: @chess)
+    rel1 = EnjoysRel.create({ frequency: 'daily' }, from_node: @alice, to_node: @chess)
 
     # Create second relationship
-    rel2 = EnjoysRelationship.create({ frequency: 'weekly' }, from_node: @alice, to_node: @chess)
+    rel2 = EnjoysRel.create({ frequency: 'weekly' }, from_node: @alice, to_node: @chess)
 
     # Both should be persisted with different IDs
     assert rel1.persisted?

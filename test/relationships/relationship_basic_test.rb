@@ -17,12 +17,12 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     assert chess.persisted?, 'Hobby should be persisted'
 
     # Create relationship
-    rel = EnjoysRelationship.create({ frequency: 'daily', since: Date.today },
+    rel = EnjoysRel.create({ frequency: 'daily', since: Date.today },
                                     from_node: alice, to_node: chess)
 
     # Verify relationship was created
     assert rel.persisted?, 'Relationship should be persisted'
-    assert_equal 'ENJOYS', EnjoysRelationship.relationship_type
+    assert_equal 'ENJOYS', EnjoysRel.relationship_type
     assert_equal alice.internal_id, rel.from_node.internal_id
     assert_equal chess.internal_id, rel.to_node.internal_id
 
@@ -41,7 +41,7 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     chess = HobbyNode.create(name: 'Chess')
 
     # Create with properties
-    rel = EnjoysRelationship.create(
+    rel = EnjoysRel.create(
       { frequency: 'weekly', since: Date.today - 10 },
       from_node: alice, to_node: chess
     )
@@ -69,7 +69,7 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     surf = HobbyNode.create(name: 'Surf')
 
     # Create relationship
-    rel = EnjoysRelationship.create({ frequency: 'monthly' },
+    rel = EnjoysRel.create({ frequency: 'monthly' },
                                     from_node: bob, to_node: surf)
     rel.internal_id
 
@@ -88,7 +88,7 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     chess = HobbyNode.create(name: 'Chess')
 
     # Create relationship
-    rel = EnjoysRelationship.create({ frequency: 'daily' },
+    rel = EnjoysRel.create({ frequency: 'daily' },
                                     from_node: alice, to_node: chess)
 
     # Verify it exists first

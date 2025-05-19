@@ -11,7 +11,7 @@ class HobbyNode < ApplicationGraphNode
            class_name: 'PersonNode',
            relationship: 'ENJOYS',
            direction: :in,
-           relationship_class: 'EnjoysRelationship'
+           relationship_class: 'EnjoysRel'
 end
 
 # HobbyNode.create(name: 'Trolling', category: 'Internet', skill_level: 'Expert')

@@ -19,8 +19,8 @@ class AdapterClassTest < ActiveSupport::TestCase
   end
 
   test 'relationship models respond to adapter_class' do
-    assert_respond_to OwnsPetRelationship, :adapter_class
-    assert_respond_to OwnsPetRelationship.new({}, from_node: PersonNode.new, to_node: PetNode.new), :adapter_class
+    assert_respond_to OwnsPetRel, :adapter_class
+    assert_respond_to OwnsPetRel.new({}, from_node: PersonNode.new, to_node: PetNode.new), :adapter_class
   end
 
   test 'adapter_class returns correct adapter class' do

@@ -6,7 +6,7 @@ require 'test_helper'
 # Relationship subclass that wires a few callbacks so we can assert
 # they actually fire.
 # ------------------------------------------------------------------
-class CallbackOwnsPetRelationship < OwnsPetRelationship
+class CallbackOwnsPetRel < OwnsPetRel
   attribute :state, :string
 
   before_create  ->(rel) { rel.state = 'before_create'  }
@@ -32,7 +32,7 @@ class RelationshipCallbacksTest < ActiveSupport::TestCase
   end
 
   test 'before_create and after_create both run' do
-    rel = CallbackOwnsPetRelationship.new(from_node: @owner, to_node: @pet)
+    rel = CallbackOwnsPetRel.new(from_node: @owner, to_node: @pet)
 
     assert rel.save, 'relationship should save successfully'
     assert_equal 'after_create', rel.state, 'after_create should overwrite before_create flag'
@@ -40,7 +40,7 @@ class RelationshipCallbacksTest < ActiveSupport::TestCase
   end
 
   test 'before_destroy can abort destruction' do
-    rel = CallbackOwnsPetRelationship.create(from_node: @owner, to_node: @pet)
+    rel = CallbackOwnsPetRel.create(from_node: @owner, to_node: @pet)
 
     refute rel.destroy, 'destroy should be halted by before_destroy'
     assert rel.persisted?, 'relationship should still be in DB after abort'

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class BelievesInRelationship < ApplicationGraphRelationship
+class BelievesInRel < ApplicationGraphRelationship
   from_class 'PersonNode'
   to_class   'ConspiracyNode'
   type       'BELIEVES_IN'

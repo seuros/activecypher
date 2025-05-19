@@ -91,14 +91,13 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
 
     # Query using the first label
     conspiracy_result = ConspiracyNode.connection.execute_cypher(
-                            "MATCH (n:Conspiracy) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
-                          )
+      "MATCH (n:Conspiracy) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
+    )
 
     # Query using the second label
     theory_result = ConspiracyNode.connection.execute_cypher(
-                        "MATCH (n:Theory) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
-                      )
-
+      "MATCH (n:Theory) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
+    )
 
     assert_equal 1, conspiracy_result.size
     assert_equal 1, theory_result.size
@@ -196,8 +195,8 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
     )
 
     result = MultiLabelTheoryNode.connection.execute_cypher(
-        "MATCH (n:FirstLabel:SecondLabel:ThirdLabel) WHERE id(n) = #{theory.internal_id} RETURN n"
-      )
+      "MATCH (n:FirstLabel:SecondLabel:ThirdLabel) WHERE id(n) = #{theory.internal_id} RETURN n"
+    )
 
     assert_equal 1, result.size
 

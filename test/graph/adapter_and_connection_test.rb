@@ -6,18 +6,18 @@ GRAPH_CLASSES = [
   AnimalNode,
   ApplicationGraphNode,
   ApplicationGraphRelationship,
-  BelievesInRelationship,
+  BelievesInRel,
   CallLogNode,
   CallbackPerson,
   CarNode,
   CompanyNode,
   ConspiracyNode,
   DefaultLabelNode,
-  EnjoysRelationship,
+  EnjoysRel,
   HobbyNode,
   MultiLabelTheoryNode,
   Neo4jRecord,
-  OwnsPetRelationship,
+  OwnsPetRel,
   PersonNode,
   PetNode
 ].freeze
@@ -28,9 +28,9 @@ class AdapterAndConnectionTest < ActiveSupport::TestCase
       AnimalNode => :primary,
       ApplicationGraphNode => :primary,
       ApplicationGraphRelationship => nil,
-      BelievesInRelationship => nil,
-      EnjoysRelationship => nil,
-      OwnsPetRelationship => nil,
+      BelievesInRel => nil,
+      EnjoysRel => nil,
+      OwnsPetRel => nil,
       CallbackPerson => :primary,
       CarNode => :primary,
       ConspiracyNode => :primary,
@@ -86,9 +86,9 @@ class AdapterAndConnectionTest < ActiveSupport::TestCase
     assert PersonNode < ApplicationGraphNode
     assert PetNode < ApplicationGraphNode
 
-    assert BelievesInRelationship < ApplicationGraphRelationship
-    assert EnjoysRelationship < ApplicationGraphRelationship
-    assert OwnsPetRelationship < ApplicationGraphRelationship
+    assert BelievesInRel < ApplicationGraphRelationship
+    assert EnjoysRel < ApplicationGraphRelationship
+    assert OwnsPetRel < ApplicationGraphRelationship
 
     assert CallLogNode < Neo4jRecord
     assert CompanyNode < Neo4jRecord

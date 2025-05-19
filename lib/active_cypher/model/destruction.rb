@@ -33,7 +33,7 @@ module ActiveCypher
 
           result = self.class.connection.execute_cypher(cypher, {}, 'Destroy')
 
-          if result.present? && result.first[:deleted].to_i > 0
+          if result.present? && result.first[:deleted].to_i.positive?
             @destroyed = true
             freeze
             true

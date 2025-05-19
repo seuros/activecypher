@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class EnjoysRelationship < ApplicationGraphRelationship
+class EnjoysRel < ApplicationGraphRelationship
   from_class 'PersonNode'
   to_class   'HobbyNode'
   type       'ENJOYS'
