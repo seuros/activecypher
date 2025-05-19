@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.6.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.2...active_cypher/v0.6.3) (2025-05-19)
+
+
+### Bug Fixes
+
+* add version helper ([#17](https://github.com/seuros/activecypher/issues/17)) ([d7288ab](https://github.com/seuros/activecypher/commit/d7288ab15845852c09b7ec558e3fa7b5dcb4be5c))
+* redact credentials. ([#16](https://github.com/seuros/activecypher/issues/16)) ([8a29bc0](https://github.com/seuros/activecypher/commit/8a29bc059b7770aa4373985658781e29a9c79709))
+
 ## [0.6.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.1...active_cypher/v0.6.2) (2025-05-19)
 
 
