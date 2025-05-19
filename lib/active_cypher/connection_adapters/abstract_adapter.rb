@@ -82,6 +82,15 @@ module ActiveCypher
       # @return [Array<Hash>] The processed rows
       def process_records(rows) = rows.map { |r| deep_symbolize(r) }
 
+      # Override inspect to hide sensitive information
+      # @return [String] Safe representation of the adapter
+      def inspect
+        filtered_config = ActiveCypher::Redaction.filter_hash(config)
+
+        # Return a safe representation
+        "#<#{self.class}:0x#{object_id.to_s(16)} @config=#{filtered_config.inspect}>"
+      end
+
       private
 
       # Recursively turns everything into symbols, because that's what all the cool kids do.
