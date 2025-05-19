@@ -21,11 +21,20 @@ module ActiveCypher
       def inspect
         filtered_auth = ActiveCypher::Redaction.filter_hash(@auth_token)
 
-        "#<#{self.class.name}:0x#{object_id.to_s(16)} @host=#{@host.inspect}, @port=#{@port.inspect}, " \
-          "@auth_token=#{filtered_auth.inspect}, @timeout_seconds=#{@timeout_seconds.inspect}, " \
-          "@secure=#{@secure.inspect}, @verify_cert=#{@verify_cert.inspect}, " \
-          "@connected=#{@connected.inspect}, @protocol_version=#{@protocol_version.inspect}, " \
-          "@server_agent=#{@server_agent.inspect}, @connection_id=#{@connection_id.inspect}>"
+        attributes = {
+          host: @host.inspect,
+          port: @port.inspect,
+          auth_token: filtered_auth.inspect,
+          timeout_seconds: @timeout_seconds.inspect,
+          secure: @secure.inspect,
+          verify_cert: @verify_cert.inspect,
+          connected: @connected.inspect,
+          protocol_version: @protocol_version.inspect,
+          server_agent: @server_agent.inspect,
+          connection_id: @connection_id.inspect
+        }
+
+        "#<#{self.class.name}:0x#{object_id.to_s(16)} #{attributes.map { |k, v| "@#{k}=#{v}" }.join(', ')}>"
       end
 
       SUPPORTED_VERSIONS = [5.8, 5.2].freeze
