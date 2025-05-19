@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.6.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.1...active_cypher/v0.6.2) (2025-05-19)
+
+
+### Bug Fixes
+
+* DRY the connection logic ([f851190](https://github.com/seuros/activecypher/commit/f8511903482aa1de4095c18a20f886e4e3569707))
+
 ## [0.6.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.0...active_cypher/v0.6.1) (2025-05-19)
 
 
