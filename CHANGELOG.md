@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+## [0.6.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.5.0...active_cypher/v0.6.0) (2025-05-19)
+
+
+### Features
+
+* add fixtures interface ([#13](https://github.com/seuros/activecypher/issues/13)) ([4d98480](https://github.com/seuros/activecypher/commit/4d98480544742fab400865846afac69d35efba70))
+* refactor to link Relationship with Node with a DSL. ([#12](https://github.com/seuros/activecypher/issues/12)) ([97ff9d0](https://github.com/seuros/activecypher/commit/97ff9d09bb4ae6d94a527c020f77a69e1b67c845))
+* Relationship Base and Node Base Convention ([d9328a8](https://github.com/seuros/activecypher/commit/d9328a83fb6a3cbeed4e7ef86dc2e5ed5ffcd4e2))
+
+
+### Bug Fixes
+
+* load_multi_db fix ([9321d73](https://github.com/seuros/activecypher/commit/9321d737f28c0f940b3e2f96f45f0328c45e109a))
+
 ## [0.5.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.4.1...active_cypher/v0.5.0) (2025-05-16)
 
 
