@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.6.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.0...active_cypher/v0.6.1) (2025-05-19)
+
+
+### Bug Fixes
+
+* use ssc in driver ([5755335](https://github.com/seuros/activecypher/commit/5755335265b93df476341abf996689dc2a7eb690))
+
 ## [0.6.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.5.0...active_cypher/v0.6.0) (2025-05-19)
 
 
