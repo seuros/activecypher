@@ -62,6 +62,17 @@ module ActiveCypher
       }
     end
 
+    # Returns SSL/TLS connection parameters based on ssl/ssc flags
+    # @return [Hash] Connection parameters for SSL/TLS
+    def ssl_connection_params
+      return {} unless @parsed
+
+      {
+        secure: @parsed[:ssl] ? true : false,
+        verify_cert: @parsed[:ssc] ? false : true
+      }
+    end
+
     private
 
     def parse_url(url_string)

@@ -18,7 +18,7 @@ class RelationshipBasicTest < ActiveSupport::TestCase
 
     # Create relationship
     rel = EnjoysRel.create({ frequency: 'daily', since: Date.today },
-                                    from_node: alice, to_node: chess)
+                           from_node: alice, to_node: chess)
 
     # Verify relationship was created
     assert rel.persisted?, 'Relationship should be persisted'
@@ -70,7 +70,7 @@ class RelationshipBasicTest < ActiveSupport::TestCase
 
     # Create relationship
     rel = EnjoysRel.create({ frequency: 'monthly' },
-                                    from_node: bob, to_node: surf)
+                           from_node: bob, to_node: surf)
     rel.internal_id
 
     # Verify it exists in database with correct type and endpoints
@@ -89,7 +89,7 @@ class RelationshipBasicTest < ActiveSupport::TestCase
 
     # Create relationship
     rel = EnjoysRel.create({ frequency: 'daily' },
-                                    from_node: alice, to_node: chess)
+                           from_node: alice, to_node: chess)
 
     # Verify it exists first
     PersonNode.connection.id_handler

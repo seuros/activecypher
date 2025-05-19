@@ -34,9 +34,22 @@ module ActiveCypher
                    { scheme: 'none' }
                  end
 
+          # Get SSL connection params
+          ssl_params = if config[:url]
+                         resolver = ActiveCypher::ConnectionUrlResolver.new(config[:url])
+                         resolver.ssl_connection_params
+                       else
+                         {
+                           secure: config[:ssl] ? true : false,
+                           verify_cert: config[:ssc] ? false : true
+                         }
+                       end
+
           @connection = Bolt::Connection.new(
             host, port, self,
-            auth_token: auth, timeout_seconds: config.fetch(:timeout, 15)
+            auth_token: auth,
+            timeout_seconds: config.fetch(:timeout, 15),
+            **ssl_params
           )
           @connection.connect
           validate_connection

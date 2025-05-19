@@ -81,13 +81,15 @@ module ActiveCypher
             principal: config[:username],
             credentials: config[:password]
           }
+          # Get SSL connection params from resolver
+          ssl_params = resolver.ssl_connection_params
+
           ActiveCypher::Bolt::Driver.new(
             uri: uri,
             adapter: adapter,
             auth_token: auth_token,
             pool_size: pool_size,
-            secure: config[:ssl] ? true : false,
-            verify_cert: config[:ssc] ? false : true
+            **ssl_params
           )
         end
       end

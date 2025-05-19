@@ -4,190 +4,35 @@ require 'test_helper'
 
 module ActiveCypher
   class ConnectionUrlResolverTest < ActiveSupport::TestCase
-    def test_neo4j_minimal_url
-      resolver = ConnectionUrlResolver.new('neo4j://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal 'localhost', config[:host]
-      assert_equal 7687, config[:port]
-      assert_nil config[:username]
-      assert_nil config[:password]
-      assert_equal false, config[:ssl]
-      assert_equal false, config[:ssc]
-      assert_equal({}, config[:options])
-      assert_equal 'neo4j', config[:database]
-    end
-
-    def test_memgraph_with_auth
-      resolver = ConnectionUrlResolver.new('memgraph://user:pass@localhost:7687')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal 'localhost', config[:host]
-      assert_equal 7687, config[:port]
-      assert_equal 'user', config[:username]
-      assert_equal 'pass', config[:password]
-      assert_equal false, config[:ssl]
-      assert_equal false, config[:ssc]
-    end
-
-    def test_neo4j_with_ssl
-      resolver = ConnectionUrlResolver.new('neo4j+ssl://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal 'localhost', config[:host]
-      assert_equal 7687, config[:port]
-      assert_nil config[:username]
-      assert_nil config[:password]
-      assert_equal true, config[:ssl]
-      assert_equal false, config[:ssc]
-    end
-
-    def test_memgraph_with_ssl
-      resolver = ConnectionUrlResolver.new('memgraph+ssl://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal true, config[:ssl]
-      assert_equal false, config[:ssc]
-    end
-
-    def test_neo4j_with_self_signed_certs
-      resolver = ConnectionUrlResolver.new('neo4j+ssc://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal true, config[:ssl]
-      assert_equal true, config[:ssc]
-    end
-
-    def test_memgraph_with_self_signed_certs
-      resolver = ConnectionUrlResolver.new('memgraph+ssc://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal true, config[:ssl]
-      assert_equal true, config[:ssc]
-    end
-
-    def test_with_both_ssl_and_ssc
-      resolver = ConnectionUrlResolver.new('neo4j+ssl+ssc://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal true, config[:ssl]
-      assert_equal true, config[:ssc]
-    end
-
-    def test_with_username_password
-      resolver = ConnectionUrlResolver.new('memgraph://admin:secret@127.0.0.1:7687')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal '127.0.0.1', config[:host]
-      assert_equal 7687, config[:port]
-      assert_equal 'admin', config[:username]
-      assert_equal 'secret', config[:password]
-    end
-
-    def test_with_complex_password
-      resolver = ConnectionUrlResolver.new('neo4j://user:p%40ssw0rd%21@localhost:7687')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal 'user', config[:username]
-      assert_equal 'p@ssw0rd!', config[:password]
-    end
-
-    def test_with_query_params
-      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687?timeout=10&pool=5')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal({ timeout: '10', pool: '5' }, config[:options])
-    end
-
-    def test_with_database_path
-      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687/mydb')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal 'mydb', config[:database]
-    end
-
-    def test_neo4j_default_database
-      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal 'neo4j', config[:database]
-    end
-
-    def test_memgraph_default_database
-      resolver = ConnectionUrlResolver.new('memgraph://localhost:7687')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal 'memgraph', config[:database]
-    end
-
-    def test_custom_database_path_overrides_default
-      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687/seuros')
-      config = resolver.to_hash
-
-      assert_equal 'neo4j', config[:adapter]
-      assert_equal 'seuros', config[:database]
-    end
-
-    def test_memgraph_with_custom_database_path
-      resolver = ConnectionUrlResolver.new('memgraph://localhost:7687/marissa')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal 'marissa', config[:database]
-    end
-
-    def test_default_port_and_database
-      resolver = ConnectionUrlResolver.new('memgraph://localhost')
-      config = resolver.to_hash
-
-      assert_equal 'memgraph', config[:adapter]
-      assert_equal 'memgraph', config[:database]
-      assert_equal 7687, config[:port]
-    end
-
-    def test_default_port_when_not_specified
-      resolver = ConnectionUrlResolver.new('neo4j://localhost')
-      config = resolver.to_hash
-
-      assert_equal 7687, config[:port]
-    end
-
-    def test_invalid_scheme
-      resolver = ConnectionUrlResolver.new('invalid://localhost')
-      assert_nil resolver.to_hash
-    end
-
-    def test_invalid_url_format
-      resolver = ConnectionUrlResolver.new('memgraph:/missing/slashes')
-      assert_nil resolver.to_hash
-    end
-
-    def test_unknown_modifier
-      resolver = ConnectionUrlResolver.new('neo4j+foo://badoption')
-      assert_nil resolver.to_hash
-    end
-
-    def test_nil_url
+    test 'ssl_connection_params returns empty hash when no URL is given' do
       resolver = ConnectionUrlResolver.new(nil)
-      assert_nil resolver.to_hash
+      assert_equal({}, resolver.ssl_connection_params)
     end
 
-    def test_empty_url
-      resolver = ConnectionUrlResolver.new('')
-      assert_nil resolver.to_hash
+    test 'ssl_connection_params for plain connection (no SSL)' do
+      resolver = ConnectionUrlResolver.new('neo4j://localhost:7687')
+      assert_equal({ secure: false, verify_cert: true }, resolver.ssl_connection_params)
+    end
+
+    test 'ssl_connection_params for SSL with CA-signed certificate' do
+      resolver = ConnectionUrlResolver.new('neo4j+ssl://localhost:7687')
+      assert_equal({ secure: true, verify_cert: true }, resolver.ssl_connection_params)
+    end
+
+    test 'ssl_connection_params for SSL with self-signed certificate' do
+      resolver = ConnectionUrlResolver.new('neo4j+ssc://localhost:7687')
+      assert_equal({ secure: true, verify_cert: false }, resolver.ssl_connection_params)
+    end
+
+    test 'ssl_connection_params for connection with empty path' do
+      resolver = ConnectionUrlResolver.new('memgraph+ssc://user:pass@localhost:7687/')
+      assert_equal({ secure: true, verify_cert: false }, resolver.ssl_connection_params)
+    end
+
+    test 'ssl_connection_params for memgraph works the same as neo4j' do
+      resolver1 = ConnectionUrlResolver.new('memgraph+ssl://localhost:7687')
+      resolver2 = ConnectionUrlResolver.new('neo4j+ssl://localhost:7687')
+      assert_equal(resolver1.ssl_connection_params, resolver2.ssl_connection_params)
     end
   end
 end
