@@ -2,6 +2,7 @@
 
 require 'test_helper'
 require 'tmpdir'
+require_relative 'support/dummy_adapter'
 
 class MigratorTest < ActiveSupport::TestCase
   def setup

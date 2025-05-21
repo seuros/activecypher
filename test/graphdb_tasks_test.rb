@@ -3,6 +3,7 @@
 require 'test_helper'
 require 'rake'
 require 'tmpdir'
+require_relative 'support/dummy_adapter'
 
 class GraphdbTasksTest < ActiveSupport::TestCase
   def setup
