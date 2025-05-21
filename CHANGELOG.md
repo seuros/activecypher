@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+## [0.7.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.3...active_cypher/v0.7.0) (2025-05-21)
+
+
+### Features
+
+* add migrations ([#22](https://github.com/seuros/activecypher/issues/22)) ([71eeae8](https://github.com/seuros/activecypher/commit/71eeae8333c221cff214e651239cd37c6b072594))
+* schema dumper ([#24](https://github.com/seuros/activecypher/issues/24)) ([1a91bc7](https://github.com/seuros/activecypher/commit/1a91bc7fe486be8b7599d1a7263f8912a937a027))
+
+
+### Bug Fixes
+
+* generate relationship classes as string ([#21](https://github.com/seuros/activecypher/issues/21)) ([e5b0bee](https://github.com/seuros/activecypher/commit/e5b0bee13ed2373d5f30e943ccc5e1d7a751d5d0))
+* hide sensitive keys in non rails context ([13df977](https://github.com/seuros/activecypher/commit/13df977769462df58f2307eebf7cef8c6efb2859))
+
 ## [0.6.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.2...active_cypher/v0.6.3) (2025-05-19)
 
 
