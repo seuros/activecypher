@@ -30,4 +30,22 @@ class DummyAdapter < ActiveCypher::ConnectionAdapters::AbstractAdapter
       []
     end
   end
+
+  ID_FUNCTION = 'id'
+
+  def vendor = :memgraph
+
+  # Return self as id_handler for compatibility with relationship tests
+  def id_handler
+    self.class
+  end
+
+  def schema_catalog
+    idx = ActiveCypher::Schema::IndexDef.new('test_index', :node, 'Test', ['name'], false, nil)
+    con = ActiveCypher::Schema::ConstraintDef.new('uniq_test', 'Test', ['name'], :unique)
+    node = ActiveCypher::Schema::NodeTypeDef.new('Test', ['name'], nil)
+    ActiveCypher::Schema::Catalog.new(indexes: [idx], constraints: [con], node_types: [node], edge_types: [])
+  end
 end
+
+ActiveCypher::ConnectionAdapters::Registry.register('dummy', DummyAdapter)

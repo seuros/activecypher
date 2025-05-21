@@ -1,10 +1,20 @@
 # frozen_string_literal: true
+require "active_cypher/schema/catalog"
 
 module ActiveCypher
   module ConnectionAdapters
     class MemgraphAdapter < AbstractBoltAdapter
       # Register this adapter with the registry
       Registry.register('memgraph', self)
+
+      def vendor = :memgraph
+
+      def schema_catalog
+        rows = run('SHOW SCHEMA')
+        parse_schema(rows)
+      rescue StandardError
+        introspect_fallback
+      end
 
       # Use id() for Memgraph instead of elementId()
       ID_FUNCTION = 'id'
@@ -57,6 +67,36 @@ module ActiveCypher
       end
 
       protected
+
+      def parse_schema(rows)
+        nodes, edges, idx, cons = [], [], [], []
+
+        rows.each do |row|
+          case row['type']
+          when 'NODE'
+            nodes << Schema::NodeTypeDef.new(row['label'], row['properties'], row['primaryKey'])
+          when 'EDGE'
+            edges << Schema::EdgeTypeDef.new(row['label'], row['from'], row['to'], row['properties'])
+          when 'INDEX'
+            idx << Schema::IndexDef.new(row['name'], :node, row['label'], row['properties'], row['unique'], nil)
+          when 'CONSTRAINT'
+            cons << Schema::ConstraintDef.new(row['name'], row['label'], row['properties'], :unique)
+          end
+        end
+
+        Schema::Catalog.new(indexes: idx, constraints: cons, node_types: nodes, edge_types: edges)
+      end
+
+      def introspect_fallback
+        labels = run('MATCH (n) RETURN DISTINCT labels(n) AS lbl').flat_map { |r| r['lbl'] }
+
+        nodes = labels.map do |lbl|
+          props = run("MATCH (n:`#{lbl}`) WITH n LIMIT 100 UNWIND keys(n) AS k RETURN DISTINCT k").map { |r| r['k'] }
+          Schema::NodeTypeDef.new(lbl, props, nil)
+        end
+
+        Schema::Catalog.new(indexes: [], constraints: [], node_types: nodes, edge_types: [])
+      end
 
       def protocol_handler_class = ProtocolHandler
 

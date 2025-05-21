@@ -1,9 +1,42 @@
 # frozen_string_literal: true
+require "active_cypher/schema/catalog"
 
 module ActiveCypher
   module ConnectionAdapters
     class Neo4jAdapter < AbstractBoltAdapter
       Registry.register('neo4j', self)
+
+      def vendor = :neo4j
+
+      def schema_catalog
+        idx_rows = run('SHOW INDEXES')
+        con_rows = run('SHOW CONSTRAINTS')
+
+        idx_defs = idx_rows.map do |r|
+          Schema::IndexDef.new(
+            r['name'],
+            r['entityType'].downcase.to_sym,
+            r['labelsOrTypes'].first,
+            r['properties'],
+            r['uniqueness'] == 'UNIQUE',
+            r['type'] == 'VECTOR' ? r['options'] : nil
+          )
+        end
+
+        con_defs = con_rows.map do |r|
+          Schema::ConstraintDef.new(
+            r['name'],
+            r['labelsOrTypes'].first,
+            r['properties'],
+            r['type'].split('_').first.downcase.to_sym
+          )
+        end
+
+        Schema::Catalog.new(indexes: idx_defs, constraints: con_defs,
+                             node_types: [], edge_types: [])
+      rescue StandardError
+        Schema::Catalog.new(indexes: [], constraints: [], node_types: [], edge_types: [])
+      end
 
       # Use elementId() for Neo4j
       ID_FUNCTION = 'elementId'
