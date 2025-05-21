@@ -11,7 +11,8 @@ development:
 
 test:
   neo4j:
-    url: neo4j://neo4j:activecypher@localhost:7687
+    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:7687') %>
 
   primary:
-    url: memgraph://memgraph:activecypher@localhost:7688
+    url: <%= ENV.fetch('GRAPHDB_URL', 'memgraph://memgraph:activecypher@localhost:7688') %>
+
