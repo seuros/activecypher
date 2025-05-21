@@ -64,10 +64,12 @@ module ActiveCypher
       require 'active_cypher/generators/install_generator'
       require 'active_cypher/generators/node_generator'
       require 'active_cypher/generators/relationship_generator'
+      require 'active_cypher/generators/migration_generator'
     end
 
     rake_tasks do
       load File.expand_path('../tasks/graphdb_migrate.rake', __dir__)
+      load File.expand_path('../tasks/graphdb_schema.rake', __dir__)
     end
   end
 end
