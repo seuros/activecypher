@@ -12,7 +12,11 @@ class RelationshipGeneratorTest < Rails::Generators::TestCase
 
   test 'generator creates a relationship file' do
     run_generator ['Alliance', '--from=SpaceShipNode', '--to=PlanetNode']
-    assert_file 'app/graph/alliance_rel.rb', /class AllianceRel < ApplicationGraphRelationship/
+    assert_file 'app/graph/alliance_rel.rb' do |content|
+      assert_match(/class AllianceRel < ApplicationGraphRelationship/, content)
+      assert_match(/from_class 'SpaceShipNode'/, content)
+      assert_match(/to_class   'PlanetNode'/, content)
+    end
   end
 
   test 'generator creates a relationship file with attributes' do
@@ -26,7 +30,7 @@ class RelationshipGeneratorTest < Rails::Generators::TestCase
   test 'generator creates a relationship file with custom type' do
     run_generator ['Discovery', '--from=SpaceShipNode', '--to=PlanetNode', '--type=FIRST_CONTACT']
     assert_file 'app/graph/discovery_rel.rb' do |content|
-      assert_match(/type\s+:FIRST_CONTACT/, content)
+      assert_match(/type\s+'FIRST_CONTACT'/, content)
     end
   end
 
