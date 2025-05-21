@@ -276,10 +276,19 @@ You can customize the suffix with `--suffix=CustomSuffix`.
 ## ActiveCypher GraphDB Migrations
 
 ActiveCypher ships with a lightweight migration system for managing indexes and
-constraints in your graph databases. Migration files live under
+constraints in your graph databases. By default, migration files live under
 `graphdb/migrate` for database-agnostic changes, with optional DB-specific
 folders like `graphdb/neo4j`.
 
+### Configuring Migration Paths
+
+You can customize the locations of migration files by configuring multiple `migrations_paths` entries. This is useful if you want to organize migrations by adapter or other criteria. Use YAML array syntax in your configuration file (e.g., `config/graphdb.yml`):
+
+```yaml
+migrations_paths:
+  - graphdb/migrate
+  - graphdb/neo4j
+  - custom_migrations/adapter_specific
 Create the migration tracking constraint once:
 
 ```cypher
