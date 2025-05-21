@@ -49,6 +49,14 @@ class RelationshipGeneratorTest < Rails::Generators::TestCase
     assert_file 'app/graph/federation/treaty_rel.rb', /class Federation::TreatyRel < ApplicationGraphRelationship/
   end
 
+  test 'generator handles namespaced node classes' do
+    run_generator ['Alliance', '--from=Company::ReportNode', '--to=Company::DepartmentNode']
+    assert_file 'app/graph/alliance_rel.rb' do |content|
+      assert_match(/from_class 'Company::ReportNode'/, content)
+      assert_match(/to_class   'Company::DepartmentNode'/, content)
+    end
+  end
+
   test 'generator handles class collision' do
     # Create a dummy model file
     FileUtils.mkdir_p(File.join(destination_root, 'app/models'))
