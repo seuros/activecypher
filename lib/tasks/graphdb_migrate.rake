@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 namespace :graphdb do
   desc 'Run graph database migrations'
   task migrate: :environment do

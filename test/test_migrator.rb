@@ -4,29 +4,6 @@ require 'test_helper'
 require 'tmpdir'
 
 class MigratorTest < ActiveSupport::TestCase
-  class DummyAdapter < ActiveCypher::ConnectionAdapters::AbstractAdapter
-    attr_reader :executed
-
-    def initialize(config = {})
-      super
-      @executed = []
-      @versions = []
-    end
-
-    def execute_cypher(cypher, _params = {}, _ctx = 'Query')
-      @executed << cypher.strip
-      if cypher.start_with?('MATCH (m:SchemaMigration)')
-        @versions.map { |v| { version: v } }
-      elsif cypher.start_with?('CREATE (:SchemaMigration')
-        version = cypher.match(/version:\s*['"]?(\d+)/)[1]
-        @versions << version
-        []
-      else
-        []
-      end
-    end
-  end
-
   def setup
     @tmp = Dir.mktmpdir
     @graphdb = File.join(@tmp, 'graphdb', 'migrate')
@@ -47,7 +24,7 @@ class MigratorTest < ActiveSupport::TestCase
     write_migration('20250521113035', 'add_test_index', <<~RUBY)
       class AddTestIndex < ActiveCypher::Migration
         up do
-          execute 'CREATE (n:Test {name: \"A\"})'
+          execute 'CREATE (n:Test {name: "A"})'
         end
       end
     RUBY
