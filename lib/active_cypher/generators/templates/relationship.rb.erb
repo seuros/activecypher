@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 class <%= class_name %> < ApplicationGraphRelationship
-  from_class :<%= options[:from] %>
-  to_class   :<%= options[:to] %>
-  type       :<%= relationship_type %>
+  from_class '<%= options[:from] %>'
+  to_class   '<%= options[:to] %>'
+  type       '<%= relationship_type %>'
 <% if attributes.any? -%>
 <% attributes.each do |attr| -%>
   attribute :<%= attr.name %>, :<%= attr.type || "string" %>
