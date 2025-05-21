@@ -49,13 +49,15 @@ development:
   primary:
     url: memgraph://memgraph:activecypher@localhost:7688
   neo4j:
-    url: neo4j://neo4j:activecypher@localhost:7687
+    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:7687') %>
+    migrations_paths: graphdb/neo4j
 
 test:
   primary:
     url: memgraph://memgraph:activecypher@localhost:7688
   neo4j:
-    url: neo4j://neo4j:activecypher@localhost:7687
+    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:7687') %>
+    migrations_paths: graphdb/neo4j
 
 production:
   primary:
@@ -271,7 +273,50 @@ If you specify a name that already ends with `Rel`, the generator will not doubl
 
 You can customize the suffix with `--suffix=CustomSuffix`.
 
----
+## ActiveCypher GraphDB Migrations
+
+ActiveCypher ships with a lightweight migration system for managing indexes and
+constraints in your graph databases. Migration files live under
+`graphdb/migrate` for database-agnostic changes, with optional DB-specific
+folders like `graphdb/neo4j`.
+
+Create the migration tracking constraint once:
+
+```cypher
+CREATE CONSTRAINT graph_schema_migration IF NOT EXISTS
+FOR (m:SchemaMigration)
+REQUIRE m.version IS UNIQUE;
+```
+
+Write migrations using the small DSL:
+
+```ruby
+class AddFacilityIndexes < ActiveCypher::Migration
+  up do
+    create_uniqueness_constraint :Facility, :commonid,
+      name: :facility_commonid_unique
+
+    create_node_index :Facility, :country_id, :kind,
+      name: :facility_country_kind_idx
+
+    create_rel_index :FACILITY_REL, :rel_type,
+      name: :facility_rel_type_idx
+
+    execute <<~CYPHER
+      CREATE INDEX IF NOT EXISTS FOR (f:Facility) ON (f.created_at)
+    CYPHER
+  end
+end
+```
+
+Run pending migrations with:
+
+```bash
+bin/rails graphdb:migrate
+bin/rails graphdb:status
+```
+
+Migrations are append-only and should not be modified once created.
 
 ## Features
 
@@ -280,12 +325,6 @@ You can customize the suffix with `--suffix=CustomSuffix`.
 *   **Rails Integration:** Easy integration into Rails projects via Rails Engine.
 *   **Comprehensive Cypher Support:** Aims to support a wide range of Cypher clauses and functions (refer to [`CYREL.md`](./CYREL.md) and `test/cyrel/` for examples).
 
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `lib/active_cypher/version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/seuros/activecypher. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the code of conduct.
@@ -293,7 +332,3 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/seuros
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the ActiveCypher project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/seuros/activecypher/blob/master/CODE_OF_CONDUCT.md). *(Note: The CODE_OF_CONDUCT.md file might need to be created)*

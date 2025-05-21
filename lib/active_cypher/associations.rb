@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'active_support/concern'
-require 'active_support/core_ext/string/inflections' # for camelize, singularize etc.
-
 module ActiveCypher
   # Module to handle association definitions (has_many, belongs_to, etc.)
   # for ActiveCypher models.
