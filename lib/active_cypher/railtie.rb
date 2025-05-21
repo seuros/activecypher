@@ -65,5 +65,9 @@ module ActiveCypher
       require 'active_cypher/generators/node_generator'
       require 'active_cypher/generators/relationship_generator'
     end
+
+    rake_tasks do
+      load File.expand_path('../tasks/graphdb_migrate.rake', __dir__)
+    end
   end
 end
