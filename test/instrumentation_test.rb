@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class TestInstrumentation < ActiveSupport::TestCase
+class InstrumentationTest < ActiveSupport::TestCase
   class TestInstrumentable
     include ActiveCypher::Instrumentation
     include ActiveCypher::Logging
