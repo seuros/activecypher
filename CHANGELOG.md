@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.7.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.0...active_cypher/v0.7.1) (2025-05-21)
+
+
+### Bug Fixes
+
+* add schema tasks ([5dd0c90](https://github.com/seuros/activecypher/commit/5dd0c902951f6649247403369af982e78db3bf6d))
+
 ## [0.7.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.6.3...active_cypher/v0.7.0) (2025-05-21)
 
 
