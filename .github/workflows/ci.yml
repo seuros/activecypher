@@ -37,7 +37,6 @@ jobs:
       - name: Set up Ruby 3.4
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.4
           bundler-cache: true
 
       - name: Wait for services to accept TCP connections
@@ -50,16 +49,7 @@ jobs:
 
       - name: Run Minitest suite
         env:
-          BOLT_URI: bolt://neo4j:activecypher@localhost:7687
-          BOLT_USER: neo4j
-          BOLT_PASS: activecypher
-          TEST_NEO4J_USER: neo4j
-          TEST_NEO4J_PASS: activecypher
-          TEST_NEO4J_HOST: localhost
-          TEST_NEO4J_PORT: 7687
-          TEST_MEMG_USER: memgraph
-          TEST_MEMG_PASS: activecypher
-          TEST_MEMG_HOST: localhost
-          TEST_MEMG_PORT: 7688
+          NEO4J_URL: neo4j://neo4j:activecypher@localhost:7687
+          GRAPHDB_URL: memgraph://memgraph:activecypher@localhost:7688
         run: |
           bin/rails test
