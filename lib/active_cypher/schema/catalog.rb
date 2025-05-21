@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveCypher
   module Schema
     IndexDef      = Data.define(:name, :element, :label, :props, :unique, :vector_opts)

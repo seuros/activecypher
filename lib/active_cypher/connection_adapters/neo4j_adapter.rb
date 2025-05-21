@@ -1,5 +1,6 @@
 # frozen_string_literal: true
-require "active_cypher/schema/catalog"
+
+require 'active_cypher/schema/catalog'
 
 module ActiveCypher
   module ConnectionAdapters
@@ -33,7 +34,7 @@ module ActiveCypher
         end
 
         Schema::Catalog.new(indexes: idx_defs, constraints: con_defs,
-                             node_types: [], edge_types: [])
+                            node_types: [], edge_types: [])
       rescue StandardError
         Schema::Catalog.new(indexes: [], constraints: [], node_types: [], edge_types: [])
       end

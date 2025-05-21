@@ -1,5 +1,6 @@
 # frozen_string_literal: true
-require "active_cypher/schema/catalog"
+
+require 'active_cypher/schema/catalog'
 
 module ActiveCypher
   module ConnectionAdapters
@@ -69,7 +70,10 @@ module ActiveCypher
       protected
 
       def parse_schema(rows)
-        nodes, edges, idx, cons = [], [], [], []
+        nodes = []
+        edges = []
+        idx = []
+        cons = []
 
         rows.each do |row|
           case row['type']

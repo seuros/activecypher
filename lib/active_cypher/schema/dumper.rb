@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'fileutils'
 require 'optparse'
 
@@ -5,7 +7,7 @@ module ActiveCypher
   module Schema
     # Dumps the graph schema to a Cypher script
     class Dumper
-      DEFAULT_PATH = 'graphdb'.freeze
+      DEFAULT_PATH = 'graphdb'
 
       def initialize(connection = ActiveCypher::Base.connection, base_dir: Dir.pwd)
         @connection = connection
@@ -60,7 +62,7 @@ module ActiveCypher
       def catalog_from_migrations
         idx = []
         cons = []
-        Dir[File.join(@base_dir, 'graphdb', 'migrate', '*.rb')].sort.each do |file|
+        Dir[File.join(@base_dir, 'graphdb', 'migrate', '*.rb')].each do |file|
           require file
           class_name = File.basename(file, '.rb').split('_', 2).last.camelize
           klass = Object.const_get(class_name)
