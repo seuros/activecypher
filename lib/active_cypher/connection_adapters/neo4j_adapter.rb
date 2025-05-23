@@ -142,7 +142,7 @@ module ActiveCypher
           labels = if model.class.respond_to?(:labels)
                      model.class.labels
                    else
-                     [model.class.label_name]
+                     [model.class.label_name.to_s]
                    end
 
           label_string = labels.map { |l| ":#{l}" }.join
