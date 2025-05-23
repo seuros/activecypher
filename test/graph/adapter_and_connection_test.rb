@@ -46,7 +46,7 @@ class AdapterAndConnectionTest < ActiveSupport::TestCase
 
     GRAPH_CLASSES.each do |klass|
       expected_adapter = expected_class_connections[klass]
-      mapping = klass.respond_to?(:connects_to_mappings) ? klass.connects_to_mappings[:writing] : nil
+      mapping = klass.connects_to_mappings[:writing]
 
       if expected_adapter.nil?
         assert_nil mapping, "#{klass.name} should have connects_to_mappings[:writing] == nil, got #{mapping.inspect}"
