@@ -331,6 +331,13 @@ Migrations are append-only and should not be modified once created.
 
 For setting up Neo4j and Memgraph databases and direct command-line access, see [GRAPH_REFERENCE.md](GRAPH_REFERENCE.md).
 
+### Sanity Check
+
+Run `bin/sanity` to verify that Memgraph and Neo4j servers are reachable on
+ports 7688 and 7687. The script exits with an error if either service is not
+listening.
+
+
 ## Features
 
 *   **Cyrel DSL:** Intuitive Ruby DSL for constructing complex Cypher queries ([see detailed Cyrel documentation](./CYREL.md)).
