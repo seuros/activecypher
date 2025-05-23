@@ -62,9 +62,7 @@ class DummyAdapter < ActiveCypher::ConnectionAdapters::AbstractAdapter
       true
     end
 
-    def destroy_record(model)
-      model.instance_variable_set(:@destroyed, true)
-      model.freeze
+    def destroy_record(_model)
       true
     end
   end

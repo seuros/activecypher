@@ -46,6 +46,22 @@ module ActiveCypher
         self.class
       end
 
+      # Override run to execute queries without explicit transactions
+      # Memgraph auto‑commits each query, so we send RUN + PULL directly
+      def run(cypher, params = {}, context: 'Query', db: nil, access_mode: :write)
+        connect
+        logger.debug { "[#{context}] #{cypher} #{params.inspect}" }
+
+        instrument_query(cypher, params, context: context, metadata: { db: nil, access_mode: access_mode }) do
+          session = Bolt::Session.new(connection)
+          tx      = Bolt::Transaction.new(session, [])
+          result  = tx.run(cypher, prepare_params(params))
+          rows    = result.respond_to?(:to_a) ? result.to_a : result
+          session.close
+          rows
+        end
+      end
+
       # Memgraph defaults to **implicit auto‑commit** transactions :contentReference[oaicite:1]{index=1},
       # so we simply run the Cypher and return the rows.
       def execute_cypher(cypher, params = {}, ctx = 'Query')
@@ -203,13 +219,7 @@ module ActiveCypher
           CYPHER
 
           result = model.connection.execute_cypher(cypher, {}, 'Destroy')
-          if result.present? && result.first[:deleted].to_i.positive?
-            model.instance_variable_set(:@destroyed, true)
-            model.freeze
-            true
-          else
-            false
-          end
+          result.present? && result.first[:deleted].to_i.positive?
         end
       end
 

@@ -181,13 +181,7 @@ module ActiveCypher
           CYPHER
 
           result = model.connection.execute_cypher(cypher, {}, 'Destroy')
-          if result.present? && result.first[:deleted].to_i.positive?
-            model.instance_variable_set(:@destroyed, true)
-            model.freeze
-            true
-          else
-            false
-          end
+          result.present? && result.first[:deleted].to_i.positive?
         end
       end
 
