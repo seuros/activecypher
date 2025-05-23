@@ -327,6 +327,10 @@ bin/rails graphdb:status
 
 Migrations are append-only and should not be modified once created.
 
+## Database Setup and Direct Access
+
+For setting up Neo4j and Memgraph databases and direct command-line access, see [GRAPH_REFERENCE.md](GRAPH_REFERENCE.md).
+
 ## Features
 
 *   **Cyrel DSL:** Intuitive Ruby DSL for constructing complex Cypher queries ([see detailed Cyrel documentation](./CYREL.md)).
