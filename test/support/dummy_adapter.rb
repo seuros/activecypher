@@ -46,6 +46,28 @@ class DummyAdapter < ActiveCypher::ConnectionAdapters::AbstractAdapter
     node = ActiveCypher::Schema::NodeTypeDef.new('Test', ['name'], nil)
     ActiveCypher::Schema::Catalog.new(indexes: [idx], constraints: [con], node_types: [node], edge_types: [])
   end
+
+  module Persistence
+    module_function
+
+    def create_record(model)
+      model.internal_id = (model.internal_id || 0) + 1
+      model.instance_variable_set(:@new_record, false)
+      model.send(:changes_applied) if model.respond_to?(:changes_applied)
+      true
+    end
+
+    def update_record(model)
+      model.send(:changes_applied) if model.respond_to?(:changes_applied)
+      true
+    end
+
+    def destroy_record(model)
+      model.instance_variable_set(:@destroyed, true)
+      model.freeze
+      true
+    end
+  end
 end
 
 ActiveCypher::ConnectionAdapters::Registry.register('dummy', DummyAdapter)
