@@ -52,15 +52,18 @@ module ActiveCypher
 
         instrument_query(cypher, params, context: context, metadata: { db: nil, access_mode: access_mode }) do
           session = Bolt::Session.new(connection)
-          tx      = Bolt::Transaction.new(session, [])
-          result  = tx.run(cypher, prepare_params(params))
-          rows    = result.respond_to?(:to_a) ? result.to_a : result
+
+          rows = session.run_transaction(access_mode, db: nil) do |tx|
+            result = tx.run(cypher, prepare_params(params))
+            result.respond_to?(:to_a) ? result.to_a : result
+          end
+
           session.close
           rows
         end
       end
 
-      # Memgraph defaults to **implicit auto‑commit** transactions :contentReference[oaicite:1]{index=1},
+      # Memgraph defaults to **implicit auto‑commit** transactions
       # so we simply run the Cypher and return the rows.
       def execute_cypher(cypher, params = {}, ctx = 'Query')
         rows = run(cypher.gsub(/\belementId\(/i, 'id('), params, context: ctx)

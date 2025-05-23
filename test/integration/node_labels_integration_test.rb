@@ -87,8 +87,6 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
       believability_index: 2
     )
 
-    # Get the ID function type
-
     # Query using the first label
     conspiracy_result = ConspiracyNode.connection.execute_cypher(
       "MATCH (n:Conspiracy) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
