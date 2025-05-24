@@ -46,6 +46,13 @@ class AdapterAndConnectionTest < ActiveSupport::TestCase
 
     GRAPH_CLASSES.each do |klass|
       expected_adapter = expected_class_connections[klass]
+
+      # Relationship classes don't have connects_to_mappings
+      if klass < ActiveCypher::Relationship
+        assert_nil expected_adapter, "#{klass.name} is a relationship class and should not have a connection mapping"
+        next
+      end
+
       mapping = klass.connects_to_mappings[:writing]
 
       if expected_adapter.nil?

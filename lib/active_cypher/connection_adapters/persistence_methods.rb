@@ -15,21 +15,9 @@ module ActiveCypher
                    [model.class.label_name.to_s]
                  end
         label_string = labels.map { |l| ":#{l}" }.join
-        props_str = props.map do |k, v|
-          value_str = if v.nil?
-                        'NULL'
-                      elsif v.is_a?(String)
-                        "'#{v.gsub("'", "\\'")}'"
-                      elsif v.is_a?(Numeric) || v.is_a?(TrueClass) || v.is_a?(FalseClass)
-                        v.to_s
-                      else
-                        "'#{v.to_s.gsub("'", "\\'")}'"
-                      end
-          "#{k}: #{value_str}"
-        end.join(', ')
 
-        cypher = "CREATE (n#{label_string} {#{props_str}}) RETURN id(n) AS internal_id"
-        data = model.connection.execute_cypher(cypher, {}, 'Create')
+        cypher = "CREATE (n#{label_string} $props) RETURN id(n) AS internal_id"
+        data = model.connection.execute_cypher(cypher, { props: props }, 'Create')
 
         return false if data.blank? || !data.first.key?(:internal_id)
 
@@ -53,20 +41,11 @@ module ActiveCypher
                  end
 
         label_string = labels.map { |l| ":#{l}" }.join
-        set_clauses = changes.map do |property, value|
-          if value.nil?
-            "n.#{property} = NULL"
-          elsif value.is_a?(String)
-            "n.#{property} = '#{value.gsub("'", "\\'")}'"
-          elsif value.is_a?(Numeric) || value.is_a?(TrueClass) || value.is_a?(FalseClass)
-            "n.#{property} = #{value}"
-          else
-            "n.#{property} = '#{value.to_s.gsub("'", "\\'")}'"
-          end
-        end.join(', ')
+        set_clauses = changes.keys.map { |property| "n.#{property} = $#{property}" }.join(', ')
+        params = changes.merge(node_id: model.internal_id)
 
-        cypher = "MATCH (n#{label_string}) WHERE id(n) = #{model.internal_id} SET #{set_clauses} RETURN n"
-        model.connection.execute_cypher(cypher, {}, 'Update')
+        cypher = "MATCH (n#{label_string}) WHERE id(n) = $node_id SET #{set_clauses} RETURN n"
+        model.connection.execute_cypher(cypher, params, 'Update')
 
         model.send(:changes_applied)
         true
@@ -85,12 +64,12 @@ module ActiveCypher
 
         cypher = <<~CYPHER
           MATCH (n#{label_string})
-          WHERE id(n) = #{model.internal_id}
+          WHERE id(n) = $node_id
           DETACH DELETE n
           RETURN count(*) AS deleted
         CYPHER
 
-        result = model.connection.execute_cypher(cypher, {}, 'Destroy')
+        result = model.connection.execute_cypher(cypher, { node_id: model.internal_id }, 'Destroy')
         result.present? && result.first[:deleted].to_i.positive?
       end
     end

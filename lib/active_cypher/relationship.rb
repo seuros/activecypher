@@ -29,6 +29,9 @@ require 'active_support/core_ext/hash/indifferent_access'
 
 module ActiveCypher
   class Relationship
+    # Define connects_to_mappings as a class attribute to match ActiveCypher::Base
+    class_attribute :connects_to_mappings, default: {}
+
     # --------------------------------------------------------------
     # Mix‑ins
     # --------------------------------------------------------------

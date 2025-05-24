@@ -50,10 +50,10 @@ module ActiveCypher
         connect
         logger.debug { "[#{context}] #{cypher} #{params.inspect}" }
 
-        instrument_query(cypher, params, context: context, metadata: { db: nil, access_mode: access_mode }) do
+        instrument_query(cypher, params, context: context, metadata: { db: db, access_mode: access_mode }) do
           session = Bolt::Session.new(connection)
 
-          rows = session.run_transaction(access_mode, db: nil) do |tx|
+          rows = session.run_transaction(access_mode, db: db) do |tx|
             result = tx.run(cypher, prepare_params(params))
             result.respond_to?(:to_a) ? result.to_a : result
           end
