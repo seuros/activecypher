@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.7.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.1...active_cypher/v0.7.2) (2025-05-24)
+
+
+### Bug Fixes
+
+* extracts persistence-related operations into adapter ([#26](https://github.com/seuros/activecypher/issues/26)) ([5e19ed1](https://github.com/seuros/activecypher/commit/5e19ed14daed7232824b59c8a710005498eda6a3))
+
 ## [0.7.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.0...active_cypher/v0.7.1) (2025-05-21)
 
 
