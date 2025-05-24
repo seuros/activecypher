@@ -87,8 +87,6 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
       believability_index: 2
     )
 
-    # Get the ID function type
-
     # Query using the first label
     conspiracy_result = ConspiracyNode.connection.execute_cypher(
       "MATCH (n:Conspiracy) WHERE id(n) = #{conspiracy.internal_id} RETURN n"
@@ -165,9 +163,9 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
   # Add teardown to reset connection state between tests
   teardown do
     # Reset connections to clear any pending transactions
-    ConspiracyNode.connection.reset! if ConspiracyNode.respond_to?(:connection) && ConspiracyNode.connection.respond_to?(:reset!)
-    HobbyNode.connection.reset! if HobbyNode.respond_to?(:connection) && HobbyNode.connection.respond_to?(:reset!)
-    MultiLabelTheoryNode.connection.reset! if MultiLabelTheoryNode.respond_to?(:connection) && MultiLabelTheoryNode.connection.respond_to?(:reset!)
+    ConspiracyNode.connection.reset!
+    HobbyNode.connection.reset!
+    MultiLabelTheoryNode.connection.reset!
   end
 
   test 'destroy works with nodes having multiple labels' do

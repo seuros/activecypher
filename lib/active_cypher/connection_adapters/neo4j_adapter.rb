@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'active_cypher/schema/catalog'
-
 module ActiveCypher
   module ConnectionAdapters
     class Neo4jAdapter < AbstractBoltAdapter
@@ -98,6 +96,11 @@ module ActiveCypher
         metadata['db'] = db if db
         metadata['mode'] = convert_access_mode(access_mode)
         metadata.compact
+      end
+
+      module Persistence
+        include PersistenceMethods
+        module_function :create_record, :update_record, :destroy_record
       end
 
       protected

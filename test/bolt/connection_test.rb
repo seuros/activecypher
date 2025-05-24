@@ -22,7 +22,7 @@ class ConnectionTest < ActiveSupport::TestCase
   def safe_close(connection)
     return unless connection
 
-    connection.close if connection.respond_to?(:close) && connection.connected?
+    connection.close if connection.connected?
   rescue StandardError => e
     puts "Error closing connection: #{e.message}" if ENV['DEBUG']
   end

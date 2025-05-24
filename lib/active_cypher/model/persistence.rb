@@ -121,40 +121,10 @@ module ActiveCypher
       # Because nothing says "production ready" like a hand-crafted query.
       # If this method ever works on the first try, that's not engineering—it's back magick.
       def create_record
-        props = attributes_for_persistence
-        n = :n
+        adapter = adapter_class
+        raise NotImplementedError, "#{adapter} does not implement Persistence" unless adapter&.const_defined?(:Persistence)
 
-        # Use all labels for database operations
-        labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name.to_s]
-
-        # For Memgraph, construct direct Cypher query
-        label_string = labels.map { |l| ":#{l}" }.join
-
-        # Handle properties for Cypher query
-        props_str = props.map do |k, v|
-          value_str = if v.nil?
-                        'NULL'
-                      elsif v.is_a?(String)
-                        "'#{v.gsub("'", "\\\\'")}'"
-                      elsif v.is_a?(Numeric) || v.is_a?(TrueClass) || v.is_a?(FalseClass)
-                        v.to_s
-                      else
-                        "'#{v.to_s.gsub("'", "\\\\'")}'"
-                      end
-          "#{k}: #{value_str}"
-        end.join(', ')
-
-        cypher = "CREATE (#{n}#{label_string} {#{props_str}}) " \
-                 "RETURN id(#{n}) AS internal_id"
-
-        data = self.class.connection.execute_cypher(cypher, {}, 'Create')
-
-        return false if data.blank? || !data.first.key?(:internal_id)
-
-        self.internal_id = data.first[:internal_id]
-        @new_record = false
-        changes_applied
-        true
+        adapter::Persistence.create_record(self)
       end
 
       # Returns a hash of attributes that have changed and their spicy new values.
@@ -173,35 +143,10 @@ module ActiveCypher
       #
       # @return [Boolean] true if we updated something, or just acted like we did.
       def update_record
-        changes = changes_to_save
-        return true if changes.empty?
+        adapter = adapter_class
+        raise NotImplementedError, "#{adapter} does not implement Persistence" unless adapter&.const_defined?(:Persistence)
 
-        # Use all labels for database operations
-        labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name]
-
-        label_string = labels.map { |l| ":#{l}" }.join
-        set_clauses = changes.map do |property, value|
-          # Handle different value types appropriately
-          if value.nil?
-            "n.#{property} = NULL"
-          elsif value.is_a?(String)
-            "n.#{property} = '#{value.gsub("'", "\\\\'")}'"
-          elsif value.is_a?(Numeric) || value.is_a?(TrueClass) || value.is_a?(FalseClass)
-            "n.#{property} = #{value}"
-          else
-            "n.#{property} = '#{value.to_s.gsub("'", "\\\\'")}'"
-          end
-        end.join(', ')
-
-        cypher = "MATCH (n#{label_string}) " \
-                 "WHERE id(n) = #{internal_id} " \
-                 "SET #{set_clauses} " \
-                 'RETURN n'
-
-        self.class.connection.execute_cypher(cypher, {}, 'Update')
-
-        changes_applied
-        true
+        adapter::Persistence.update_record(self)
       end
     end
   end

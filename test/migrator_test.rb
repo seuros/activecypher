@@ -14,7 +14,7 @@ class MigratorTest < ActiveSupport::TestCase
 
   def teardown
     FileUtils.rm_rf(@tmp)
-    Object.send(:remove_const, :AddTestIndex) if defined?(AddTestIndex)
+    Object.send(:remove_const, :AddTestIndex)
   end
 
   def write_migration(version, name, body)

@@ -7,7 +7,7 @@ module Cyrel
   module Pattern
     class Node
       include ActiveModel::Model
-      include ActiveModel::Attributes # :contentReference[oaicite:3]{index=3}
+      include ActiveModel::Attributes
       include Cyrel::Parameterizable
 
       attribute :alias_name, Cyrel::Types::SymbolType.new

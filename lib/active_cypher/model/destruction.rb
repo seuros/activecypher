@@ -20,20 +20,10 @@ module ActiveCypher
           raise 'Cannot destroy a new record' if new_record?
           raise 'Record already destroyed' if destroyed?
 
-          n = :n
-          labels = self.class.respond_to?(:labels) ? self.class.labels : [self.class.label_name]
-          label_string = labels.map { |l| ":#{l}" }.join
+          adapter = adapter_class
+          raise NotImplementedError, "#{adapter} does not implement Persistence" unless adapter&.const_defined?(:Persistence)
 
-          cypher = <<~CYPHER
-            MATCH (#{n}#{label_string})
-            WHERE id(#{n}) = #{internal_id}
-            DETACH DELETE #{n}
-            RETURN count(*) AS deleted
-          CYPHER
-
-          result = self.class.connection.execute_cypher(cypher, {}, 'Destroy')
-
-          if result.present? && result.first[:deleted].to_i.positive?
+          if adapter::Persistence.destroy_record(self)
             @destroyed = true
             freeze
             true

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'active_cypher/schema/catalog'
-
 module ActiveCypher
   module ConnectionAdapters
     class MemgraphAdapter < AbstractBoltAdapter
@@ -46,7 +44,26 @@ module ActiveCypher
         self.class
       end
 
-      # Memgraph defaults to **implicit auto‑commit** transactions :contentReference[oaicite:1]{index=1},
+      # Override run to execute queries without explicit transactions
+      # Memgraph auto‑commits each query, so we send RUN + PULL directly
+      def run(cypher, params = {}, context: 'Query', db: nil, access_mode: :write)
+        connect
+        logger.debug { "[#{context}] #{cypher} #{params.inspect}" }
+
+        instrument_query(cypher, params, context: context, metadata: { db: db, access_mode: access_mode }) do
+          session = Bolt::Session.new(connection)
+
+          rows = session.run_transaction(access_mode, db: db) do |tx|
+            result = tx.run(cypher, prepare_params(params))
+            result.respond_to?(:to_a) ? result.to_a : result
+          end
+
+          session.close
+          rows
+        end
+      end
+
+      # Memgraph defaults to **implicit auto‑commit** transactions
       # so we simply run the Cypher and return the rows.
       def execute_cypher(cypher, params = {}, ctx = 'Query')
         rows = run(cypher.gsub(/\belementId\(/i, 'id('), params, context: ctx)
@@ -120,6 +137,11 @@ module ActiveCypher
         when Symbol then raw.to_s
         else raw # String/Integer/Float/Boolean/NilClass
         end
+      end
+
+      module Persistence
+        include PersistenceMethods
+        module_function :create_record, :update_record, :destroy_record
       end
 
       class ProtocolHandler < AbstractProtocolHandler

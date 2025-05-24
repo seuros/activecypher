@@ -8,12 +8,26 @@ require_relative 'support/dummy_adapter'
 class GraphdbTasksTest < ActiveSupport::TestCase
   def setup
     Rails.application.load_tasks
+
+    # Preserve existing connection handler state so subsequent tests
+    # continue using the real database connections.
+    @old_handler = ActiveCypher::Base.connection_handler
+    @old_mappings = ActiveCypher::Base.connects_to_mappings.dup
+
     pool = ActiveCypher::ConnectionPool.new(adapter: 'dummy')
+
+    # Replace the handler with a fresh instance that uses the dummy adapter.
+    ActiveCypher::Base.instance_variable_set(:@connection_handler, ActiveCypher::ConnectionHandler.new)
     ActiveCypher::Base.connection_handler.set(:primary, pool)
     ActiveCypher::Base.connects_to_mappings = { writing: :primary, reading: :primary }
   end
 
   def teardown
+    # Restore the original handler and mappings so other tests see the
+    # correct real database connections.
+    ActiveCypher::Base.instance_variable_set(:@connection_handler, @old_handler)
+    ActiveCypher::Base.connects_to_mappings = @old_mappings
+
     Rake::Task['graphdb:migrate'].reenable
     Rake::Task['graphdb:status'].reenable
   end
