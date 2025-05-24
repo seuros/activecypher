@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.7.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.2...active_cypher/v0.7.3) (2025-05-24)
+
+
+### Bug Fixes
+
+* add support for +s ([607790b](https://github.com/seuros/activecypher/commit/607790b590cf2624d79d036e32a8350f7cf02118))
+* replace deprecated id() with adapter-aware node_id() in Cyrel queries ([536301d](https://github.com/seuros/activecypher/commit/536301d0119b8c7b6e37542898f4196648b584a0))
+* unify internal_id handling for Neo4j and Memgraph adapters ([14dbbcb](https://github.com/seuros/activecypher/commit/14dbbcb163d00f53242d3aa5e0140662499d8d8c))
+
 ## [0.7.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.1...active_cypher/v0.7.2) (2025-05-24)
 
 
