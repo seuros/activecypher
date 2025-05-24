@@ -9,9 +9,11 @@ module ActiveCypher
   #
   # Supported URL prefixes:
   # - neo4j://
+  # - neo4j+s:// (alias for neo4j+ssc://)
   # - neo4j+ssl://
   # - neo4j+ssc://
   # - memgraph://
+  # - memgraph+s:// (alias for memgraph+ssc://)
   # - memgraph+ssl://
   # - memgraph+ssc://
   #
@@ -138,10 +140,14 @@ module ActiveCypher
 
       return nil unless SUPPORTED_ADAPTERS.include?(adapter)
 
-      modifiers = parts.select { |mod| %w[ssl ssc].include?(mod) }
+      # Map 's' to 'ssc' for Neo4j compatibility (self-signed certificates)
+      mapped_parts = parts.map { |mod| mod == 's' ? 'ssc' : mod }
+      modifiers = mapped_parts.select { |mod| %w[ssl ssc].include?(mod) }
 
       # If there are parts that are neither the adapter nor valid modifiers, the URL is invalid
-      remaining_parts = parts - modifiers
+      # Check against original parts but also accept 's' as valid
+      valid_modifiers = %w[ssl ssc s]
+      remaining_parts = parts.reject { |part| valid_modifiers.include?(part) }
       return nil if remaining_parts.any?
 
       [adapter, modifiers]

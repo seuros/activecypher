@@ -73,8 +73,12 @@ Connections are managed automatically, just like ActiveRecord.
 
 Similar to ActiveRecord's `DATABASE_URL`, ActiveCypher supports the `GRAPHDB_URL` environment variable as a standard way to configure your primary graph database connection. The adapter type is automatically detected from the URL scheme:
 
-- `neo4j://` or `neo4j+s://` → Neo4j adapter
-- `memgraph://` or `memgraph+ssl://` → Memgraph adapter
+- `neo4j://` → Neo4j adapter (no SSL)
+- `neo4j+ssl://` → Neo4j adapter (SSL with CA-signed certificate)
+- `neo4j+ssc://` or `neo4j+s://` → Neo4j adapter (SSL with self-signed certificate)
+- `memgraph://` → Memgraph adapter (no SSL)
+- `memgraph+ssl://` → Memgraph adapter (SSL with CA-signed certificate)
+- `memgraph+ssc://` or `memgraph+s://` → Memgraph adapter (SSL with self-signed certificate)
 
 Example:
 ```bash
