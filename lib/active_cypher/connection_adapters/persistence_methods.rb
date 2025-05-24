@@ -5,7 +5,7 @@ module ActiveCypher
     # Common persistence helpers shared by adapters
     module PersistenceMethods
       # Create a record in the database and update model state.
-      # @param model [ActiveCypher::Model] the model instance
+      # @param model [ActiveCypher::Base, ActiveCypher::Relationship] the model instance
       # @return [Boolean] true if created successfully
       def create_record(model)
         props = model.send(:attributes_for_persistence)
@@ -28,7 +28,7 @@ module ActiveCypher
       end
 
       # Update a record in the database based on model changes.
-      # @param model [ActiveCypher::Model] the model instance
+      # @param model [ActiveCypher::Base, ActiveCypher::Relationship] the model instance
       # @return [Boolean] true if update succeeded
       def update_record(model)
         changes = model.send(:changes_to_save)
@@ -52,7 +52,7 @@ module ActiveCypher
       end
 
       # Destroy a record in the database.
-      # @param model [ActiveCypher::Model] the model instance
+      # @param model [ActiveCypher::Base, ActiveCypher::Relationship] the model instance
       # @return [Boolean] true if a record was deleted
       def destroy_record(model)
         labels = if model.class.respond_to?(:labels)
