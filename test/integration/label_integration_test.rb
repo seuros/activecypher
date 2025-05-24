@@ -112,11 +112,12 @@ class LabelIntegrationTest < ActiveSupport::TestCase
 
     # Verify nodes exist before destroying them
 
+    adapter = AnimalNode.connection.id_handler
     AnimalNode.connection.execute_cypher(
-      "MATCH (n:Animal:LivingBeing) WHERE id(n) = #{animal.internal_id} RETURN count(n) as count"
+      "MATCH (n:Animal:LivingBeing) WHERE #{adapter.node_id_equals_value('n', animal.internal_id)} RETURN count(n) as count"
     )
     CarNode.connection.execute_cypher(
-      "MATCH (n:Vehicle) WHERE id(n) = #{car.internal_id} RETURN count(n) as count"
+      "MATCH (n:Vehicle) WHERE #{adapter.node_id_equals_value('n', car.internal_id)} RETURN count(n) as count"
     )
 
     # Explicitly destroy and check results

@@ -39,6 +39,27 @@ module ActiveCypher
         'id(r) AS rid'
       end
 
+      # Additional helper methods for nodes
+      def self.node_id_where(alias_name, param_name = nil)
+        if param_name
+          "id(#{alias_name}) = $#{param_name}"
+        else
+          "id(#{alias_name})"
+        end
+      end
+
+      def self.node_id_equals_value(alias_name, value)
+        "id(#{alias_name}) = #{value}"
+      end
+
+      def self.return_node_id(alias_name, as_name = 'internal_id')
+        "id(#{alias_name}) AS #{as_name}"
+      end
+
+      def self.id_function
+        'id'
+      end
+
       # Return self as id_handler for compatibility with tests
       def id_handler
         self.class
@@ -66,7 +87,12 @@ module ActiveCypher
       # Memgraph defaults to **implicit auto‑commit** transactions
       # so we simply run the Cypher and return the rows.
       def execute_cypher(cypher, params = {}, ctx = 'Query')
-        rows = run(cypher.gsub(/\belementId\(/i, 'id('), params, context: ctx)
+        # Convert elementId() to id() because Memgraph doesn't speak Neo4j's fancy ID dialect
+        # This is the duct tape holding our multi-database dreams together
+        # TODO: Make Cyrel adapter-aware so it doesn't generate the wrong ID function
+        #       like a tourist ordering in the wrong language
+        cypher = cypher.gsub(/\belementId\(/i, 'id(')
+        rows = run(cypher, params, context: ctx)
         process_records(rows)
       end
 

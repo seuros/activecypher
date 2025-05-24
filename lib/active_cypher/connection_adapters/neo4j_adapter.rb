@@ -61,6 +61,35 @@ module ActiveCypher
         'elementId(r) AS rid'
       end
 
+      # Additional helper methods for nodes
+      def self.node_id_where(alias_name, param_name = nil)
+        if param_name
+          "elementId(#{alias_name}) = $#{param_name}"
+        else
+          "elementId(#{alias_name})"
+        end
+      end
+
+      def self.node_id_equals_value(alias_name, value)
+        # Quote string values for Cypher because Neo4j is paranoid about injection attacks
+        # (As it should be, have you seen what people try to inject these days?)
+        quoted_value = value.is_a?(String) ? "'#{value}'" : value
+        "elementId(#{alias_name}) = #{quoted_value}"
+      end
+
+      def self.return_node_id(alias_name, as_name = 'internal_id')
+        "elementId(#{alias_name}) AS #{as_name}"
+      end
+
+      def self.id_function
+        'elementId'
+      end
+
+      # Return self as id_handler for compatibility
+      def id_handler
+        self.class
+      end
+
       def execute_cypher(cypher, params = {}, ctx = 'Query')
         connect
         session = connection.session # thin wrapper around Bolt::Session

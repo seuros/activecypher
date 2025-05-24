@@ -16,7 +16,8 @@ module ActiveCypher
                  end
         label_string = labels.map { |l| ":#{l}" }.join
 
-        cypher = "CREATE (n#{label_string} $props) RETURN id(n) AS internal_id"
+        adapter = model.connection.id_handler
+        cypher = "CREATE (n#{label_string} $props) RETURN #{adapter.return_node_id('n')}"
         data = model.connection.execute_cypher(cypher, { props: props }, 'Create')
 
         return false if data.blank? || !data.first.key?(:internal_id)
@@ -42,9 +43,14 @@ module ActiveCypher
 
         label_string = labels.map { |l| ":#{l}" }.join
         set_clauses = changes.keys.map { |property| "n.#{property} = $#{property}" }.join(', ')
-        params = changes.merge(node_id: model.internal_id)
 
-        cypher = "MATCH (n#{label_string}) WHERE id(n) = $node_id SET #{set_clauses} RETURN n"
+        adapter = model.connection.id_handler
+        # Convert internal_id to its preferred existential format
+        # Neo4j wants strings because it's complicated, Memgraph wants integers because it's not
+        node_id_param = adapter.id_function == 'elementId' ? model.internal_id.to_s : model.internal_id.to_i
+        params = changes.merge(node_id: node_id_param)
+
+        cypher = "MATCH (n#{label_string}) WHERE #{adapter.node_id_where('n', 'node_id')} SET #{set_clauses} RETURN n"
         model.connection.execute_cypher(cypher, params, 'Update')
 
         model.send(:changes_applied)
@@ -62,14 +68,19 @@ module ActiveCypher
                  end
         label_string = labels.map { |l| ":#{l}" }.join
 
+        adapter = model.connection.id_handler
+        # Convert internal_id to whatever format makes the database feel validated
+        # It's like therapy, but for graph databases
+        node_id_param = adapter.id_function == 'elementId' ? model.internal_id.to_s : model.internal_id.to_i
+
         cypher = <<~CYPHER
           MATCH (n#{label_string})
-          WHERE id(n) = $node_id
+          WHERE #{adapter.node_id_where('n', 'node_id')}
           DETACH DELETE n
           RETURN count(*) AS deleted
         CYPHER
 
-        result = model.connection.execute_cypher(cypher, { node_id: model.internal_id }, 'Destroy')
+        result = model.connection.execute_cypher(cypher, { node_id: node_id_param }, 'Destroy')
         result.present? && result.first[:deleted].to_i.positive?
       end
     end

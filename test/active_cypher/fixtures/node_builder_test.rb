@@ -19,7 +19,8 @@ class NodeBuilderTest < ActiveSupport::TestCase
     assert instance.is_a?(PersonNode), "Expected PersonNode, got #{instance.class}"
     assert_equal 'John', instance.name
     assert_equal 42, instance.age
-    assert instance.internal_id.is_a?(Integer), "Expected integer internal_id, got #{instance.internal_id.inspect}"
+    # Internal ID can be either Integer (Memgraph) or String (Neo4j)
+    assert instance.internal_id.present?, "Expected internal_id to be present, got #{instance.internal_id.inspect}"
 
     # Confirm node exists in DB
     result = PersonNode.connection.execute_cypher(<<~CYPHER, name: 'John')

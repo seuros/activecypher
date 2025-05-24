@@ -33,16 +33,25 @@ module ActiveCypher
         # Find a node by internal DB ID. Returns the record or dies dramatically.
         # Because sometimes you want to find a node, and sometimes you want to find existential dread.
         def find(internal_db_id)
-          internal_db_id = internal_db_id.to_i if internal_db_id.respond_to?(:to_i)
           node_alias = :n
 
           labels = respond_to?(:labels) ? self.labels : [label_name]
-          Cyrel.match(Cyrel.node(node_alias, labels: labels)).limit(1)
+          adapter = connection.id_handler
           label_string = labels.map { |l| ":#{l}" }.join
+
+          # Handle ID format based on adapter's preferred flavor of existential crisis
+          # Neo4j insists on string IDs like "4:uuid:wtf" because simple integers are for peasants
+          # Memgraph keeps it real with numeric IDs because it doesn't need to prove anything
+          formatted_id = if adapter.id_function == 'elementId'
+                           internal_db_id.to_s  # String for Neo4j
+                         else
+                           internal_db_id.to_i  # Numeric for Memgraph
+                         end
+
           cypher = <<~CYPHER
             MATCH (#{node_alias}#{label_string})
-            WHERE id(#{node_alias}) = #{internal_db_id}
-            RETURN #{node_alias}, id(#{node_alias}) AS internal_id
+            WHERE #{adapter.node_id_equals_value(node_alias, formatted_id)}
+            RETURN #{node_alias}, #{adapter.return_node_id(node_alias)}
             LIMIT 1
           CYPHER
 

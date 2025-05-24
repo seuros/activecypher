@@ -12,7 +12,11 @@ module ActiveCypher
         include ActiveCypher::Associations
         include ActiveCypher::Scoping
 
-        attribute :internal_id, :integer
+        # internal_id: The ID that proves you exist in the graph's eyes
+        # String type because Neo4j needs UUIDs like "4:abc:xyz" to feel special
+        # while Memgraph just counts sheep like a normal database.
+        # ActiveModel will convert between them, hopefully without existential dread
+        attribute :internal_id, :string
 
         class_attribute :configurations, instance_accessor: false,
                                          default: ActiveSupport::HashWithIndifferentAccess.new

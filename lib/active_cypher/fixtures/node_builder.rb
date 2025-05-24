@@ -17,10 +17,11 @@ module ActiveCypher
         label_clause = labels.map { |label| "`#{label}`" }.join(':')
 
         # Build and fire the CREATE query.
-        # We use id(n) because elementId(n) lies to us with strings.
+        # Ask the adapter how it likes its IDs served - string or integer, sir?
+        adapter = conn.id_handler
         cypher = <<~CYPHER
           CREATE (n:#{label_clause} $props)
-          RETURN n, id(n) AS internal_id, properties(n) AS props
+          RETURN n, #{adapter.return_node_id('n')}, properties(n) AS props
         CYPHER
 
         result = conn.execute_cypher(cypher, props: props)

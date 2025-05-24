@@ -50,7 +50,10 @@ module ActiveCypher
     # --------------------------------------------------------------
     # Attributes
     # --------------------------------------------------------------
-    attribute :internal_id, :integer
+    # internal_id: Your relationship's social security number, but less secure
+    # String because Neo4j relationships have commitment issues and need complex IDs
+    # Memgraph relationships just want a simple number, like the good old days with MS Access.
+    attribute :internal_id, :string
 
     # --------------------------------------------------------------
     # Connection fallback
