@@ -57,6 +57,7 @@ module Cyrel
     def to_cypher
       ActiveSupport::Notifications.instrument('cyrel.render', query: self) do
         cypher_string = @clauses
+                        .sort_by { |clause| clause_order(clause) }
                         .map { it.render(self) }
                         .reject(&:blank?)
                         .join("\n")
@@ -275,12 +276,17 @@ module Cyrel
     # @return [self]
     # For when you want to ignore the first N results, just like your unread emails.
     def skip(amount)
-      existing_skip = @clauses.find { |c| c.is_a?(Clause::Skip) }
-      new_skip = Clause::Skip.new(amount)
-      if existing_skip
-        existing_skip.replace!(new_skip)
+      # Use AST-based implementation
+      skip_node = AST::SkipNode.new(amount)
+      ast_clause = AST::ClauseAdapter.new(skip_node)
+
+      # Find and replace existing skip or add new one
+      existing_skip_index = @clauses.find_index { |c| c.is_a?(Clause::Skip) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::SkipNode)) }
+
+      if existing_skip_index
+        @clauses[existing_skip_index] = ast_clause
       else
-        add_clause(new_skip)
+        add_clause(ast_clause)
       end
       self
     end
@@ -290,13 +296,19 @@ module Cyrel
     # @return [self]
     # Because sometimes you want boundaries, even in your queries.
     def limit(amount)
-      existing_limit = @clauses.find { |c| c.is_a?(Clause::Limit) }
-      new_limit = Clause::Limit.new(amount)
-      if existing_limit
-        existing_limit.replace!(new_limit)
+      # Use AST-based implementation
+      limit_node = AST::LimitNode.new(amount)
+      ast_clause = AST::ClauseAdapter.new(limit_node)
+
+      # Find and replace existing limit or add new one
+      existing_limit_index = @clauses.find_index { |c| c.is_a?(Clause::Limit) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::LimitNode)) }
+
+      if existing_limit_index
+        @clauses[existing_limit_index] = ast_clause
       else
-        add_clause(new_limit)
+        add_clause(ast_clause)
       end
+
       self
     end
 
@@ -375,6 +387,13 @@ module Cyrel
       when Clause::OrderBy then 60 # Ordering/Paging
       when Clause::Skip then 70
       when Clause::Limit then 80
+      when AST::ClauseAdapter
+        # For AST-based clauses, check the underlying node type
+        case clause.ast_node
+        when AST::SkipNode then 70
+        when AST::LimitNode then 80
+        else 99
+        end
       else 99 # Unknown clauses go last
       end
     end
@@ -446,24 +465,30 @@ module Cyrel
 
       # --- Handle Replacing Clauses (OrderBy, Skip, Limit) ---
       [Clause::OrderBy, Clause::Skip, Clause::Limit].each do |clause_class|
+        # Helper to check if a clause matches the type we're looking for
+        clause_matcher = lambda do |c|
+          c.is_a?(clause_class) ||
+            (clause_class == Clause::Limit && c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::LimitNode))
+        end
+
         # Find the last occurrence in the other query's clauses
-        other_clause = other_clauses_to_process.reverse.find { |c| c.is_a?(clause_class) }
+        other_clause = other_clauses_to_process.reverse.find(&clause_matcher)
         next unless other_clause
 
         # Find the clause in self, if it exists
-        self_clause = @clauses.find { |c| c.is_a?(clause_class) }
+        self_clause = @clauses.find(&clause_matcher)
 
-        if self_clause.respond_to?(:replace!)
-          # If self has the clause and it supports replace!, replace it
-          self_clause.replace!(other_clause)
+        if self_clause && other_clause
+          # Replace the existing clause
+          self_clause_index = @clauses.index(self_clause)
+          @clauses[self_clause_index] = other_clause
         elsif !self_clause
           # If self doesn't have the clause, add the one from other_query
           add_clause(other_clause)
-          # Else: self has the clause but doesn't support replace! - do nothing (keep self's)
         end
 
         # Remove *all* occurrences of this clause type from the list to process further
-        other_clauses_to_process.delete_if { |c| c.is_a?(clause_class) }
+        other_clauses_to_process.delete_if(&clause_matcher)
       end
 
       # --- Handle Merging Clauses (Where) ---

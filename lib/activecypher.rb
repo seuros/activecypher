@@ -104,7 +104,8 @@ loader.ignore("#{__dir__}/activecypher.rb")
 loader.ignore("#{__dir__}/cyrel.rb")
 loader.inflector.inflect(
   'activecypher' => 'ActiveCypher',
-  'dsl_context' => 'DSLContext'
+  'dsl_context' => 'DSLContext',
+  'ast' => 'AST'
 )
 loader.push_dir("#{__dir__}/cyrel", namespace: Cyrel)
 loader.setup
