@@ -16,7 +16,7 @@ mgconsole --host localhost --port 7688 --username memgraph --password activecyph
 ### Environment Variables
 ```bash
 NEO4J_URL="neo4j://neo4j:activecypher@localhost:7687"
-GRAPH_URL="memgraph://memgraph:activecypher@localhost:7688"
+GRAPHDB_URL="memgraph://memgraph:activecypher@localhost:7688"
 ```
 
 ### Basic Cypher Queries
@@ -55,4 +55,5 @@ echo "MATCH (n) RETURN count(n);" | mgconsole --host localhost --port 7688 --use
 # Exit shell
 :exit (Neo4j)
 :quit (Memgraph)
+# Note: Unlike Vim, you can actually exit these shells! 😉
 ```

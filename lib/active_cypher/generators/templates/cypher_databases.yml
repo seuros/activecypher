@@ -1,11 +1,11 @@
 development:
   primary:
-    url: ENV["GRAPH_URL"]
+    url: <%= ENV["GRAPHDB_URL"] %>
 
 test:
   primary:
-    url: ENV["GRAPH_URL"]
+    url: <%= ENV["GRAPHDB_URL"] %>
 
 production:
   primary:
-    url: ENV["GRAPH_URL"]
+    url: <%= ENV["GRAPHDB_URL"] %>

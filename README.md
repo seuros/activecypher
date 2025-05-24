@@ -69,6 +69,24 @@ ActiveCypher will automatically pick up the correct configuration for the curren
 **You do not need to call any setup code in your test helper or application initializer.**
 Connections are managed automatically, just like ActiveRecord.
 
+### Environment Variable Configuration
+
+Similar to ActiveRecord's `DATABASE_URL`, ActiveCypher supports the `GRAPHDB_URL` environment variable as a standard way to configure your primary graph database connection. The adapter type is automatically detected from the URL scheme:
+
+- `neo4j://` or `neo4j+s://` → Neo4j adapter
+- `memgraph://` or `memgraph+ssl://` → Memgraph adapter
+
+Example:
+```bash
+# For Neo4j
+export GRAPHDB_URL="neo4j://username:password@localhost:7687/database_name"
+
+# For Memgraph
+export GRAPHDB_URL="memgraph://username:password@localhost:7688"
+```
+
+When `GRAPHDB_URL` is set, it takes precedence over the corresponding entry in `cypher_databases.yml` for the primary connection.
+
 ### Connecting Models to Different Databases
 
 You can configure each node (model) class to use a specific connection by using the `connects_to` class method. This allows you to route different models to different databases or roles.
