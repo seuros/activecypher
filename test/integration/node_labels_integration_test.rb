@@ -71,8 +71,10 @@ class NodeLabelsIntegrationTest < ActiveSupport::TestCase
     assert_equal 'Bird Watching', properties[:name]
 
     # Verify it doesn't have the default class name label
+    adapter = HobbyNode.connection.id_handler
+    id_where = adapter.node_id_where('n', 'id')
     alt_result = HobbyNode.connection.execute_cypher(
-      'MATCH (n:hobby_node) WHERE elementId(n) = $id RETURN n',
+      "MATCH (n:hobby_node) WHERE #{id_where} RETURN n",
       { id: hobby.internal_id }
     )
 

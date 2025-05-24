@@ -35,10 +35,14 @@ module Cyrel
 
   # Cyrel DSL helper: returns the element id of a node/relationship.
   # Example: Cyrel.id(:n)
-  def id(...) = Functions.element_id(...)
+  def id(...) = Functions.id(...)
 
   # Cyrel DSL helper: returns the element id of a node/relationship (alias).
   def element_id(...) = Functions.element_id(...)
+
+  # Cyrel DSL helper: adapter-aware node ID function
+  # Example: Cyrel.node_id(:n)
+  def node_id(...) = Functions.node_id(...)
 
   # Cyrel DSL helper: Cypher count() aggregation.
   # Example: Cyrel.count(:n)

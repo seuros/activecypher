@@ -128,9 +128,9 @@ module ActiveCypher
           arrow = (dir == :both ? :'--' : :out)
           Cyrel
             .match(Cyrel.node(from_node.class.label_name).as(:a)
-                        .where(Cyrel.id(:a).eq(from_node.internal_id)))
+                        .where(Cyrel.node_id(:a).eq(from_node.internal_id)))
             .match(Cyrel.node(to_node.class.label_name).as(:b)
-                        .where(Cyrel.id(:b).eq(to_node.internal_id)))
+                        .where(Cyrel.node_id(:b).eq(to_node.internal_id)))
             .create(Cyrel.node(:a).rel(arrow, reflection[:relationship]).to(:b))
             .tap { |qry| owner.class.connection.execute_cypher(*qry.to_cypher, 'Create Association') }
         end

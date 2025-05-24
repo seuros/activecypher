@@ -142,7 +142,7 @@ module ActiveCypher
 
       Cyrel
         .match(Cyrel.node(node_alias, labels: labels))
-        .return_(node_alias, Cyrel.element_id(node_alias).as(:internal_id))
+        .return_(node_alias, Cyrel.node_id(node_alias).as(:internal_id))
     end
 
     # Actually loads the records from the database, shattering the illusion of laziness.

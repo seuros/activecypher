@@ -87,11 +87,9 @@ module ActiveCypher
       # Memgraph defaults to **implicit auto‑commit** transactions
       # so we simply run the Cypher and return the rows.
       def execute_cypher(cypher, params = {}, ctx = 'Query')
-        # Convert elementId() to id() because Memgraph doesn't speak Neo4j's fancy ID dialect
-        # This is the duct tape holding our multi-database dreams together
-        # TODO: Make Cyrel adapter-aware so it doesn't generate the wrong ID function
-        #       like a tourist ordering in the wrong language
-        cypher = cypher.gsub(/\belementId\(/i, 'id(')
+        # Replace adapter-aware placeholder with Memgraph's id function
+        # Because Memgraph insists on being different and using id() instead of elementId()
+        cypher = cypher.gsub('__NODE_ID__', 'id')
         rows = run(cypher, params, context: ctx)
         process_records(rows)
       end

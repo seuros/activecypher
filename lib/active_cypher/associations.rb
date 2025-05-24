@@ -142,7 +142,7 @@ module ActiveCypher
           # Compose query  MATCH – WHERE – RETURN
           query = Cyrel::Query.new
                               .match(path)
-                              .where(Cyrel.id(a_alias).eq(internal_id))
+                              .where(Cyrel.node_id(a_alias).eq(internal_id))
                               .return_(b_alias)
 
           base_relation = Relation.new(target_class, query)
@@ -186,7 +186,7 @@ module ActiveCypher
 
           query = Cyrel::Query.new
                               .match(path)
-                              .where(Cyrel.id(a_alias).eq(internal_id))
+                              .where(Cyrel.node_id(a_alias).eq(internal_id))
                               .return_(b_alias)
                               .limit(1)
 
@@ -225,8 +225,8 @@ module ActiveCypher
                                       .rel(cyrel_direction, rel_type)
                                       .as(del_rel_alias)
                                       .to(del_end_alias))
-                        .where(Cyrel.id(del_start_alias).eq(del_start_node.internal_id))
-                        .where(Cyrel.id(del_end_alias).eq(del_end_node.internal_id))
+                        .where(Cyrel.node_id(del_start_alias).eq(del_start_node.internal_id))
+                        .where(Cyrel.node_id(del_end_alias).eq(del_end_node.internal_id))
                         .delete(del_rel_alias)
 
             self.class.connection.execute_cypher(
@@ -266,8 +266,8 @@ module ActiveCypher
               create_query = Cyrel
                              .match(Cyrel.node(new_start_node.class.label_name).as(new_start_alias))
                              .match(Cyrel.node(new_end_node.class.label_name).as(new_end_alias))
-                             .where(Cyrel.id(new_start_alias).eq(new_start_node.internal_id))
-                             .where(Cyrel.id(new_end_alias).eq(new_end_node.internal_id))
+                             .where(Cyrel.node_id(new_start_alias).eq(new_start_node.internal_id))
+                             .where(Cyrel.node_id(new_end_alias).eq(new_end_node.internal_id))
                              .create(Cyrel.node(new_start_alias)
                                             .rel(arrow, rel_type)
                                             .to(new_end_alias))
@@ -322,7 +322,7 @@ module ActiveCypher
           target_node_alias = :target_node
 
           start_node_pattern = Cyrel.node(self.class.label_name).as(start_node_alias)
-                                    .where(Cyrel.id(start_node_alias).eq(internal_id))
+                                    .where(Cyrel.node_id(start_node_alias).eq(internal_id))
           target_node_pattern = Cyrel.node(target_class.label_name).as(target_node_alias)
 
           rel_pattern = case direction
@@ -372,10 +372,10 @@ module ActiveCypher
             # Adjust direction for Cyrel pattern if needed
             cyrel_direction = direction == :in ? :out : direction
             del_query = Cyrel.match(Cyrel.node(del_start_node.class.label_name)
-                                         .as(del_start_alias).where(Cyrel.id(del_start_alias)
+                                         .as(del_start_alias).where(Cyrel.node_id(del_start_alias)
                                                                          .eq(del_start_node.internal_id)))
                              .match(Cyrel.node(del_end_node.class.label_name)
-                                         .as(del_end_alias).where(Cyrel.id(del_end_alias)
+                                         .as(del_end_alias).where(Cyrel.node_id(del_end_alias)
                                                                        .eq(del_end_node.internal_id)))
                              .match(Cyrel.node(del_start_alias).rel(cyrel_direction,
                                                                     rel_type).as(del_rel_alias).to(del_end_alias))
@@ -411,10 +411,10 @@ module ActiveCypher
               new_start_alias = :a
               new_end_alias = :b
               create_query = Cyrel.match(Cyrel.node(new_start_node.class.label_name)
-                                              .as(new_start_alias).where(Cyrel.id(new_start_alias)
+                                              .as(new_start_alias).where(Cyrel.node_id(new_start_alias)
                                                                               .eq(new_start_node.internal_id)))
                                   .match(Cyrel.node(new_end_node.class.label_name)
-                                              .as(new_end_alias).where(Cyrel.id(new_end_alias)
+                                              .as(new_end_alias).where(Cyrel.node_id(new_end_alias)
                                                                             .eq(new_end_node.internal_id)))
                                   .create(Cyrel.node(new_start_alias).rel(:out, rel_type).to(new_end_alias))
 
@@ -488,7 +488,7 @@ module ActiveCypher
 
         # Start node pattern
         start_node_pattern = Cyrel.node(self.class.label_name).as(start_node_alias)
-                                  .where(Cyrel.id(start_node_alias).eq(internal_id))
+                                  .where(Cyrel.node_id(start_node_alias).eq(internal_id))
 
         # Intermediate node pattern (based on through_reflection)
         intermediate_node_pattern = Cyrel.node(intermediate_class.label_name).as(intermediate_node_alias)

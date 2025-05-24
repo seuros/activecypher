@@ -18,12 +18,23 @@ module Cyrel
     # --- Common Cypher Functions ---
 
     # Use elementId() instead of deprecated id()
+    # @deprecated Use {#node_id} instead for adapter-aware ID handling
     def element_id(node_variable)
       Expression::FunctionCall.new(:elementId, Clause::Return::RawIdentifier.new(node_variable.to_s))
     end
 
+    # @deprecated Use {#node_id} instead for adapter-aware ID handling
     def id(node_variable)
       Expression::FunctionCall.new(:id, Clause::Return::RawIdentifier.new(node_variable.to_s))
+    end
+
+    # Adapter-aware node ID function
+    # Generates a placeholder that will be replaced by the correct ID function
+    # at execution time based on the database adapter (Neo4j vs Memgraph)
+    # Because databases can't agree on how to name their ID functions,
+    # we'll just pretend they're all the same and fix it later
+    def node_id(node_variable)
+      Expression::FunctionCall.new(:__NODE_ID__, Clause::Return::RawIdentifier.new(node_variable.to_s))
     end
 
     # Because apparently, COUNT(*) isn’t obvious enough.
