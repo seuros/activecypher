@@ -331,6 +331,18 @@ module Cyrel
       # Consider adding: merge_parameters!(subquery) here, but it might re-register params.
     end
 
+    # Adds an UNWIND clause.
+    # @param expression [Array, Symbol, Object] The list expression to unwind
+    # @param variable [Symbol, String] The variable name to bind each element to
+    # @return [self]
+    # For when you want to turn one row with a list into many rows with values,
+    # like unpacking a suitcase but for data
+    # Example: query.unwind([1,2,3], :x).return_(:x)
+    #          query.unwind(:names, :name).create(...)
+    def unwind(expression, variable)
+      add_clause(Clause::Unwind.new(expression, variable))
+    end
+
     # No longer private, needed by merge!
     # private
 

@@ -94,7 +94,7 @@ module ActiveCypher
         connect
         # Replace adapter-aware placeholder with Neo4j's elementId function
         cypher = cypher.gsub('__NODE_ID__', 'elementId')
-        
+
         session = connection.session # thin wrapper around Bolt::Session
         result  = session.write_transaction do |tx|
           logger.debug { "[#{ctx}] #{cypher} #{params.inspect}" }
