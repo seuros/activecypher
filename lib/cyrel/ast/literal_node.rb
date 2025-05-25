@@ -18,7 +18,7 @@ module Cyrel
         [value]
       end
 
-      def deconstruct_keys(keys)
+      def deconstruct_keys(_keys)
         { value: value }
       end
 

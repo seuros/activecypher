@@ -99,8 +99,10 @@ module Cyrel
     # @return [self]
     # Because nothing says "find me" like a declarative pattern and a prayer.
     def match(pattern, path_variable: nil)
-      # TODO: Add implicit pattern construction from Hash/Array if desired.
-      add_clause(Clause::Match.new(pattern, optional: false, path_variable: path_variable))
+      # Use AST-based implementation
+      match_node = AST::MatchNode.new(pattern, optional: false, path_variable: path_variable)
+      ast_clause = AST::ClauseAdapter.new(match_node)
+      add_clause(ast_clause)
     end
 
     # Adds an OPTIONAL MATCH clause.
@@ -109,7 +111,10 @@ module Cyrel
     # @return [self]
     # For when you want to be non-committal, even in your queries.
     def optional_match(pattern, path_variable: nil)
-      add_clause(Clause::Match.new(pattern, optional: true, path_variable: path_variable))
+      # Use AST-based implementation
+      match_node = AST::MatchNode.new(pattern, optional: true, path_variable: path_variable)
+      ast_clause = AST::ClauseAdapter.new(match_node)
+      add_clause(ast_clause)
     end
 
     # Adds a WHERE clause (merging with an existing one if present).
@@ -142,14 +147,26 @@ module Cyrel
         end
       end
 
-      new_where = Clause::Where.new(*processed_conditions)
+      # Use AST-based implementation
+      where_node = AST::WhereNode.new(processed_conditions)
+      ast_clause = AST::ClauseAdapter.new(where_node)
 
       # ------------------------------------------------------------------
       # 2. Merge with an existing WHERE (if any)
       # ------------------------------------------------------------------
-      existing_where = @clauses.find { |c| c.is_a?(Clause::Where) }
-      if existing_where
-        existing_where.merge!(new_where)
+      existing_where_index = @clauses.find_index { |c| c.is_a?(Clause::Where) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WhereNode)) }
+
+      if existing_where_index
+        existing_clause = @clauses[existing_where_index]
+        if existing_clause.is_a?(AST::ClauseAdapter) && existing_clause.ast_node.is_a?(AST::WhereNode)
+          # Merge conditions by creating a new WHERE node with combined conditions
+          combined_conditions = existing_clause.ast_node.conditions + processed_conditions
+          merged_where_node = AST::WhereNode.new(combined_conditions)
+          @clauses[existing_where_index] = AST::ClauseAdapter.new(merged_where_node)
+        else
+          # Replace old-style WHERE with AST WHERE
+          @clauses[existing_where_index] = ast_clause
+        end
         return self
       end
 
@@ -164,9 +181,9 @@ module Cyrel
       end
 
       if insertion_index
-        @clauses.insert(insertion_index, new_where)
+        @clauses.insert(insertion_index, ast_clause)
       else
-        @clauses << new_where
+        @clauses << ast_clause
       end
 
       self
@@ -177,18 +194,23 @@ module Cyrel
     # @return [self]
     # Because sometimes you want to make things, not just break them.
     def create(pattern)
-      # TODO: Add implicit pattern construction
-      add_clause(Clause::Create.new(pattern))
+      # Use AST-based implementation
+      create_node = AST::CreateNode.new(pattern)
+      ast_clause = AST::ClauseAdapter.new(create_node)
+      add_clause(ast_clause)
     end
 
     # Adds a MERGE clause.
     # @param pattern [Cyrel::Pattern::Path, Node, Relationship, Hash, Array] Pattern definition.
+    # @param on_create [Array, Hash] Optional ON CREATE SET assignments
+    # @param on_match [Array, Hash] Optional ON MATCH SET assignments
     # @return [self]
     # For when you want to find-or-create, but with more existential angst.
-    def merge(pattern)
-      # TODO: Add implicit pattern construction
-      # TODO: Add ON CREATE SET / ON MATCH SET options
-      add_clause(Clause::Merge.new(pattern))
+    def merge(pattern, on_create: nil, on_match: nil)
+      # Use AST-based implementation
+      merge_node = AST::MergeNode.new(pattern, on_create: on_create, on_match: on_match)
+      ast_clause = AST::ClauseAdapter.new(merge_node)
+      add_clause(ast_clause)
     end
 
     # Adds a SET clause.
@@ -196,8 +218,65 @@ module Cyrel
     # @return [self]
     # Because sometimes you just want to change everything and pretend it was always that way.
     def set(assignments)
-      # TODO: Consider merging SET clauses intelligently if needed.
-      add_clause(Clause::Set.new(assignments))
+      # Process assignments similar to existing Set clause
+      processed_assignments = case assignments
+                              when Hash
+                                assignments.flat_map do |key, value|
+                                  case key
+                                  when Expression::PropertyAccess
+                                    # SET n.prop = value
+                                    [[:property, key, Expression.coerce(value)]]
+                                  when Symbol, String
+                                    # SET n = properties
+                                    raise ArgumentError, 'Value for variable assignment must be a Hash' unless value.is_a?(Hash)
+
+                                    [[:variable_properties, key.to_sym, Expression.coerce(value), :assign]]
+                                  when Cyrel::Plus
+                                    # SET n += properties
+                                    raise ArgumentError, 'Value for variable assignment must be a Hash' unless value.is_a?(Hash)
+
+                                    [[:variable_properties, key.variable.to_sym, Expression.coerce(value), :merge]]
+                                  else
+                                    raise ArgumentError, "Invalid key type in SET assignments: #{key.class}"
+                                  end
+                                end
+                              when Array
+                                assignments.map do |item|
+                                  unless item.is_a?(Array) && item.length == 2
+                                    raise ArgumentError, "Invalid label assignment format. Expected [[:variable, 'Label'], ...], got #{item.inspect}"
+                                  end
+
+                                  # SET n:Label
+                                  [:label, item[0].to_sym, item[1]]
+                                end
+                              else
+                                raise ArgumentError, "Invalid assignments type: #{assignments.class}"
+                              end
+
+      set_node = AST::SetNode.new(processed_assignments)
+      ast_clause = AST::ClauseAdapter.new(set_node)
+
+      # Check for existing SET clause to merge with
+      existing_set_index = @clauses.find_index { |c| c.is_a?(Clause::Set) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::SetNode)) }
+
+      if existing_set_index
+        existing_clause = @clauses[existing_set_index]
+        if existing_clause.is_a?(AST::ClauseAdapter) && existing_clause.ast_node.is_a?(AST::SetNode)
+          # Merge with existing AST SET node by creating a new one with combined assignments
+          combined_assignments = existing_clause.ast_node.assignments + processed_assignments
+          merged_set_node = AST::SetNode.new(combined_assignments)
+        else
+          # Replace old clause-based SET with merged AST version
+          combined_assignments = existing_clause.assignments + set_node.assignments
+          merged_set_node = AST::SetNode.new({})
+          merged_set_node.instance_variable_set(:@assignments, combined_assignments)
+        end
+        @clauses[existing_set_index] = AST::ClauseAdapter.new(merged_set_node)
+      else
+        add_clause(ast_clause)
+      end
+
+      self
     end
 
     # Adds a REMOVE clause.
@@ -205,8 +284,10 @@ module Cyrel
     # @return [self]
     # For when you want to Marie Kondo your graph.
     def remove(*items)
-      # TODO: Consider merging REMOVE clauses.
-      add_clause(Clause::Remove.new(items)) # Pass array directly
+      # Use AST-based implementation
+      remove_node = AST::RemoveNode.new(items)
+      ast_clause = AST::ClauseAdapter.new(remove_node)
+      add_clause(ast_clause)
     end
 
     # Adds a DELETE clause. Use `detach_delete` for DETACH DELETE.
@@ -215,7 +296,10 @@ module Cyrel
     # Underscore to avoid keyword clash
     # Because sometimes you just want to watch the world burn, one node at a time.
     def delete_(*variables)
-      add_clause(Clause::Delete.new(*variables, detach: false))
+      # Use AST-based implementation
+      delete_node = AST::DeleteNode.new(variables, detach: false)
+      ast_clause = AST::ClauseAdapter.new(delete_node)
+      add_clause(ast_clause)
     end
 
     # Adds a DETACH DELETE clause.
@@ -223,7 +307,10 @@ module Cyrel
     # @return [self]
     # For when you want to delete with extreme prejudice.
     def detach_delete(*variables)
-      add_clause(Clause::Delete.new(*variables, detach: true))
+      # Use AST-based implementation
+      delete_node = AST::DeleteNode.new(variables, detach: true)
+      ast_clause = AST::ClauseAdapter.new(delete_node)
+      add_clause(ast_clause)
     end
 
     # Adds a WITH clause.
@@ -233,23 +320,92 @@ module Cyrel
     # @return [self]
     # Because sometimes you want to pass things along, and sometimes you just want to pass the buck.
     def with(*items, distinct: false, where: nil)
-      where_clause = case where
-                     when Clause::Where then where
-                     when nil then nil
-                     else Clause::Where.new(*Array(where)) # Coerce Hash/Array/Expression
-                     end
-      add_clause(Clause::With.new(*items, distinct: distinct, where: where_clause))
+      # Process items similar to existing Return clause
+      processed_items = items.flatten.map do |item|
+        case item
+        when Expression::Base
+          item
+        when Symbol
+          # Create a RawIdentifier for variable names
+          Clause::Return::RawIdentifier.new(item.to_s)
+        when String
+          # String literals should be coerced to expressions (parameterized)
+          Expression.coerce(item)
+        else
+          Expression.coerce(item)
+        end
+      end
+
+      # Process WHERE conditions if provided
+      where_conditions = case where
+                         when nil then []
+                         when Hash
+                           # Convert hash to equality comparisons
+                           where.map do |key, value|
+                             Expression::Comparison.new(
+                               Expression::PropertyAccess.new(@current_alias || infer_alias, key),
+                               :'=',
+                               value
+                             )
+                           end
+                         when Array then where
+                         else [where] # Single condition
+                         end
+
+      # Use AST-based implementation
+      with_node = AST::WithNode.new(processed_items, distinct: distinct, where_conditions: where_conditions)
+      ast_clause = AST::ClauseAdapter.new(with_node)
+
+      # Find and replace existing with or add new one
+      existing_with_index = @clauses.find_index { |c| c.is_a?(Clause::With) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WithNode)) }
+
+      if existing_with_index
+        @clauses[existing_with_index] = ast_clause
+      else
+        add_clause(ast_clause)
+      end
+
+      self
     end
 
     # Adds a RETURN clause.
     # @param items [Array] Items to return. See Clause::Return#initialize.
     # @param distinct [Boolean] Use DISTINCT?
     # @return [self]
-    # Underscore to avoid keyword clash
-    # Because what you really want is your data, but what you'll get is a hash.
+    #
+    # Note: Method is named `return_` with an underscore suffix because `return`
+    # is a reserved keyword in Ruby. We're not crazy - we just want to provide
+    # a clean DSL while respecting Ruby's language constraints.
     def return_(*items, distinct: false)
-      # TODO: Consider merging RETURN clauses?
-      add_clause(Clause::Return.new(*items, distinct: distinct))
+      # Process items similar to existing Return clause
+      processed_items = items.flatten.map do |item|
+        case item
+        when Expression::Base
+          item
+        when Symbol
+          # Create a RawIdentifier for variable names
+          Clause::Return::RawIdentifier.new(item.to_s)
+        when String
+          # String literals should be coerced to expressions (parameterized)
+          Expression.coerce(item)
+        else
+          Expression.coerce(item)
+        end
+      end
+
+      # Use AST-based implementation
+      return_node = AST::ReturnNode.new(processed_items, distinct: distinct)
+      ast_clause = AST::ClauseAdapter.new(return_node)
+
+      # Find and replace existing return or add new one
+      existing_return_index = @clauses.find_index { |c| c.is_a?(Clause::Return) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::ReturnNode)) }
+
+      if existing_return_index
+        @clauses[existing_return_index] = ast_clause
+      else
+        add_clause(ast_clause)
+      end
+      self
     end
 
     # Adds or replaces the ORDER BY clause.
@@ -261,12 +417,17 @@ module Cyrel
     def order_by(*order_items)
       items_array = order_items.first.is_a?(Hash) ? order_items.first.to_a : order_items
 
-      existing_order = @clauses.find { |c| c.is_a?(Clause::OrderBy) }
-      new_order = Clause::OrderBy.new(*items_array)
-      if existing_order
-        existing_order.replace!(new_order)
+      # Use AST-based implementation
+      order_by_node = AST::OrderByNode.new(items_array)
+      ast_clause = AST::ClauseAdapter.new(order_by_node)
+
+      # Find and replace existing order by or add new one
+      existing_order_index = @clauses.find_index { |c| c.is_a?(Clause::OrderBy) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::OrderByNode)) }
+
+      if existing_order_index
+        @clauses[existing_order_index] = ast_clause
       else
-        add_clause(new_order)
+        add_clause(ast_clause)
       end
       self
     end
@@ -321,11 +482,21 @@ module Cyrel
     # @return [self]
     # For when you want to call a procedure and pretend it's not just another query.
     def call_procedure(procedure_name, arguments: [], yield_items: nil, where: nil, return_items: nil)
-      add_clause(Clause::Call.new(procedure_name,
-                                  arguments: arguments,
-                                  yield_items: yield_items,
-                                  where: where,
-                                  return_items: return_items))
+      # Use AST-based implementation for simple CALL
+      # Note: WHERE and RETURN after YIELD are not yet supported in AST version
+      if where || return_items
+        # Fall back to clause-based for complex cases
+        add_clause(Clause::Call.new(procedure_name,
+                                    arguments: arguments,
+                                    yield_items: yield_items,
+                                    where: where,
+                                    return_items: return_items))
+      else
+        call_node = AST::CallNode.new(procedure_name, arguments: arguments, yield_items: yield_items)
+        ast_clause = AST::ClauseAdapter.new(call_node)
+        add_clause(ast_clause)
+      end
+      self
     end
 
     # Adds a CALL { subquery } clause.
@@ -335,12 +506,10 @@ module Cyrel
     def call_subquery
       subquery = Cyrel::Query.new
       yield subquery
-      # Important: Parameters defined within the subquery block are currently
-      # NOT automatically merged into the outer query's parameters by this DSL method.
-      # This needs to be handled either by manually merging parameters after the block
-      # or by enhancing the rendering/parameter registration logic.
-      add_clause(Clause::CallSubquery.new(subquery))
-      # Consider adding: merge_parameters!(subquery) here, but it might re-register params.
+      # Use AST-based implementation
+      call_subquery_node = AST::CallSubqueryNode.new(subquery)
+      ast_clause = AST::ClauseAdapter.new(call_subquery_node)
+      add_clause(ast_clause)
     end
 
     # Adds an UNWIND clause.
@@ -352,10 +521,68 @@ module Cyrel
     # Example: query.unwind([1,2,3], :x).return_(:x)
     #          query.unwind(:names, :name).create(...)
     def unwind(expression, variable)
-      add_clause(Clause::Unwind.new(expression, variable))
+      # Create an AST UnwindNode wrapped in a ClauseAdapter
+      ast_node = AST::UnwindNode.new(expression, variable)
+      add_clause(AST::ClauseAdapter.new(ast_node))
     end
 
     # No longer private, needed by merge!
+    # Combines this query with another using UNION
+    # @param other_query [Cyrel::Query] The query to union with
+    # @return [Cyrel::Query] A new query representing the union
+    def union(other_query)
+      self.class.union_queries([self, other_query], all: false)
+    end
+
+    # Combines this query with another using UNION ALL
+    # @param other_query [Cyrel::Query] The query to union with
+    # @return [Cyrel::Query] A new query representing the union
+    def union_all(other_query)
+      self.class.union_queries([self, other_query], all: true)
+    end
+
+    # Combines multiple queries using UNION or UNION ALL
+    # @param queries [Array<Cyrel::Query>] The queries to combine
+    # @param all [Boolean] Whether to use UNION ALL (true) or UNION (false)
+    # @return [Cyrel::Query] A new query representing the union
+    def self.union_queries(queries, all: false)
+      raise ArgumentError, 'UNION requires at least 2 queries' if queries.size < 2
+
+      # Create a new query that represents the union
+      union_query = new
+      union_node = AST::UnionNode.new(queries, all: all)
+      union_query.add_clause(AST::ClauseAdapter.new(union_node))
+      union_query
+    end
+
+    # Adds a FOREACH clause for iterating over a list with update operations
+    # @param variable [Symbol] The iteration variable
+    # @param expression [Expression, Array] The list to iterate over
+    # @param update_clauses [Array<Clause>] The update clauses to execute for each element
+    # @return [self]
+    def foreach(variable, expression)
+      # If a block is given, create a sub-query context for update clauses
+      raise ArgumentError, 'FOREACH requires a block with update clauses' unless block_given?
+
+      sub_query = self.class.new
+      yield sub_query
+      update_clauses = sub_query.clauses
+
+      foreach_node = AST::ForeachNode.new(variable, expression, update_clauses)
+      add_clause(AST::ClauseAdapter.new(foreach_node))
+    end
+
+    # Adds a LOAD CSV clause for importing CSV data
+    # @param url [String] The URL or file path to load CSV from
+    # @param variable [Symbol] The variable to bind each row to
+    # @param with_headers [Boolean] Whether the CSV has headers
+    # @param fieldterminator [String] The field delimiter (default is comma)
+    # @return [self]
+    def load_csv(from:, as:, with_headers: false, fieldterminator: nil)
+      load_csv_node = AST::LoadCsvNode.new(from, as, with_headers: with_headers, fieldterminator: fieldterminator)
+      add_clause(AST::ClauseAdapter.new(load_csv_node))
+    end
+
     # private
 
     # Merges parameters from another query, ensuring keys are unique.
@@ -377,24 +604,34 @@ module Cyrel
     # Provides a sort order for clauses during rendering. Lower numbers come first.
     # Because even your clauses need to know their place in the world.
     def clause_order(clause)
-      case clause
-      when Clause::Match, Clause::Create, Clause::Merge then 10 # Reading/Writing/Merging clauses
-      when Clause::Call, Clause::CallSubquery then 15 # CALL often follows MATCH/CREATE
-      when Clause::With then 20
-      when Clause::Where then 30 # Filtering clauses
-      when Clause::Set, Clause::Remove, Clause::Delete then 40 # Modifying clauses
-      when Clause::Return then 50 # Projection
-      when Clause::OrderBy then 60 # Ordering/Paging
-      when Clause::Skip then 70
-      when Clause::Limit then 80
-      when AST::ClauseAdapter
-        # For AST-based clauses, check the underlying node type
-        case clause.ast_node
-        when AST::SkipNode then 70
-        when AST::LimitNode then 80
-        else 99
-        end
-      else 99 # Unknown clauses go last
+      # All clauses should be AST-based now
+      return 997 unless clause.is_a?(AST::ClauseAdapter)
+
+      # Clause ordering values - lower numbers come first
+      case clause.ast_node
+      when AST::LoadCsvNode then 2
+      when AST::MatchNode then 5
+      when AST::CallNode, AST::CallSubqueryNode then 7
+      when AST::WhereNode
+        # WHERE can come after different clauses - check what came before
+        # This is a simplified approach - a more sophisticated one would
+        # track the actual clause relationships
+        has_load_csv = @clauses.any? { |c| c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::LoadCsvNode) }
+        has_load_csv ? 3 : 11
+      when AST::WithNode then 13
+      when AST::UnwindNode then 17
+      when AST::CreateNode then 23
+      when AST::MergeNode then 23
+      when AST::SetNode then 29
+      when AST::RemoveNode then 29
+      when AST::DeleteNode then 29
+      when AST::ForeachNode then 31
+      when AST::ReturnNode then 37
+      when AST::OrderByNode then 41
+      when AST::SkipNode then 43
+      when AST::LimitNode then 47
+      when AST::UnionNode then 53
+      else 997
       end
     end
 
@@ -404,15 +641,22 @@ module Cyrel
     def defined_aliases
       aliases = {}
       @clauses.each do |clause|
-        # Look for clauses that define patterns (Match, Create, Merge)
-        next unless clause.respond_to?(:pattern) && clause.pattern
+        # Look for AST clauses that define patterns (Match, Create, Merge)
+        next unless clause.is_a?(AST::ClauseAdapter)
+
+        pattern = case clause.ast_node
+                  when AST::MatchNode, AST::CreateNode, AST::MergeNode
+                    clause.ast_node.pattern
+                  end
+
+        next unless pattern
 
         elements_to_check = []
-        case clause.pattern
+        case pattern
         when Pattern::Path
-          elements_to_check.concat(clause.pattern.elements)
+          elements_to_check.concat(pattern.elements)
         when Pattern::Node, Pattern::Relationship
-          elements_to_check << clause.pattern
+          elements_to_check << pattern
         end
 
         elements_to_check.each do |element|
@@ -464,11 +708,10 @@ module Cyrel
       other_clauses_to_process = other_query.clauses.dup
 
       # --- Handle Replacing Clauses (OrderBy, Skip, Limit) ---
-      [Clause::OrderBy, Clause::Skip, Clause::Limit].each do |clause_class|
+      [AST::OrderByNode, AST::SkipNode, AST::LimitNode].each do |ast_class|
         # Helper to check if a clause matches the type we're looking for
         clause_matcher = lambda do |c|
-          c.is_a?(clause_class) ||
-            (clause_class == Clause::Limit && c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::LimitNode))
+          c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(ast_class)
         end
 
         # Find the last occurrence in the other query's clauses
@@ -492,19 +735,25 @@ module Cyrel
       end
 
       # --- Handle Merging Clauses (Where) ---
-      other_wheres = other_query.clauses.select { |c| c.is_a?(Clause::Where) }
+      other_wheres = other_query.clauses.select { |c| c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WhereNode) }
       unless other_wheres.empty?
-        self_where = @clauses.find { |c| c.is_a?(Clause::Where) }
+        self_where = @clauses.find { |c| c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WhereNode) }
         if self_where
-          other_wheres.each { |ow| self_where.merge!(ow) }
+          # For AST WHERE nodes, we need to merge the conditions
+          other_wheres.each do |ow|
+            # Extract conditions from both WHERE nodes and create a new merged one
+            self_conditions = self_where.ast_node.conditions
+            other_conditions = ow.ast_node.conditions
+            merged_where_node = AST::WhereNode.new(self_conditions + other_conditions)
+            self_where_index = @clauses.index(self_where)
+            @clauses[self_where_index] = AST::ClauseAdapter.new(merged_where_node)
+          end
         else
-          # Add the first other_where and merge the rest into it
-          first_other_where = other_wheres.shift
-          add_clause(first_other_where)
-          other_wheres.each { |ow| first_other_where.merge!(ow) }
+          # Add the first other_where
+          add_clause(other_wheres.first)
         end
         # Remove processed clauses
-        other_clauses_to_process.delete_if { |c| c.is_a?(Clause::Where) }
+        other_clauses_to_process.delete_if { |c| c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WhereNode) }
       end
 
       # --- Handle Appending Clauses (Match, Create, Set, Remove, Delete, With, Return, Call, etc.) ---
@@ -522,9 +771,15 @@ module Cyrel
     def infer_alias
       # Find first Node alias defined in MATCH/CREATE/MERGE clauses
       @clauses.each do |clause|
-        next unless clause.respond_to?(:pattern) && clause.pattern
+        next unless clause.is_a?(AST::ClauseAdapter)
 
-        pattern = clause.pattern
+        pattern = case clause.ast_node
+                  when AST::MatchNode, AST::CreateNode, AST::MergeNode
+                    clause.ast_node.pattern
+                  end
+
+        next unless pattern
+
         element = pattern.is_a?(Pattern::Path) ? pattern.elements.first : pattern
         return element.alias_name if element.is_a?(Pattern::Node) && element.alias_name
       end

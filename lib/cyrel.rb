@@ -3,6 +3,18 @@
 module Cyrel
   module_function
 
+  # Cyrel DSL helper: creates a new query.
+  # Example: Cyrel.query.match(pattern)
+  def query
+    Query.new
+  end
+
+  # Cyrel DSL helper: alias for node creation.
+  # Example: Cyrel.n(:person, :Person, name: 'Alice')
+  def n(alias_name = nil, *labels, **properties)
+    Pattern::Node.new(alias_name, labels: labels, properties: properties)
+  end
+
   # Cyrel DSL helper: creates a CALL clause for a procedure.
   # Example: Cyrel.call('db.labels')
   def call(procedure)
@@ -16,9 +28,84 @@ module Cyrel
   end
 
   # Cyrel DSL helper: creates a node pattern.
-  # Example: Cyrel.node(:n, labels: ['Person'], properties: {name: 'Alice'})
-  def node(alias_name, labels: [], properties: {})
+  # Example: Cyrel.node(:n, :Person, name: 'Alice')
+  def node(alias_name = nil, *labels, **properties)
     Pattern::Node.new(alias_name, labels: labels, properties: properties)
+  end
+
+  # Cyrel DSL helper: creates a relationship pattern.
+  # Example: Cyrel.rel(:r, :KNOWS, since: 2020)
+  def rel(alias_name = nil, *types, **properties)
+    length = properties.delete(:length)
+    Pattern::Relationship.new(alias_name: alias_name, types: types, properties: properties, length: length)
+  end
+
+  # Cyrel DSL helper: creates a path pattern with a DSL block.
+  # Example: Cyrel.path { node(:a) > rel(:r) > node(:b) }
+  def path(&)
+    builder = PathBuilder.new
+    builder.instance_eval(&)
+    Pattern::Path.new(builder.elements)
+  end
+
+  # Path builder DSL for constructing path patterns
+  class PathBuilder
+    attr_reader :elements
+
+    def initialize
+      @elements = []
+      @pending_direction = nil
+    end
+
+    def node(alias_name = nil, *labels, **properties)
+      # If there's a pending direction, we need to add a relationship first
+      if @pending_direction && @elements.any? && @elements.last.is_a?(Pattern::Node)
+        @elements << Pattern::Relationship.new(types: [], direction: @pending_direction)
+        @pending_direction = nil
+      end
+
+      n = Pattern::Node.new(alias_name, labels: labels, properties: properties)
+      @elements << n
+      self
+    end
+
+    def rel(alias_name = nil, *types, **properties)
+      length = properties.delete(:length)
+
+      # Check if we need to replace the last element (an anonymous relationship)
+      if @elements.last.is_a?(Pattern::Relationship) && @elements.last.types.empty?
+        # Replace the anonymous relationship with specified one, keeping direction
+        direction = @elements.last.direction
+        @elements.pop
+      else
+        direction = @pending_direction || :both
+      end
+
+      r = Pattern::Relationship.new(alias_name: alias_name, types: types, properties: properties, length: length, direction: direction)
+      @elements << r
+      @pending_direction = nil
+      self
+    end
+
+    def >(_other)
+      @pending_direction = :outgoing
+      # If other is a PathBuilder (self), just return self for chaining
+      # This happens when chaining like: node(:a) > rel(:r) > node(:b)
+      # The rel(:r) returns self, so > receives self as the argument
+      self
+    end
+
+    def <(_other)
+      @pending_direction = :incoming
+      # Same logic as > method
+      self
+    end
+
+    def -(_other)
+      @pending_direction = :both
+      # Same logic as > method
+      self
+    end
   end
 
   # Cyrel DSL helper: starts a CREATE query.
@@ -43,6 +130,12 @@ module Cyrel
   # Cyrel DSL helper: adapter-aware node ID function
   # Example: Cyrel.node_id(:n)
   def node_id(...) = Functions.node_id(...)
+
+  # Cyrel DSL helper: creates a function call expression.
+  # Example: Cyrel.function(:count, :*)
+  def function(name, *args)
+    Expression::FunctionCall.new(name, args)
+  end
 
   # Cyrel DSL helper: Cypher count() aggregation.
   # Example: Cyrel.count(:n)

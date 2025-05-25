@@ -175,7 +175,7 @@ class QueryBuildingTest < ActiveSupport::TestCase
     <<~CYPHER.chomp.strip # Assign to variable
       MATCH (p:Person)
       RETURN p
-      ORDER BY p.age DESC, p.name ASC
+      ORDER BY p.age DESC, p.name
     CYPHER
     expected_params = {}
     # NOTE: Clause order in output depends on Query#clause_order
@@ -184,7 +184,7 @@ class QueryBuildingTest < ActiveSupport::TestCase
     cypher, params = query.to_cypher
     assert_match(/MATCH \(p:Person\)/, cypher)
     assert_match(/RETURN p/, cypher)
-    assert_match(/ORDER BY p.age DESC, p.name ASC/, cypher)
+    assert_match(/ORDER BY p.age DESC, p.name/, cypher)
     assert_equal expected_params, params
   end
 
@@ -244,7 +244,7 @@ class QueryBuildingTest < ActiveSupport::TestCase
       OPTIONAL MATCH (u:User)-[:AUTHORED]->(p:Post)
       WITH u.name AS userName, count(p) AS postCount
       RETURN userName, postCount
-      ORDER BY userName ASC
+      ORDER BY userName
     CYPHER
     expected_params = { p1: 30 }
 
@@ -255,7 +255,7 @@ class QueryBuildingTest < ActiveSupport::TestCase
     assert_match(/OPTIONAL MATCH \(u:User\)-\[:AUTHORED\]->\(p:Post\)/, cypher)
     assert_match(/WITH u.name AS userName, count\(p\) AS postCount/, cypher)
     assert_match(/RETURN userName, postCount/, cypher)
-    assert_match(/ORDER BY userName ASC/, cypher)
+    assert_match(/ORDER BY userName/, cypher)
     assert_equal expected_params, params
   end
 end

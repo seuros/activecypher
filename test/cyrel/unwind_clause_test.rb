@@ -31,7 +31,7 @@ module Cyrel
 
     test 'unwind in complex query' do
       query = Cyrel::Query.new
-                          .match(Cyrel.node(:n, labels: [:Person]))
+                          .match(Cyrel.node(:n, :Person))
                           .unwind(%i[friend colleague family], :rel_type)
                           .create(Cyrel::Pattern::Path.new([
                                                              Cyrel::Pattern::Node.new(:n),
@@ -58,7 +58,7 @@ module Cyrel
 
     test 'unwind preserves clause order' do
       query = Cyrel::Query.new
-                          .match(Cyrel.node(:n, labels: [:Node]))
+                          .match(Cyrel.node(:n, :Node))
                           .where(Cyrel::Expression::Comparison.new(
                                    Cyrel::Expression::PropertyAccess.new(:n, :active),
                                    :'=',
@@ -80,7 +80,7 @@ module Cyrel
 
     test 'unwind with property access' do
       query = Cyrel::Query.new
-                          .match(Cyrel.node(:n, labels: [:Person]))
+                          .match(Cyrel.node(:n, :Person))
                           .unwind(Cyrel::Expression::PropertyAccess.new(:n, :hobbies), :hobby)
                           .return_(:n, :hobby)
 
@@ -92,8 +92,8 @@ module Cyrel
       query = Cyrel::Query.new
                           .unwind(:categories, :category)
                           .unwind(:subcategories, :subcategory)
-                          .create(Cyrel.node(:c, labels: [:Category], properties: { name: :category }))
-                          .create(Cyrel.node(:s, labels: [:Subcategory], properties: { name: :subcategory }))
+                          .create(Cyrel.node(:c, :Category, name: :category))
+                          .create(Cyrel.node(:s, :Subcategory, name: :subcategory))
                           .create(Cyrel::Pattern::Path.new([
                                                              Cyrel::Pattern::Node.new(:c),
                                                              Cyrel::Pattern::Relationship.new(types: 'HAS_SUBCATEGORY', direction: :outgoing),
@@ -109,14 +109,14 @@ module Cyrel
     test 'unwind integrates with existing query building' do
       # Test that unwind works seamlessly with the existing clause-based system
       query = Cyrel::Query.new
-      query = query.match(Cyrel.node(:p, labels: [:Person]))
+      query = query.match(Cyrel.node(:p, :Person))
       query = query.where(Cyrel::Expression::Comparison.new(
                             Cyrel::Expression::PropertyAccess.new(:p, :age),
                             :'=',
                             30
                           ))
       query = query.unwind(:skills, :skill)
-      query = query.merge(Cyrel.node(:s, labels: [:Skill], properties: { name: :skill }))
+      query = query.merge(Cyrel.node(:s, :Skill, name: :skill))
       query = query.merge(Cyrel::Pattern::Path.new([
                                                      Cyrel::Pattern::Node.new(:p),
                                                      Cyrel::Pattern::Relationship.new(types: 'HAS_SKILL', direction: :outgoing),

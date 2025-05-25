@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative 'compiler'
-
 module Cyrel
   module AST
     # Compiler that integrates with the Query's parameter system
     # Like a diplomat that speaks both AST and Query fluently
     class QueryIntegratedCompiler < Compiler
+      attr_reader :query
+
       def initialize(query)
         super()
         @query = query

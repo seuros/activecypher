@@ -38,9 +38,10 @@ module Cyrel
       private
 
       def store(key, value)
-        # Simple LRU: clear half the cache when it gets too big
+        # Simple LRU: remove oldest entries when cache is full
         if @cache.size >= @max_size
-          @cache.shift(@max_size / 2)
+          # Remove half of the oldest entries
+          (@max_size / 2).times { @cache.shift }
         end
         @cache[key] = value
       end

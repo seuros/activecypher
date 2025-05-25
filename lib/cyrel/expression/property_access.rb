@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'cyrel/expression/base'
+require_relative 'base'
 
 module Cyrel
   module Expression

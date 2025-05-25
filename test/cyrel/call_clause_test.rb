@@ -34,8 +34,12 @@ class CallClauseTest < ActiveSupport::TestCase
 
     # Manually merge parameters from subquery (as noted in DSL method TODO)
     # Find the subquery clause and merge its parameters
-    subquery_clause = outer_query.clauses.find { |c| c.is_a?(Cyrel::Clause::CallSubquery) }
-    outer_query.send(:merge_parameters!, subquery_clause.subquery) # Access private method for test
+    subquery_clause = outer_query.clauses.find do |c|
+      c.is_a?(Cyrel::AST::ClauseAdapter) && c.ast_node.is_a?(Cyrel::AST::CallSubqueryNode)
+    end
+
+    # AST-based implementation - the subquery is in the ast_node
+    outer_query.send(:merge_parameters!, subquery_clause.ast_node.subquery)
 
     # Add the final return to the outer query
     outer_query.return_(Cyrel::Clause::Return::RawIdentifier.new('person.name'),
