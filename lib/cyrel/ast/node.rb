@@ -32,20 +32,5 @@ module Cyrel
         instance_variables.map { |var| instance_variable_get(var) }
       end
     end
-
-    # Base class for clause nodes (MATCH, WHERE, RETURN, etc.)
-    # The building blocks of your query, like LEGO but with more existential dread
-    class ClauseNode < Node
-    end
-
-    # Base class for expression nodes (literals, comparisons, functions, etc.)
-    # Where math meets philosophy and neither wins
-    class ExpressionNode < Node
-    end
-
-    # Base class for pattern nodes (nodes, relationships, paths)
-    # Because graphs need patterns like developers need coffee
-    class PatternNode < Node
-    end
   end
 end

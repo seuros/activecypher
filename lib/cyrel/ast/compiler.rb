@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'stringio'
+
 module Cyrel
   module AST
     # Compiles AST nodes into Cypher queries with optional thread-safety

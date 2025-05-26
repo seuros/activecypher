@@ -107,6 +107,7 @@ loader.inflector.inflect(
   'dsl_context' => 'DSLContext',
   'ast' => 'AST'
 )
+
 loader.push_dir("#{__dir__}/cyrel", namespace: Cyrel)
 loader.setup
 
