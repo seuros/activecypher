@@ -98,6 +98,9 @@ Lint/EmptyClass:
 Lint/EmptyConditionalBody:
   Enabled: false # Sometimes a blank `if` is all we have left.
 
+Lint/MultipleComparison:
+  Enabled: false # The `>` operator in path patterns is not a comparison. Stop being wrong.
+
 Metrics/ParameterLists:
   Enabled: false # Leave our well-meaning copy-paste spaghetti alone.
 

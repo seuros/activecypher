@@ -36,7 +36,7 @@ module Cyrel
 
     test 'relationship pattern match' do
       query = Cyrel::Query.new
-                          .match(Cyrel.path { node(:a) > rel(:r, :KNOWS) > node(:b) }) # rubocop:disable Lint/MultipleComparison
+                          .match(Cyrel.path { node(:a) > rel(:r, :KNOWS) > node(:b) })
                           .return_(:a, :b)
 
       cypher, params = query.to_cypher
@@ -56,7 +56,7 @@ module Cyrel
 
     test 'path variable assignment' do
       query = Cyrel::Query.new
-                          .match(Cyrel.path { node(:a) > rel(:r) > node(:b) }, path_variable: :p) # rubocop:disable Lint/MultipleComparison
+                          .match(Cyrel.path { node(:a) > rel(:r) > node(:b) }, path_variable: :p)
                           .return_(:p)
 
       cypher, params = query.to_cypher
@@ -67,7 +67,7 @@ module Cyrel
     test 'optional match' do
       query = Cyrel::Query.new
                           .match(Cyrel.node(:n))
-                          .optional_match(Cyrel.path { node(:n) > rel(:r, :LIKES) > node(:m) }) # rubocop:disable Lint/MultipleComparison
+                          .optional_match(Cyrel.path { node(:n) > rel(:r, :LIKES) > node(:m) })
                           .return_(:n, :m)
 
       cypher, params = query.to_cypher
@@ -89,7 +89,7 @@ module Cyrel
     test 'complex path pattern' do
       query = Cyrel::Query.new
                           .match(Cyrel.path do
-                                   node(:a, :Person) > rel(:r1, :WORKS_AT) > node(:c, :Company) < rel(:r2, :EMPLOYS) < node(:b, :Person) # rubocop:disable Lint/MultipleComparison
+                                   node(:a, :Person) > rel(:r1, :WORKS_AT) > node(:c, :Company) < rel(:r2, :EMPLOYS) < node(:b, :Person)
                                  end)
                           .return_(:a, :b, :c)
 
@@ -121,7 +121,7 @@ module Cyrel
 
     test 'relationship with properties' do
       query = Cyrel::Query.new
-                          .match(Cyrel.path { node(:a) > rel(:r, :KNOWS, since: 2020) > node(:b) }) # rubocop:disable Lint/MultipleComparison
+                          .match(Cyrel.path { node(:a) > rel(:r, :KNOWS, since: 2020) > node(:b) })
                           .return_(:a, :b, :r)
 
       cypher, params = query.to_cypher
@@ -131,7 +131,7 @@ module Cyrel
 
     test 'variable length relationship' do
       query = Cyrel::Query.new
-                          .match(Cyrel.path { node(:a) > rel(:r, :KNOWS, length: 1..3) > node(:b) }) # rubocop:disable Lint/MultipleComparison
+                          .match(Cyrel.path { node(:a) > rel(:r, :KNOWS, length: 1..3) > node(:b) })
                           .return_(:a, :b)
 
       cypher, params = query.to_cypher
