@@ -136,7 +136,16 @@ module ActiveCypher
         labels = run('MATCH (n) RETURN DISTINCT labels(n) AS lbl').flat_map { |r| r['lbl'] }
 
         nodes = labels.map do |lbl|
-          props = run("MATCH (n:`#{lbl}`) WITH n LIMIT 100 UNWIND keys(n) AS k RETURN DISTINCT k").map { |r| r['k'] }
+          # Use Cyrel for secure query building with user-provided label
+          query = Cyrel::Query.new
+                              .match(Cyrel.node(:n, lbl))
+                              .with(:n)
+                              .limit(100)
+                              .unwind(Cyrel.function(:keys, :n), :k)
+                              .return_('DISTINCT k')
+
+          cypher, params = query.to_cypher
+          props = run(cypher, params).map { |r| r['k'] }
           Schema::NodeTypeDef.new(lbl, props, nil)
         end
 
