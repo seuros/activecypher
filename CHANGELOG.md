@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [0.8.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.3...active_cypher/v0.8.0) (2025-05-26)
+
+
+### Features
+
+* add UNWIND clause support ([89a5b29](https://github.com/seuros/activecypher/commit/89a5b29a9fc0cd6733374d195a97bfbb905f9bcf))
+* finalize Cyrel ([597e588](https://github.com/seuros/activecypher/commit/597e5889b3f109acf4c8b58b76c5aea4ff965b0e))
+* finalize CYREL ([33fcb53](https://github.com/seuros/activecypher/commit/33fcb5338521de1b7a769b10d4f5d71e31751166))
+* implement AST-based limit and skip nodes with caching ([a8e14f3](https://github.com/seuros/activecypher/commit/a8e14f3b39d7ea2d686c4ead82df4e0861aabc32))
+
+
+### Bug Fixes
+
+* autoloading issue ([8380ba5](https://github.com/seuros/activecypher/commit/8380ba5222ed1e7381be3d66f50f4f96ffe5dae5))
+* secure form injections ([4a0d729](https://github.com/seuros/activecypher/commit/4a0d72959a0107f37a755a15bdbe018dbcd3d92f))
+
 ## [0.7.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.2...active_cypher/v0.7.3) (2025-05-24)
 
 
