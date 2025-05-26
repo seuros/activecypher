@@ -27,6 +27,7 @@ module Cyrel
       @parameters = {}
       @param_counter = 0
       @clauses = [] # Holds instances of Clause::Base subclasses, because arrays are the new query planner
+      @loop_variables = Set.new # Track loop variables for FOREACH context
     end
 
     # Registers a value and returns a parameter key.
@@ -35,6 +36,11 @@ module Cyrel
     # @return [Symbol] The parameter key (e.g., :p1, :p2).
     # Because nothing says "safe query" like a parade of anonymous parameters.
     def register_parameter(value)
+      # Don't parameterize loop variables in FOREACH context
+      if value.is_a?(Symbol) && @loop_variables.include?(value)
+        return value # Return the symbol itself, not a parameter key
+      end
+
       existing_key = @parameters.key(value)
       return existing_key if existing_key
 
@@ -329,8 +335,14 @@ module Cyrel
           # Create a RawIdentifier for variable names
           Clause::Return::RawIdentifier.new(item.to_s)
         when String
-          # String literals should be coerced to expressions (parameterized)
-          Expression.coerce(item)
+          # Check if string looks like property access (e.g. "person.name")
+          # If so, treat as raw identifier, otherwise parameterize
+          if item.match?(/\A\w+\.\w+\z/)
+            Clause::Return::RawIdentifier.new(item)
+          else
+            # String literals should be coerced to expressions (parameterized)
+            Expression.coerce(item)
+          end
         else
           Expression.coerce(item)
         end
@@ -386,8 +398,14 @@ module Cyrel
           # Create a RawIdentifier for variable names
           Clause::Return::RawIdentifier.new(item.to_s)
         when String
-          # String literals should be coerced to expressions (parameterized)
-          Expression.coerce(item)
+          # Check if string looks like property access (e.g. "person.name")
+          # If so, treat as raw identifier, otherwise parameterize
+          if item.match?(/\A\w+\.\w+\z/)
+            Clause::Return::RawIdentifier.new(item)
+          else
+            # String literals should be coerced to expressions (parameterized)
+            Expression.coerce(item)
+          end
         else
           Expression.coerce(item)
         end
@@ -565,6 +583,10 @@ module Cyrel
       raise ArgumentError, 'FOREACH requires a block with update clauses' unless block_given?
 
       sub_query = self.class.new
+      # Pass loop variable context to sub-query
+      sub_query.instance_variable_set(:@loop_variables, @loop_variables.dup)
+      sub_query.instance_variable_get(:@loop_variables).add(variable.to_sym)
+
       yield sub_query
       update_clauses = sub_query.clauses
 

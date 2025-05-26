@@ -29,7 +29,7 @@ class QueryMergingTest < ActiveSupport::TestCase
 
     expected_cypher = <<~CYPHER.chomp.strip
       MATCH (n:Person)
-      WHERE ((n.age > $p1) AND (n.city = $p2))
+      WHERE (n.age > $p1) AND (n.city = $p2)
     CYPHER
     # Parameters are re-registered in the target query
     expected_params = { p1: 30, p2: 'London' }

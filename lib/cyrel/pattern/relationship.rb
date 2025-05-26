@@ -21,21 +21,29 @@ module Cyrel
       end
 
       def render(query)
-        arrow =
-          case direction # Ruby 3.4 pattern match
-          in Direction::OUT  then '->'
-          in Direction::IN   then '<-'
-          else '-'
+        # For anonymous relationships (no alias, no types, no properties, no length)
+        # we don't render brackets at all
+        if alias_name.nil? && types.empty? && properties.empty? && length.nil?
+          case direction
+          in Direction::OUT  then '-->'
+          in Direction::IN   then '<--'
+          else '--'
           end
+        else
+          # Regular relationship with brackets
+          core = +'['
+          core << alias_name.to_s if alias_name
+          core << ':' << Array(types).join('|') unless types.empty?
+          core << length_spec
+          core << " #{prop_string(query)}" unless properties.empty?
+          core << ']'
 
-        core = +'['
-        core << "#{alias_name} " if alias_name
-        core << ':' << Array(types).join('|') unless types.empty?
-        core << length_spec
-        core << " #{prop_string(query)}" unless properties.empty?
-        core << ']'
-
-        "#{arrow.start_with?('<') ? arrow : '-'}#{core}#{arrow.end_with?('>') ? arrow : '-'}"
+          case direction
+          in Direction::OUT  then "-#{core}->"
+          in Direction::IN   then "<-#{core}-"
+          else "-#{core}-"
+          end
+        end
       end
 
       private

@@ -93,8 +93,8 @@ module Cyrel
                           .return_(:n)
 
       cypher, params = query.to_cypher
-      assert_equal "MATCH (n)\nSET n.deleted_at = $p1\nRETURN n", cypher
-      assert_equal({ p1: nil }, params)
+      assert_equal "MATCH (n)\nSET n.deleted_at = NULL\nRETURN n", cypher
+      assert_empty params
     end
 
     test 'complex set with create' do

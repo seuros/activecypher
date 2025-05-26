@@ -17,6 +17,7 @@ module Cyrel
           @param_counter = 0
         end
         @first_clause = true
+        @loop_variables = Set.new # Track loop variables that shouldn't be parameterized
       end
 
       # Compile an AST node or array of nodes
@@ -364,6 +365,10 @@ module Cyrel
 
         @output << ' | '
 
+        # Track the loop variable so it doesn't get parameterized in inner clauses
+        old_loop_variables = @loop_variables.dup
+        @loop_variables.add(node.variable.to_sym)
+
         # Render update clauses without duplication
         node.update_clauses.each_with_index do |clause, index|
           @output << ' ' if index.positive?
@@ -372,18 +377,30 @@ module Cyrel
 
           # For AST-based clauses, compile just the inner content
           # Create a proxy object that forwards parameter registration to this compiler
+          # and inherits the loop variable context
           parameter_proxy = Object.new
           parent_compiler = self
+          current_loop_variables = @loop_variables.dup
           parameter_proxy.define_singleton_method(:register_parameter) do |value|
-            parent_compiler.send(:register_parameter, value)
+            # Check if this is a loop variable that shouldn't be parameterized
+            if value.is_a?(Symbol) && current_loop_variables.include?(value)
+              value # Return the symbol itself, not a parameter key
+            else
+              parent_compiler.send(:register_parameter, value)
+            end
           end
 
           inner_compiler = QueryIntegratedCompiler.new(parameter_proxy)
+          # Pass the loop variables context to the inner compiler
+          inner_compiler.instance_variable_set(:@loop_variables, @loop_variables.dup)
           clause_cypher, = inner_compiler.compile([clause.ast_node])
           @output << clause_cypher
 
           # For other clause types, render directly
         end
+
+        # Restore previous loop variables context
+        @loop_variables = old_loop_variables
 
         @output << ')'
       end
@@ -416,8 +433,14 @@ module Cyrel
       # The most honest node in the entire tree
       def visit_literal_node(node)
         if node.value.is_a?(Symbol)
-          # Symbols are parameter references, not values to be parameterized
-          @output << "$#{node.value}"
+          # Check if this symbol is a loop variable
+          @output << if @loop_variables.include?(node.value)
+                       # Loop variables are rendered as-is, not as parameters
+                       node.value.to_s
+                     else
+                       # Symbols are parameter references, not values to be parameterized
+                       "$#{node.value}"
+                     end
         else
           # All other literals become parameters for consistency with existing behavior
           param_key = register_parameter(node.value)
@@ -509,8 +532,8 @@ module Cyrel
           @output << expr.identifier
         in Symbol
           # Symbols in ORDER BY context are identifiers, not parameters
-          # In other contexts, they should be parameterized
-          if @in_order_by
+          # Loop variables should also not be parameterized
+          if @in_order_by || @loop_variables.include?(expr)
             @output << expr.to_s
           else
             # Parameterize the symbol
@@ -521,8 +544,13 @@ module Cyrel
           # Wrap in literal node and visit
           LiteralNode.new(expr).accept(self)
         in String
-          # Strings should be parameterized
-          LiteralNode.new(expr).accept(self)
+          # Strings in ORDER BY context are column names/aliases, not literals
+          if @in_order_by
+            @output << expr
+          else
+            # Strings should be parameterized
+            LiteralNode.new(expr).accept(self)
+          end
         else
           # Try common methods
           if expr.respond_to?(:render)

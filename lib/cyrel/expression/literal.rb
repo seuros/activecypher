@@ -18,8 +18,18 @@ module Cyrel
       # @param query [Cyrel::Query] The query object for parameter registration.
       # @return [String] The parameter placeholder string (e.g., "$p1").
       def render(query)
+        # nil is special - render as NULL literal, not a parameter
+        return 'NULL' if @value.nil?
+
         param_key = query.register_parameter(@value)
-        "$#{param_key}"
+
+        # If the param_key is the same as the value (for loop variables),
+        # don't add the $ prefix - just render as identifier
+        if param_key == @value && @value.is_a?(Symbol)
+          param_key.to_s
+        else
+          "$#{param_key}"
+        end
       end
 
       # Override comparison methods for direct literal comparison if needed,

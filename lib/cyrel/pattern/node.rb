@@ -41,7 +41,17 @@ module Cyrel
         base << ':' << labels.join(':') unless labels.empty?
         unless properties.empty?
           params = properties.with_indifferent_access
-          formatted = params.map { |k, v| "#{k}: $#{query.register_parameter(v)}" }.join(', ')
+          formatted = params.map do |k, v|
+            # Let register_parameter handle loop variable detection
+            param_key = query.register_parameter(v)
+            if param_key.is_a?(Symbol) && param_key == v
+              # Loop variable returned as-is, don't parameterize
+              "#{k}: #{v}"
+            else
+              # Normal parameter key returned
+              "#{k}: $#{param_key}"
+            end
+          end.join(', ')
           base << " {#{formatted}}"
         end
         base << ')'

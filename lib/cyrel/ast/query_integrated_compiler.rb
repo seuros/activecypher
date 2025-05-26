@@ -8,8 +8,12 @@ module Cyrel
       attr_reader :query
 
       def initialize(query)
+        # Store current loop_variables before calling super
+        old_loop_variables = @loop_variables
         super()
         @query = query
+        # Restore loop_variables if they were set before initialization
+        @loop_variables = old_loop_variables if old_loop_variables
       end
 
       protected

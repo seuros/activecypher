@@ -14,7 +14,7 @@ class MultipleWhereTest < ActiveSupport::TestCase
 
     expected_cypher = <<~CYPHER.chomp.strip
       MATCH (person:Person)
-      WHERE ((person.name = $p1) AND (person.age = $p2))
+      WHERE (person.name = $p1) AND (person.age = $p2)
       RETURN person.name
     CYPHER
     expected_params = { p1: 'Alice', p2: 30 }

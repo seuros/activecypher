@@ -74,7 +74,7 @@ class PatternTest < ActiveSupport::TestCase
   test 'relationship pattern rendering - alias and type' do
     rel = Cyrel::Pattern::Relationship.new(alias_name: :r, types: 'KNOWS', direction: :outgoing)
     query = Cyrel::Query.new
-    assert_equal '-[r :KNOWS]->', rel.render(query)
+    assert_equal '-[r:KNOWS]->', rel.render(query)
     assert_empty query.parameters
   end
 
@@ -96,7 +96,7 @@ class PatternTest < ActiveSupport::TestCase
     rel = Cyrel::Pattern::Relationship.new(alias_name: :r, types: 'KNOWS', properties: { since: 2020 },
                                            direction: :outgoing)
     query = Cyrel::Query.new
-    assert_equal '-[r :KNOWS {since: $p1}]->', rel.render(query)
+    assert_equal '-[r:KNOWS {since: $p1}]->', rel.render(query)
     assert_equal({ p1: 2020 }, query.parameters)
   end
 
@@ -134,7 +134,7 @@ class PatternTest < ActiveSupport::TestCase
     rel = Cyrel::Pattern::Relationship.new(alias_name: :r, types: 'KNOWS', properties: { active: true },
                                            length: '*1..', direction: :outgoing)
     query = Cyrel::Query.new
-    assert_equal '-[r :KNOWS*1.. {active: $p1}]->', rel.render(query)
+    assert_equal '-[r:KNOWS*1.. {active: $p1}]->', rel.render(query)
     assert_equal({ p1: true }, query.parameters)
   end
 
@@ -146,7 +146,7 @@ class PatternTest < ActiveSupport::TestCase
     n2 = Cyrel::Pattern::Node.new(:m, labels: 'Person')
     path = Cyrel::Pattern::Path.new([n1, r, n2])
     query = Cyrel::Query.new
-    assert_equal '(n:Person)-[r :KNOWS]->(m:Person)', path.render(query) # Expect standard Cypher syntax
+    assert_equal '(n:Person)-[r:KNOWS]->(m:Person)', path.render(query) # Expect standard Cypher syntax
     assert_empty query.parameters
   end
 
@@ -157,7 +157,7 @@ class PatternTest < ActiveSupport::TestCase
     n2 = Cyrel::Pattern::Node.new(:m, labels: 'Person', properties: { name: 'Bob' })
     path = Cyrel::Pattern::Path.new([n1, r, n2])
     query = Cyrel::Query.new
-    assert_equal '(n:Person {name: $p1})-[r :KNOWS {since: $p2}]->(m:Person {name: $p3})', path.render(query) # Corrected expectation
+    assert_equal '(n:Person {name: $p1})-[r:KNOWS {since: $p2}]->(m:Person {name: $p3})', path.render(query) # Corrected expectation
     assert_equal({ p1: 'Alice', p2: 2021, p3: 'Bob' }, query.parameters) # Expect standard Cypher syntax
   end
 

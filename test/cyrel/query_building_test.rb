@@ -44,7 +44,7 @@ class QueryBuildingTest < ActiveSupport::TestCase
 
     expected_cypher = <<~CYPHER.chomp.strip
       MATCH (p:Person)
-      WHERE ((p.age > $p1) AND (p.city = $p2))
+      WHERE (p.age > $p1) AND (p.city = $p2)
       RETURN p.name
     CYPHER
     expected_params = { p1: 30, p2: 'London' }
@@ -60,7 +60,7 @@ class QueryBuildingTest < ActiveSupport::TestCase
 
     expected_cypher = <<~CYPHER.chomp.strip
       MATCH (p:Person)
-      WHERE ((p.name = $p1) AND (p.status = $p2))
+      WHERE (p.name = $p1) AND (p.status = $p2)
       RETURN p
     CYPHER
     expected_params = { p1: 'Bob', p2: 'active' }

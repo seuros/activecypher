@@ -49,8 +49,8 @@ module Cyrel
                    .match(Cyrel.node(:n))
                    .foreach(:item, :items) do |sub|
                      sub.create(Cyrel.node(:m))
-                     sub.create(Cyrel.rel(:n, :r, :KNOWS, :m))
-                     sub.set(m: { value: :item })
+                     sub.create(Cyrel.path { node(:n) > rel(:r, :KNOWS) && rel(:r, :KNOWS) > node(:m) })
+                     sub.set(Cyrel.prop(:m, :value) => :item)
                    end
                    .return_(:n)
 

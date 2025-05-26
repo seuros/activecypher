@@ -59,12 +59,12 @@ module Cyrel
 
     def node(alias_name = nil, *labels, **properties)
       # If there's a pending direction, we need to add a relationship first
-      if @pending_direction && @elements.any? && @elements.last.is_a?(Pattern::Node)
-        @elements << Pattern::Relationship.new(types: [], direction: @pending_direction)
+      if @pending_direction && @elements.any? && @elements.last.is_a?(Cyrel::Pattern::Node)
+        @elements << Cyrel::Pattern::Relationship.new(types: [], direction: @pending_direction)
         @pending_direction = nil
       end
 
-      n = Pattern::Node.new(alias_name, labels: labels, properties: properties)
+      n = Cyrel::Pattern::Node.new(alias_name, labels: labels, properties: properties)
       @elements << n
       self
     end
@@ -73,7 +73,7 @@ module Cyrel
       length = properties.delete(:length)
 
       # Check if we need to replace the last element (an anonymous relationship)
-      if @elements.last.is_a?(Pattern::Relationship) && @elements.last.types.empty?
+      if @elements.last.is_a?(Cyrel::Pattern::Relationship) && @elements.last.types.empty?
         # Replace the anonymous relationship with specified one, keeping direction
         direction = @elements.last.direction
         @elements.pop
@@ -81,29 +81,66 @@ module Cyrel
         direction = @pending_direction || :both
       end
 
-      r = Pattern::Relationship.new(alias_name: alias_name, types: types, properties: properties, length: length, direction: direction)
+      r = Cyrel::Pattern::Relationship.new(alias_name: alias_name, types: types, properties: properties, length: length, direction: direction)
       @elements << r
       @pending_direction = nil
       self
     end
 
     def >(_other)
-      @pending_direction = :outgoing
-      # If other is a PathBuilder (self), just return self for chaining
-      # This happens when chaining like: node(:a) > rel(:r) > node(:b)
-      # The rel(:r) returns self, so > receives self as the argument
+      # When called like: node(:a) > rel(:r) > node(:b)
+      # The rel(:r) is evaluated first, then > is called
+      # So we need to modify the last relationship that was just added
+      if @elements.last.is_a?(Cyrel::Pattern::Relationship)
+        # Replace the last relationship with one that has the correct direction
+        last_rel = @elements.pop
+        new_rel = Cyrel::Pattern::Relationship.new(
+          alias_name: last_rel.alias_name,
+          types: last_rel.types,
+          properties: last_rel.properties,
+          length: last_rel.length,
+          direction: :outgoing
+        )
+        @elements << new_rel
+      else
+        @pending_direction = :outgoing
+      end
       self
     end
 
     def <(_other)
-      @pending_direction = :incoming
-      # Same logic as > method
+      # Same logic as > but for incoming direction
+      if @elements.last.is_a?(Cyrel::Pattern::Relationship)
+        last_rel = @elements.pop
+        new_rel = Cyrel::Pattern::Relationship.new(
+          alias_name: last_rel.alias_name,
+          types: last_rel.types,
+          properties: last_rel.properties,
+          length: last_rel.length,
+          direction: :incoming
+        )
+        @elements << new_rel
+      else
+        @pending_direction = :incoming
+      end
       self
     end
 
     def -(_other)
-      @pending_direction = :both
-      # Same logic as > method
+      # Same logic as > but for bidirectional
+      if @elements.last.is_a?(Cyrel::Pattern::Relationship)
+        last_rel = @elements.pop
+        new_rel = Cyrel::Pattern::Relationship.new(
+          alias_name: last_rel.alias_name,
+          types: last_rel.types,
+          properties: last_rel.properties,
+          length: last_rel.length,
+          direction: :both
+        )
+        @elements << new_rel
+      else
+        @pending_direction = :both
+      end
       self
     end
   end

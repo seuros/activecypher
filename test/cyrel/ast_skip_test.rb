@@ -104,7 +104,7 @@ module Cyrel
 
       expected_cypher = <<~CYPHER.strip
         MATCH (n {name: $p1})
-        MATCH (n {name: $p1})-[r ]-(m)
+        MATCH (n {name: $p1})-[r]-(m)
         WHERE (n.age > $p2)
         RETURN n, m, count(r) AS relationship_count
         ORDER BY n.age DESC

@@ -41,7 +41,7 @@ module Cyrel
                           .return_(:n, :rel_type, :m)
 
       cypher, = query.to_cypher
-      expected = "MATCH (n:Person)\nUNWIND ['friend', 'colleague', 'family'] AS rel_type\nCREATE (n)-[r :rel_type]->(m:Person)\nRETURN n, rel_type, m"
+      expected = "MATCH (n:Person)\nUNWIND ['friend', 'colleague', 'family'] AS rel_type\nCREATE (n)-[r:rel_type]->(m:Person)\nRETURN n, rel_type, m"
       assert_equal expected, cypher
     end
 

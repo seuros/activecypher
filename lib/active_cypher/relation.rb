@@ -141,7 +141,7 @@ module ActiveCypher
                end
 
       Cyrel
-        .match(Cyrel.node(node_alias, labels: labels))
+        .match(Cyrel.node(node_alias, *labels))
         .return_(node_alias, Cyrel.node_id(node_alias).as(:internal_id))
     end
 
