@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.8.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.8.0...active_cypher/v0.8.1) (2025-05-30)
+
+
+### Bug Fixes
+
+* update test coverage and expose connected? ([#30](https://github.com/seuros/activecypher/issues/30)) ([402d87b](https://github.com/seuros/activecypher/commit/402d87b13e2159c6c71c423f84f60cca63a751d9))
+
 ## [0.8.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.7.3...active_cypher/v0.8.0) (2025-05-26)
 
 
