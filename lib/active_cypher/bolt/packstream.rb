@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'stringio'
+require 'bigdecimal'
 
 module ActiveCypher
   module Bolt
@@ -46,6 +47,7 @@ module ActiveCypher
         NULL = 0xC0
         FALSEY = 0xC2
         TRUETHY = 0xC3
+        FLOAT_64 = 0xC1
 
         def initialize(io)
           @io = io
@@ -56,11 +58,13 @@ module ActiveCypher
           when String then pack_string(value)
           when Hash then pack_map(value)
           when Integer then pack_integer(value)
+          when Float then pack_float(value)
+          when BigDecimal then pack_string(value.to_s('F'))
           when TrueClass then write_marker([TRUETHY].pack('C'))
           when FalseClass then write_marker([FALSEY].pack('C'))
           when NilClass then write_marker([NULL].pack('C'))
           when Array then pack_list(value)
-          # TODO: Add other types as needed (Float, Structure)
+          # TODO: Add other types maybe Postgis stuff when i'm ready for it
           else
             raise ProtocolError, "Cannot pack type: #{value.class}"
           end
@@ -132,6 +136,11 @@ module ActiveCypher
           else # INT_64
             write_marker_and_data([INT_64].pack('C'), [int].pack('q')) # q is already network byte order
           end
+        end
+
+        def pack_float(float)
+          # Pack as 64-bit double precision float in big-endian format
+          write_marker_and_data([FLOAT_64].pack('C'), [float].pack('G'))
         end
 
         def write_marker(marker_bytes)

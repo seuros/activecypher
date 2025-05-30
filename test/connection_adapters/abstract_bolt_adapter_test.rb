@@ -5,6 +5,18 @@ require 'logger'
 
 module ActiveCypher
   module ConnectionAdapters
+    class BatchDeleteTestAdapter < TestBoltAdapter
+      def execute_cypher(query, params = {}, context = 'Query')
+        @executed_queries << { query: query, params: params, context: context }
+        # Simulate batch deletion behavior
+        if @executed_queries.size == 1
+          [{ total: 50 }] # First batch deletes 50 items
+        else
+          [{ total: 0 }] # Second batch finds nothing to delete
+        end
+      end
+    end
+
     class AbstractBoltAdapterTest < ActiveSupport::TestCase
       # Create a concrete implementation for testing
       class TestBoltAdapter < AbstractBoltAdapter
@@ -199,17 +211,6 @@ module ActiveCypher
 
       test 'wipe_database executes batch wipe when batch size specified' do
         # Use specialized adapter for batch deletion testing
-        class BatchDeleteTestAdapter < TestBoltAdapter
-          def execute_cypher(query, params = {}, context = 'Query')
-            @executed_queries << { query: query, params: params, context: context }
-            # Simulate batch deletion behavior
-            if @executed_queries.size == 1
-              [{ total: 50 }] # First batch deletes 50 items
-            else
-              [{ total: 0 }] # Second batch finds nothing to delete
-            end
-          end
-        end
         @adapter = BatchDeleteTestAdapter.new(@config)
 
         result = @adapter.send(:wipe_database, confirm: 'yes, really', batch: 100)

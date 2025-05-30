@@ -235,7 +235,17 @@ people = PersonNode.where(name: 'Alice')
 believable_conspiracies = ConspiracyNode.where('believability_index > ?', 5)
 ```
 
-*(See more detailed usage and advanced queries in the models and test files in `test/dummy/app/graph`.)*
+## Examples and Tutorials
+
+For comprehensive examples of building graph applications with nodes and relationships, see [EXAMPLES.md](EXAMPLES.md). This guide walks through creating a coffee supply chain application, demonstrating:
+
+- Creating nodes (coffee beans, roasteries, coffee shops)
+- Defining relationships with custom attributes (supplies, roasts, serves)
+- Connection inheritance and customization
+- Complex querying patterns
+- Migration examples
+
+*(See also detailed usage and advanced queries in the models and test files in `test/dummy/app/graph`.)*
 
 ## Generators and Naming Conventions
 
