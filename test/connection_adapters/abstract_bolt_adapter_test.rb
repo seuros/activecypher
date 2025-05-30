@@ -8,6 +8,11 @@ module ActiveCypher
     class AbstractBoltAdapterTest < ActiveSupport::TestCase
       # Create a concrete implementation for testing
       class TestBoltAdapter < AbstractBoltAdapter
+        def initialize(config)
+          super
+          @executed_queries = []
+        end
+
         def protocol_handler_class
           TestProtocolHandler
         end
@@ -16,9 +21,19 @@ module ActiveCypher
           true
         end
 
-        def execute_cypher(_query, _params = {}, _context = 'Query')
-          []
+        def execute_cypher(query, params = {}, context = 'Query')
+          @executed_queries << { query: query, params: params, context: context }
+
+          # Return different responses based on query pattern
+          case query
+          when /RETURN rels \+ nodes AS total/
+            [{ total: 0 }] # Simulate no more records to delete
+          else
+            []
+          end
         end
+
+        attr_reader :executed_queries
       end
 
       class TestProtocolHandler < AbstractProtocolHandler
@@ -162,6 +177,55 @@ module ActiveCypher
           result = @adapter.reset!
           assert_equal false, result
         end
+      end
+
+      test 'wipe_database requires explicit confirmation' do
+        assert_raises(RuntimeError, 'Refusing to wipe without explicit confirmation') do
+          @adapter.send(:wipe_database, confirm: 'no')
+        end
+      end
+
+      test 'wipe_database executes simple wipe when no batch specified' do
+        result = @adapter.send(:wipe_database, confirm: 'yes, really')
+
+        assert_equal true, result
+        assert_equal 1, @adapter.executed_queries.size
+
+        query = @adapter.executed_queries.first
+        assert_equal 'MATCH (n) DETACH DELETE n', query[:query]
+        assert_equal({}, query[:params])
+        assert_equal 'WipeDB', query[:context]
+      end
+
+      test 'wipe_database executes batch wipe when batch size specified' do
+        # Use specialized adapter for batch deletion testing
+        class BatchDeleteTestAdapter < TestBoltAdapter
+          def execute_cypher(query, params = {}, context = 'Query')
+            @executed_queries << { query: query, params: params, context: context }
+            # Simulate batch deletion behavior
+            if @executed_queries.size == 1
+              [{ total: 50 }] # First batch deletes 50 items
+            else
+              [{ total: 0 }] # Second batch finds nothing to delete
+            end
+          end
+        end
+        @adapter = BatchDeleteTestAdapter.new(@config)
+
+        result = @adapter.send(:wipe_database, confirm: 'yes, really', batch: 100)
+
+        assert_equal true, result
+        assert_equal 2, @adapter.executed_queries.size
+
+        # Check first batch query
+        first_query = @adapter.executed_queries.first
+        assert_includes first_query[:query], 'LIMIT 100'
+        assert_includes first_query[:query], 'RETURN rels + nodes AS total'
+        assert_equal 'Batch‑Delete', first_query[:context]
+
+        # Check second batch query (should be identical)
+        second_query = @adapter.executed_queries.last
+        assert_equal first_query[:query], second_query[:query]
       end
     end
   end
