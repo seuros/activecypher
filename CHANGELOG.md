@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.8.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.8.1...active_cypher/v0.8.2) (2025-05-30)
+
+
+### Bug Fixes
+
+* add support to float and bigdecimal ([#32](https://github.com/seuros/activecypher/issues/32)) ([225a9d6](https://github.com/seuros/activecypher/commit/225a9d647dd277988399d6d404f83e8cdea92425))
+
 ## [0.8.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.8.0...active_cypher/v0.8.1) (2025-05-30)
 
 
