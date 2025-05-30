@@ -59,6 +59,7 @@ module ActiveCypher
 
       # Connection health check. If this returns false, you're probably in trouble.
       def active? = @connection&.connected?
+      alias connected? active?
 
       # Clean disconnection. Resets the internal state.
       def disconnect
