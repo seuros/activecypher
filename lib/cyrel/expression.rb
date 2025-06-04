@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# Subclasses are autoloaded by Zeitwerk based on constant usage.
-# Explicit requires removed.
-
 module Cyrel
   # Namespace for classes representing expressions in Cypher queries.
   # Expressions are parts of a query that evaluate to a value or condition.
