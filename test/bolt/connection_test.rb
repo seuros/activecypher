@@ -161,7 +161,6 @@ class ConnectionTest < ActiveSupport::TestCase
   # --- Memgraph Tests ---
 
   test '[Memgraph] successful connection and handshake' do
-
     connection = nil
     begin
       adapter = ActiveCypher::ConnectionAdapters::MemgraphAdapter.new({

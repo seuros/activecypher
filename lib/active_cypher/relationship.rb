@@ -159,6 +159,21 @@ module ActiveCypher
         new(attrs, from_node: from_node, to_node: to_node).tap(&:save)
       end
 
+      # Bang version of create - raises exception if save fails
+      # For when you want your relationship failures to be as dramatic as your breakups
+      def create!(attrs = {}, from_node:, to_node:)
+        relationship = create(attrs, from_node: from_node, to_node: to_node)
+        if relationship.persisted?
+          relationship
+        else
+          error_msgs = relationship.errors.full_messages.join(', ')
+          error_msgs = 'Validation failed' if error_msgs.empty?
+          raise ActiveCypher::RecordNotSaved,
+                "#{name} could not be saved: #{error_msgs}. " \
+                "Perhaps the nodes aren't ready for this kind of commitment?"
+        end
+      end
+
       # Instantiate from DB row, marking the instance as persisted.
       def instantiate(attributes, from_node: nil, to_node: nil)
         instance = allocate
@@ -167,6 +182,82 @@ module ActiveCypher
                       from_node: from_node,
                       to_node: to_node)
         instance
+      end
+
+      # -- Querying methods ----------------------------------------
+      # Find the first relationship matching the given attributes
+      # Like finding a needle in a haystack, if the haystack was made of graph edges
+      def find_by(attributes = {})
+        return nil if attributes.blank?
+
+        rel_type = relationship_type
+
+        # Build WHERE conditions for the attributes
+        conditions = []
+        params = {}
+
+        attributes.each_with_index do |(key, value), index|
+          param_name = :"p#{index + 1}"
+          conditions << "r.#{key} = $#{param_name}"
+          params[param_name] = value
+        end
+
+        where_clause = conditions.join(' AND ')
+
+        # Determine ID function based on adapter type
+        adapter_class = connection.class
+        id_func = adapter_class.const_defined?(:ID_FUNCTION) ? adapter_class::ID_FUNCTION : 'id'
+
+        cypher = <<~CYPHER
+          MATCH ()-[r:#{rel_type}]-()
+          WHERE #{where_clause}
+          RETURN r, #{id_func}(r) as rid, startNode(r) as from_node, endNode(r) as to_node
+          LIMIT 1
+        CYPHER
+
+        result = connection.execute_cypher(cypher, params, 'Find Relationship By')
+        row = result.first
+
+        return nil unless row
+
+        # Extract relationship data and instantiate
+        rel_data = row[:r] || row['r']
+        rid = row[:rid] || row['rid']
+
+        # Extract properties from the relationship data
+        # Memgraph returns relationships wrapped as [type_code, [actual_data]]
+        attrs = {}
+
+        if rel_data.is_a?(Array) && rel_data.length == 2
+          # Extract the actual relationship data from the second element
+          actual_data = rel_data[1]
+
+          if actual_data.is_a?(Array) && actual_data.length >= 5
+            # Format: [rel_id, start_id, end_id, type, properties, ...]
+            props = actual_data[4]
+            attrs = props.is_a?(Hash) ? props : {}
+          end
+        elsif rel_data.is_a?(Hash)
+          attrs = rel_data
+        end
+
+        # Convert string keys to symbols for attributes
+        attrs = attrs.transform_keys(&:to_sym)
+        attrs[:internal_id] = rid if rid
+
+        instantiate(attrs)
+      end
+
+      # Find the first relationship or raise an exception
+      # For when nil just isn't dramatic enough for your data access needs
+      def find_by!(attributes = {})
+        # Format attributes nicely for the error message
+        formatted_attrs = attributes.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')
+
+        find_by(attributes) || raise(ActiveCypher::RecordNotFound,
+                                     "Couldn't find #{name} with #{formatted_attrs}. " \
+                                     'Maybe these nodes were never meant to be connected? ' \
+                                     'Or perhaps their relationship status is... complicated?')
       end
     end
 
@@ -231,6 +322,21 @@ module ActiveCypher
     # Private helpers
     # --------------------------------------------------------------
     private
+
+    # Initialize from database attributes, marking as persisted
+    def init_with_attributes(attributes, from_node: nil, to_node: nil)
+      # Initialize the model first to set up attributes
+      initialize({}, from_node: from_node, to_node: to_node)
+
+      # Now we're not a new record
+      @new_record = false
+
+      # Assign the attributes from the database
+      assign_attributes(attributes) if attributes
+
+      # Clear any change tracking
+      clear_changes_information
+    end
 
     def create_relationship
       raise 'Source node must be persisted' unless from_node&.persisted?
