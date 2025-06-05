@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'cyrel/expression'
-require 'cyrel/expression/property_access'
-
 module Cyrel
   module Clause
     # Represents a SET clause in a Cypher query.

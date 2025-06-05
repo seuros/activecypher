@@ -86,10 +86,7 @@ module Cyrel
 
       # Add more operators as needed (e.g., IN, STARTS WITH, CONTAINS, ENDS WITH)
       # These might be better represented as specific Comparison or FunctionCall types.
-
-      # NOTE: `coerce` method moved to the Expression module itself.
     end
-    require_relative 'alias' # Explicitly require the Alias class
 
     # Creates an aliased version of this expression.
     # @param alias_name [Symbol, String] The alias to assign.

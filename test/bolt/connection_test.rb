@@ -161,7 +161,6 @@ class ConnectionTest < ActiveSupport::TestCase
   # --- Memgraph Tests ---
 
   test '[Memgraph] successful connection and handshake' do
-    skip 'Skipping Memgraph test (may not be available)' unless ENV['TEST_MEMGRAPH']
 
     connection = nil
     begin

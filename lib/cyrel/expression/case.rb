@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../expression'
-
 module Cyrel
   module Expression
     # Represents a CASE expression in Cypher.

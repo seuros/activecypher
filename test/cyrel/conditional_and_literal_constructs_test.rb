@@ -4,8 +4,6 @@ require 'test_helper'
 require 'cyrel'
 
 class ConditionalAndLiteralConstructsTest < ActiveSupport::TestCase
-  # Removed duplicate CASE Expression test (covered in case_expression_test.rb)
-
   test 'List and Map Literals in RETURN with Aliases' do
     list_literal = [1, 2, 3]
     map_literal = { name: 'Jane', age: 22 }

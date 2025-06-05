@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# Dependencies are autoloaded by Zeitwerk based on constant usage.
-# Explicit requires removed.
-
 module Cyrel
   module Expression
     # Represents an EXISTS { pattern } predicate in Cypher.
