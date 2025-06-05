@@ -4,8 +4,6 @@ require 'test_helper'
 require 'cyrel'
 
 class EdgeCasesAndOrderingTest < ActiveSupport::TestCase
-  # Removed duplicate Multiple `where` Calls test (covered in multiple_where_test.rb)
-
   test 'Aliasing a Node in MATCH' do
     # Define node with alias 'a'
     match_node = Cyrel::Pattern::Node.new(:a, labels: 'Person', properties: { name: 'Alice' })

@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../expression'
-require_relative '../pattern' # Need Path
-
 module Cyrel
   module Expression
     # Represents a Pattern Comprehension in Cypher.

@@ -42,6 +42,4 @@ class AdvancedConstructsTest < ActiveSupport::TestCase
 
     assert_equal [expected_cypher, expected_params], query_raw.to_cypher
   end
-
-  # Removed duplicate CALL tests, already covered in call_clause_test.rb
 end

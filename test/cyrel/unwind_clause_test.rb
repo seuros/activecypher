@@ -25,8 +25,19 @@ module Cyrel
     end
 
     test 'unwind with expression' do
-      # Skip this test for now as we need to implement range function
-      skip 'Need to implement range function'
+      # Using range expression: range(1, 5)
+      query = Cyrel::Query.new
+                          .unwind(Cyrel.function(:range, 1, 5), :num)
+                          .return_(:num)
+
+      expected_cypher = <<~CYPHER.chomp.strip
+        UNWIND range($p1, $p2) AS num
+        RETURN num
+      CYPHER
+      expected_params = { p1: 1, p2: 5 }
+      cypher, params = query.to_cypher
+      assert_equal expected_cypher, cypher
+      assert_equal expected_params, params
     end
 
     test 'unwind in complex query' do

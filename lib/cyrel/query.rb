@@ -1,11 +1,5 @@
 # frozen_string_literal: true
 
-# Base DSL components
-require 'cyrel/parameterizable'
-require 'cyrel/logging'
-
-# Require all clause types for DSL methods
-
 module Cyrel
   # Error raised when merging queries with conflicting alias definitions.
   # Because even in graphs, two things can't have the same name without drama.

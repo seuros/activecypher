@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative '../direction'
-
 module Cyrel
   module Pattern
     class Relationship
