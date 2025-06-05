@@ -67,6 +67,27 @@ module ActiveCypher
                 "#{name} with internal_id=#{internal_db_id.inspect} not found. Perhaps it's in another castle, or just being 'graph'-ty."
         end
 
+        # Find the first node matching the given attributes, or return nil and question your life choices
+        # @param attributes [Hash] Attributes to match
+        # @return [Object, nil] The first matching record or nil
+        # Because apparently typing .where(attrs).limit(1).first was giving people RSI
+        def find_by(attributes = {})
+          return nil if attributes.blank?
+          where(attributes).limit(1).first
+        end
+
+        # Find the first node matching the given attributes or throw a tantrum
+        # @param attributes [Hash] Attributes to match
+        # @return [Object] The first matching record
+        # @raise [ActiveCypher::RecordNotFound] When no record is found
+        # For when nil isn't dramatic enough and you need your code to scream at you
+        def find_by!(attributes = {})
+          find_by(attributes) || raise(ActiveCypher::RecordNotFound,
+                                       "Couldn't find #{name} with #{attributes.inspect}. " \
+                                       "Perhaps it's hiding in another graph, or maybe it never existed. " \
+                                       "Who can say in this vast, uncaring universe of nodes and relationships?")
+        end
+
         # Instantiates and immediately saves a new record. YOLO mode.
         # @param attrs [Hash] Attributes for the new record
         # @return [Object] The new, possibly persisted record
