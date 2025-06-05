@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+## [0.9.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.8.2...active_cypher/v0.9.0) (2025-06-05)
+
+
+### Features
+
+* add find_by ([#36](https://github.com/seuros/activecypher/issues/36)) ([0d73b6a](https://github.com/seuros/activecypher/commit/0d73b6a9bdd208972394420c28370ec76ab2d113))
+
+
+### Bug Fixes
+
+* test unwind ([#34](https://github.com/seuros/activecypher/issues/34)) ([7e3f3cb](https://github.com/seuros/activecypher/commit/7e3f3cbd61583faa09bd500cd9d82063966b2d2a))
+
 ## [0.8.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.8.1...active_cypher/v0.8.2) (2025-05-30)
 
 
