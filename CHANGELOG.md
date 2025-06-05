@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.9.0...active_cypher/v0.10.0) (2025-06-05)
+
+
+### Features
+
+* add create and find_by to relationship ([#37](https://github.com/seuros/activecypher/issues/37)) ([0becbae](https://github.com/seuros/activecypher/commit/0becbae6e2df9fbd64956ca66d81060b74470be8))
+
 ## [0.9.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.8.2...active_cypher/v0.9.0) (2025-06-05)
 
 
