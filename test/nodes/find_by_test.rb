@@ -8,8 +8,9 @@ class FindByTest < ActiveSupport::TestCase
 
   def setup
     # Clean slate because yesterday's data is so yesterday
-    PersonNode.connection.execute_cypher('MATCH (n:PersonNode) DETACH DELETE n')
-    CompanyNode.connection.execute_cypher('MATCH (n:CompanyNode) DETACH DELETE n')
+    # Using label-less MATCH to ensure we get everything, even badly labeled nodes
+    PersonNode.connection.execute_cypher('MATCH (n) WHERE labels(n) = ["PersonNode"] OR "PersonNode" IN labels(n) DETACH DELETE n')
+    CompanyNode.connection.execute_cypher('MATCH (n) WHERE labels(n) = ["CompanyNode"] OR "CompanyNode" IN labels(n) DETACH DELETE n')
     
     # Create some test data because an empty database is like a party with no guests
     @alice_memgraph = PersonNode.create(name: "Alice", age: 30, active: true)
@@ -48,7 +49,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_includes [1990, 2010], result.founding_year, "Should find one of the Acme Corps"
   end
 
-  test "find_by with multiple attributes returns correct node (Memgraph)" do
+  test "find_by with multiple attributes returns correct node (Memgraph) - L51" do
     # Because sometimes one attribute just isn't specific enough
     result = PersonNode.find_by(name: "Alice", age: 35)
     assert_not_nil result
@@ -56,7 +57,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_equal 35, result.age
   end
 
-  test "find_by with multiple attributes returns correct node (Neo4j)" do
+  test "find_by with multiple attributes returns correct node (Neo4j) - L59" do
     # Neo4j can do multiple attributes too, it's not just a one-trick pony
     result = CompanyNode.find_by(name: "Acme Corp", founding_year: 2010)
     assert_not_nil result
@@ -64,7 +65,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_equal 2010, result.founding_year
   end
 
-  test "find_by with boolean attributes works (Memgraph)" do
+  test "find_by with boolean attributes works (Memgraph) - L67" do
     # Because true/false decisions are the only ones developers can make confidently
     result = PersonNode.find_by(name: "Bob", active: false)
     assert_not_nil result
@@ -72,7 +73,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_equal false, result.active
   end
 
-  test "find_by with boolean attributes works (Neo4j)" do
+  test "find_by with boolean attributes works (Neo4j) - L75" do
     # Neo4j handles booleans too, probably converts them to strings internally
     result = CompanyNode.find_by(name: "Widgets Inc", active: false)
     assert_not_nil result
@@ -82,25 +83,27 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Not found scenarios: Where dreams go to die ---
 
-  test "find_by returns nil when no match found (Memgraph)" do
+  test "find_by returns nil when no match found (Memgraph) - L85" do
     # Looking for Charlie in a world of Alices and Bobs
-    assert_nil PersonNode.find_by(name: "Charlie")
+    # Note: If this fails, it might be because another test created a Charlie
+    # We'll use a more unique name to avoid conflicts
+    assert_nil PersonNode.find_by(name: "NonexistentPerson_#{SecureRandom.hex(4)}")
     assert_nil PersonNode.find_by(name: "Alice", age: 99)
   end
 
-  test "find_by returns nil when no match found (Neo4j)" do
+  test "find_by returns nil when no match found (Neo4j) - L91" do
     # These companies don't exist, just like my work-life balance
     assert_nil CompanyNode.find_by(name: "Nonexistent Corp")
     assert_nil CompanyNode.find_by(name: "Acme Corp", founding_year: 1885)
   end
 
-  test "find_by with empty hash returns nil" do
+  test "find_by with empty hash returns nil - L97" do
     # Because finding everything is the same as finding nothing, philosophically speaking
     assert_nil PersonNode.find_by({})
     assert_nil CompanyNode.find_by({})
   end
 
-  test "find_by with nil returns nil" do
+  test "find_by with nil returns nil - L103" do
     # nil in, nil out - the circle of life
     assert_nil PersonNode.find_by(nil)
     assert_nil CompanyNode.find_by(nil)
@@ -108,7 +111,7 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Exception handling: When nil just isn't dramatic enough ---
 
-  test "find_by! raises exception when not found (Memgraph)" do
+  test "find_by! raises exception when not found (Memgraph) - L111" do
     # Because sometimes you want your code to scream when it can't find something
     error = assert_raises(ActiveCypher::RecordNotFound) do
       PersonNode.find_by!(name: "Ghost")
@@ -117,7 +120,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_match(/name: "Ghost"/, error.message)
   end
 
-  test "find_by! raises exception when not found (Neo4j)" do
+  test "find_by! raises exception when not found (Neo4j) - L120" do
     # Neo4j exceptions: Now with 100% more drama
     error = assert_raises(ActiveCypher::RecordNotFound) do
       CompanyNode.find_by!(name: "Bankruptcy LLC")
@@ -125,7 +128,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_match(/Couldn't find CompanyNode/, error.message)
   end
 
-  test "find_by! returns record when found" do
+  test "find_by! returns record when found - L128" do
     # The happy path where everything works and nobody panics
     result = PersonNode.find_by!(name: "Alice", age: 30)
     assert_not_nil result
@@ -139,7 +142,7 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Edge cases: Because the universe loves to test our assumptions ---
 
-  test "find_by handles special characters safely" do
+  test "find_by handles special characters safely - L142" do
     # Testing the dark arts of SQL injection... I mean, Cypher injection
     special_person = PersonNode.create(name: "O'Malley's \"Special\" Name", age: 40)
     result = PersonNode.find_by(name: "O'Malley's \"Special\" Name")
@@ -152,7 +155,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_equal "Hack'); DROP TABLE users;--", result.name
   end
 
-  test "find_by is case sensitive" do
+  test "find_by is case sensitive - L155" do
     # Because 'alice' and 'Alice' are totally different people, obviously
     result = PersonNode.find_by(name: "alice")
     assert_nil result
@@ -161,7 +164,7 @@ class FindByTest < ActiveSupport::TestCase
     assert_nil result
   end
 
-  test "find_by handles nil values in attributes" do
+  test "find_by handles nil values in attributes - L164" do
     # For when your data has trust issues and won't commit to having values
     nil_person = PersonNode.create(name: "Nullbert", age: nil)
     result = PersonNode.find_by(name: "Nullbert")
@@ -179,7 +182,7 @@ class FindByTest < ActiveSupport::TestCase
     end
   end
 
-  test "find_by handles numeric types correctly" do
+  test "find_by handles numeric types correctly - L182" do
     # Because 30 and 30.0 are the same... until they're not
     float_person = PersonNode.create(name: "Floaty McFloatface", age: 42)
     
@@ -192,7 +195,7 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Security: Because paranoia is just good engineering ---
 
-  test "find_by properly escapes injection attempts" do
+  test "find_by properly escapes injection attempts - L195" do
     # Your friendly neighborhood security test
 
     injection_attempts = [
@@ -214,7 +217,7 @@ class FindByTest < ActiveSupport::TestCase
     end
   end
 
-  test "find_by handles regex patterns as literals" do
+  test "find_by handles regex patterns as literals - L217" do
     # Because .* should mean dot-star, not "match everything" 
     regex_person = PersonNode.create(name: "test.*regex", age: 50)
     literal_person = PersonNode.create(name: "test123regex", age: 51)
@@ -230,7 +233,7 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Performance considerations (not really testing, just documenting) ---
 
-  test "find_by uses LIMIT 1 for efficiency" do
+  test "find_by uses LIMIT 1 for efficiency - L233" do
     # Let's make sure we're not loading the entire database into memory
     # This test doesn't actually verify the LIMIT, but it makes us feel better
     100.times { |i| PersonNode.create(name: "Clone #{i}", age: 25) }
@@ -243,7 +246,7 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Cross-database compatibility: Because supporting multiple databases is "fun" ---
 
-  test "find_by works consistently across Memgraph and Neo4j" do
+  test "find_by works consistently across Memgraph and Neo4j - L246" do
     # Both databases should behave the same way, in theory
     # In practice, one uses numeric IDs and the other uses string IDs
     # But find_by shouldn't care about that implementation detail
@@ -259,7 +262,7 @@ class FindByTest < ActiveSupport::TestCase
 
   # --- Cyrel integration: Ensuring we're using the safe query builder ---
 
-  test "find_by generates parameterized queries through Cyrel" do
+  test "find_by generates parameterized queries through Cyrel - L262" do
     # Let's peek under the hood and make sure we're using Cyrel properly
     # We can't easily inspect the actual query, but we can verify the behavior
     

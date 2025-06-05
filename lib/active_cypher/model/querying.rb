@@ -82,8 +82,11 @@ module ActiveCypher
         # @raise [ActiveCypher::RecordNotFound] When no record is found
         # For when nil isn't dramatic enough and you need your code to scream at you
         def find_by!(attributes = {})
+          # Format attributes nicely for the error message
+          formatted_attrs = attributes.map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
+          
           find_by(attributes) || raise(ActiveCypher::RecordNotFound,
-                                       "Couldn't find #{name} with #{attributes.inspect}. " \
+                                       "Couldn't find #{name} with #{formatted_attrs}. " \
                                        "Perhaps it's hiding in another graph, or maybe it never existed. " \
                                        "Who can say in this vast, uncaring universe of nodes and relationships?")
         end
