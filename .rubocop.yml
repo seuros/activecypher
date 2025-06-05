@@ -67,7 +67,7 @@ Style/EmptyElse:
 # Naming cops. Please stop renaming `tx` to `transactional_unit`.
 # =======================================
 
-Naming/PredicateName:
+Naming/PredicatePrefix:
   Enabled: false
 
 Naming/MethodParameterName:

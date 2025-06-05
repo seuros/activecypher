@@ -73,6 +73,7 @@ module ActiveCypher
         # Because apparently typing .where(attrs).limit(1).first was giving people RSI
         def find_by(attributes = {})
           return nil if attributes.blank?
+
           where(attributes).limit(1).first
         end
 
@@ -83,12 +84,12 @@ module ActiveCypher
         # For when nil isn't dramatic enough and you need your code to scream at you
         def find_by!(attributes = {})
           # Format attributes nicely for the error message
-          formatted_attrs = attributes.map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
-          
+          formatted_attrs = attributes.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')
+
           find_by(attributes) || raise(ActiveCypher::RecordNotFound,
                                        "Couldn't find #{name} with #{formatted_attrs}. " \
                                        "Perhaps it's hiding in another graph, or maybe it never existed. " \
-                                       "Who can say in this vast, uncaring universe of nodes and relationships?")
+                                       'Who can say in this vast, uncaring universe of nodes and relationships?')
         end
 
         # Instantiates and immediately saves a new record. YOLO mode.
