@@ -271,7 +271,8 @@ module ActiveCypher
       _run(:initialize) do
         super()
 
-        # Merge explicit attrs hash with keyword arguments for attributes
+        # Merge explicit attrs hash with keyword arguments for attributes.
+        # Note: `attribute_kwargs` takes precedence over `attrs` for keys that exist in both.
         combined_attrs = attrs.merge(attribute_kwargs)
         assign_attributes(combined_attrs) if combined_attrs.any?
 
