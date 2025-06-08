@@ -39,6 +39,7 @@ module ActiveCypher
     include ActiveModel::Attributes
     include ActiveModel::Dirty
     include ActiveModel::Naming
+    include ActiveModel::Validations
 
     include Model::ConnectionOwner
     include Logging
@@ -166,8 +167,10 @@ module ActiveCypher
         if relationship.persisted?
           relationship
         else
+          error_msgs = relationship.errors.full_messages.join(', ')
+          error_msgs = 'Validation failed' if error_msgs.empty?
           raise ActiveCypher::RecordNotSaved,
-                "#{name} could not be saved. " \
+                "#{name} could not be saved: #{error_msgs}. " \
                 "Perhaps the nodes aren't ready for this kind of commitment?"
         end
       end
@@ -288,7 +291,9 @@ module ActiveCypher
     # --------------------------------------------------------------
     # Persistence API
     # --------------------------------------------------------------
-    def save
+    def save(validate: true)
+      return false if validate && !valid?
+
       _run(:save) do
         if new_record?
           _run(:create) { create_relationship }
@@ -307,8 +312,10 @@ module ActiveCypher
       if save
         self
       else
+        error_msgs = errors.full_messages.join(', ')
+        error_msgs = 'Validation failed' if error_msgs.empty?
         raise ActiveCypher::RecordNotSaved,
-              "#{self.class} could not be saved. " \
+              "#{self.class} could not be saved: #{error_msgs}. " \
               'Perhaps this relationship was never meant to be?'
       end
     end
