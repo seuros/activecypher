@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.2...active_cypher/v0.10.3) (2025-06-08)
+
+
+### Bug Fixes
+
+* add validation in relationship ([#43](https://github.com/seuros/activecypher/issues/43)) ([44edd26](https://github.com/seuros/activecypher/commit/44edd26b8c0bd7590f26df51c87e6b1b793ecd9a))
+
 ## [0.10.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.1...active_cypher/v0.10.2) (2025-06-08)
 
 
