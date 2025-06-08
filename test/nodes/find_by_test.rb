@@ -9,8 +9,8 @@ class FindByTest < ActiveSupport::TestCase
   def setup
     # Clean slate because yesterday's data is so yesterday
     # Use the proper database wipe method to ensure complete cleanup
-    PersonNode.connection.send(:wipe_database, confirm: "yes, really")
-    CompanyNode.connection.send(:wipe_database, confirm: "yes, really")
+    PersonNode.connection.send(:wipe_database, confirm: 'yes, really')
+    CompanyNode.connection.send(:wipe_database, confirm: 'yes, really')
 
     # Create some test data because an empty database is like a party with no guests
     @alice_memgraph = PersonNode.create(name: 'Alice', age: 30, active: true)

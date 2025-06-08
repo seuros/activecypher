@@ -172,7 +172,6 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     assert_equal Date.today - 30, rel.since
 
     # Verify in database
-    PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
        WHERE id(p) = #{bob.internal_id} AND id(h) = #{poker.internal_id}
@@ -180,5 +179,77 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     )
     assert_equal 1, result[0][:count], 'Expected one relationship in database'
     assert_equal 'weekly', result[0][:frequency], 'Frequency should match'
+  end
+
+  test 'save! method creates relationship and returns self' do
+    # Create nodes
+    charlie = PersonNode.create(name: 'Charlie', age: 28)
+    tennis = HobbyNode.create(name: 'Tennis', category: 'sport', skill_level: 'intermediate')
+
+    assert charlie.persisted?, 'Person should be persisted'
+    assert tennis.persisted?, 'Hobby should be persisted'
+
+    # Create relationship using new + save! with keyword arguments
+    rel = EnjoysRel.new(
+      from_node: charlie,
+      to_node: tennis,
+      frequency: 'daily',
+      since: Date.today - 7
+    )
+
+    # Verify it's not persisted yet
+    assert rel.new_record?, 'Relationship should be a new record'
+    assert_not rel.persisted?, 'Relationship should not be persisted yet'
+
+    # Use save! to persist it
+    result = rel.save!
+
+    # Verify save! returns the relationship itself
+    assert_equal rel, result, 'save! should return the relationship object'
+
+    # Verify it's now persisted
+    assert_not rel.new_record?, 'Relationship should not be a new record after save!'
+    assert rel.persisted?, 'Relationship should be persisted after save!'
+
+    # Verify attributes are correct
+    assert_equal charlie, rel.from_node
+    assert_equal tennis, rel.to_node
+    assert_equal 'daily', rel.frequency
+    assert_equal Date.today - 7, rel.since
+
+    # Verify in database
+    result = PersonNode.connection.execute_cypher(
+      "MATCH (p)-[r:ENJOYS]->(h)
+       WHERE id(p) = #{charlie.internal_id} AND id(h) = #{tennis.internal_id}
+       RETURN COUNT(r) as count, r.frequency as frequency"
+    )
+    assert_equal 1, result[0][:count], 'Expected one relationship in database'
+    assert_equal 'daily', result[0][:frequency], 'Frequency should match'
+  end
+
+  test 'save! raises exception when save fails' do
+    # Create relationship with missing nodes to force save failure
+    rel = EnjoysRel.new(
+      from_node: nil,
+      to_node: nil,
+      frequency: 'never',
+      since: Date.today
+    )
+
+    # Verify it's a new record
+    assert rel.new_record?, 'Relationship should be a new record'
+
+    # save! should raise ActiveCypher::RecordNotSaved when save fails
+    error = assert_raises(ActiveCypher::RecordNotSaved) do
+      rel.save!
+    end
+
+    # Verify error message mentions the class name
+    assert_match(/EnjoysRel could not be saved/, error.message)
+    assert_match(/relationship was never meant to be/, error.message)
+
+    # Verify relationship is still a new record
+    assert rel.new_record?, 'Relationship should still be a new record after failed save!'
+    assert_not rel.persisted?, 'Relationship should not be persisted after failed save!'
   end
 end
