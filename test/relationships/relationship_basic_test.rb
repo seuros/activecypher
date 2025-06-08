@@ -27,7 +27,6 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     assert_equal chess.internal_id, rel.to_node.internal_id
 
     # Verify in database
-    PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
        WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}
@@ -110,5 +109,76 @@ class RelationshipBasicTest < ActiveSupport::TestCase
        RETURN COUNT(r) as count"
     )[0][:count]
     assert_equal 0, count_after, 'Should have no relationships after deletion'
+  end
+
+  test 'create relationship with keyword arguments' do
+    # Create nodes
+    alice = PersonNode.create(name: 'Alice', age: 30)
+    chess = HobbyNode.create(name: 'Chess', category: 'board game', skill_level: 'beginner')
+
+    assert alice.persisted?, 'Person should be persisted'
+    assert chess.persisted?, 'Hobby should be persisted'
+
+    # Create relationship using keyword args
+    rel = EnjoysRel.new(
+      from_node: alice,
+      to_node: chess,
+      frequency: 'daily',
+      since: Date.today
+    )
+
+    # Verify attributes were set correctly
+    assert_equal alice, rel.from_node
+    assert_equal chess, rel.to_node
+    assert_equal 'daily', rel.frequency
+    assert_equal Date.today, rel.since
+
+    # Save and verify persistence
+    assert rel.save, 'Relationship should save successfully'
+    assert rel.persisted?, 'Relationship should be persisted'
+
+    # Verify in database
+    PersonNode.connection.id_handler
+    result = PersonNode.connection.execute_cypher(
+      "MATCH (p)-[r:ENJOYS]->(h)
+       WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}
+       RETURN COUNT(r) as count, r.frequency as frequency"
+    )
+    assert_equal 1, result[0][:count], 'Expected one relationship in database'
+    assert_equal 'daily', result[0][:frequency], 'Frequency should match'
+  end
+
+  test 'create relationship with keyword arguments using create method' do
+    # Create nodes
+    bob = PersonNode.create(name: 'Bob', age: 25)
+    poker = HobbyNode.create(name: 'Poker', category: 'card game', skill_level: 'expert')
+
+    assert bob.persisted?, 'Person should be persisted'
+    assert poker.persisted?, 'Hobby should be persisted'
+
+    # Create relationship using create method with keyword arguments
+    rel = EnjoysRel.create(
+      from_node: bob,
+      to_node: poker,
+      frequency: 'weekly',
+      since: Date.today - 30
+    )
+
+    # Verify attributes were set correctly and it's persisted
+    assert rel.persisted?, 'Relationship should be persisted immediately'
+    assert_equal bob, rel.from_node
+    assert_equal poker, rel.to_node
+    assert_equal 'weekly', rel.frequency
+    assert_equal Date.today - 30, rel.since
+
+    # Verify in database
+    PersonNode.connection.id_handler
+    result = PersonNode.connection.execute_cypher(
+      "MATCH (p)-[r:ENJOYS]->(h)
+       WHERE id(p) = #{bob.internal_id} AND id(h) = #{poker.internal_id}
+       RETURN COUNT(r) as count, r.frequency as frequency"
+    )
+    assert_equal 1, result[0][:count], 'Expected one relationship in database'
+    assert_equal 'weekly', result[0][:frequency], 'Frequency should match'
   end
 end

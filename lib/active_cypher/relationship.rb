@@ -155,14 +155,14 @@ module ActiveCypher
 
       # -- factories -----------------------------------------------
       # Mirrors ActiveRecord.create
-      def create(attrs = {}, from_node:, to_node:)
-        new(attrs, from_node: from_node, to_node: to_node).tap(&:save)
+      def create(attrs = {}, from_node:, to_node:, **attribute_kwargs)
+        new(attrs, from_node: from_node, to_node: to_node, **attribute_kwargs).tap(&:save)
       end
 
       # Bang version of create - raises exception if save fails
       # For when you want your relationship failures to be as dramatic as your breakups
-      def create!(attrs = {}, from_node:, to_node:)
-        relationship = create(attrs, from_node: from_node, to_node: to_node)
+      def create!(attrs = {}, from_node:, to_node:, **attribute_kwargs)
+        relationship = create(attrs, from_node: from_node, to_node: to_node, **attribute_kwargs)
         if relationship.persisted?
           relationship
         else
@@ -267,10 +267,15 @@ module ActiveCypher
     attr_accessor :from_node, :to_node
     attr_reader   :new_record
 
-    def initialize(attrs = {}, from_node: nil, to_node: nil)
+    def initialize(attrs = {}, from_node: nil, to_node: nil, **attribute_kwargs)
       _run(:initialize) do
         super()
-        assign_attributes(attrs) if attrs
+
+        # Merge explicit attrs hash with keyword arguments for attributes.
+        # Note: `attribute_kwargs` takes precedence over `attrs` for keys that exist in both.
+        combined_attrs = attrs.merge(attribute_kwargs)
+        assign_attributes(combined_attrs) if combined_attrs.any?
+
         @from_node  = from_node
         @to_node    = to_node
         @new_record = true
