@@ -27,7 +27,6 @@ class RelationshipBasicTest < ActiveSupport::TestCase
     assert_equal chess.internal_id, rel.to_node.internal_id
 
     # Verify in database
-    PersonNode.connection.id_handler
     result = PersonNode.connection.execute_cypher(
       "MATCH (p)-[r:ENJOYS]->(h)
        WHERE id(p) = #{alice.internal_id} AND id(h) = #{chess.internal_id}

@@ -8,9 +8,9 @@ class FindByTest < ActiveSupport::TestCase
 
   def setup
     # Clean slate because yesterday's data is so yesterday
-    # Using label-less MATCH to ensure we get everything, even badly labeled nodes
-    PersonNode.connection.execute_cypher('MATCH (n) WHERE labels(n) = ["PersonNode"] OR "PersonNode" IN labels(n) DETACH DELETE n')
-    CompanyNode.connection.execute_cypher('MATCH (n) WHERE labels(n) = ["CompanyNode"] OR "CompanyNode" IN labels(n) DETACH DELETE n')
+    # Use the proper database wipe method to ensure complete cleanup
+    PersonNode.connection.send(:wipe_database, confirm: "yes, really")
+    CompanyNode.connection.send(:wipe_database, confirm: "yes, really")
 
     # Create some test data because an empty database is like a party with no guests
     @alice_memgraph = PersonNode.create(name: 'Alice', age: 30, active: true)
