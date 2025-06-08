@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.1...active_cypher/v0.10.2) (2025-06-08)
+
+
+### Bug Fixes
+
+* implement missing relationship persistence methods ([#41](https://github.com/seuros/activecypher/issues/41)) ([8e966d8](https://github.com/seuros/activecypher/commit/8e966d8ff38fac5dabb2ebfc21086921de244803))
+
 ## [0.10.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.0...active_cypher/v0.10.1) (2025-06-08)
 
 
