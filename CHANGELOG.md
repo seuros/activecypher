@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.0...active_cypher/v0.10.1) (2025-06-08)
+
+
+### Bug Fixes
+
+* allow keyword arguments in Relationship#initialize ([#39](https://github.com/seuros/activecypher/issues/39)) ([961bb0e](https://github.com/seuros/activecypher/commit/961bb0ea1b592527b397ff2f15e7166732c31f45))
+
 ## [0.10.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.9.0...active_cypher/v0.10.0) (2025-06-05)
 
 
