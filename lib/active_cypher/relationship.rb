@@ -166,10 +166,8 @@ module ActiveCypher
         if relationship.persisted?
           relationship
         else
-          error_msgs = relationship.errors.full_messages.join(', ')
-          error_msgs = 'Validation failed' if error_msgs.empty?
           raise ActiveCypher::RecordNotSaved,
-                "#{name} could not be saved: #{error_msgs}. " \
+                "#{name} could not be saved. " \
                 "Perhaps the nodes aren't ready for this kind of commitment?"
         end
       end
@@ -301,6 +299,18 @@ module ActiveCypher
     rescue StandardError => e
       log_error "Failed to save #{self.class}: #{e.class} – #{e.message}"
       false
+    end
+
+    # Bang version of save - raises exception if save fails
+    # For when you want your relationship persistence to be as dramatic as your code reviews
+    def save!
+      if save
+        self
+      else
+        raise ActiveCypher::RecordNotSaved,
+              "#{self.class} could not be saved. " \
+              'Perhaps this relationship was never meant to be?'
+      end
     end
 
     def destroy
