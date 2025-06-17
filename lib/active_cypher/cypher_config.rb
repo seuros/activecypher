@@ -34,7 +34,7 @@ module ActiveCypher
       merged =
         if defined?(Rails::Application)
           # Leverage the very method you pasted:
-          Rails.application.config_for(file, env: env).deep_dup
+          Rails.application.config_for(file, env: env)&.deep_dup || {}
         else
           # Stand‑alone Ruby script: replicate the merge rules.
           raw     = ActiveSupport::ConfigurationFile.parse(file).deep_symbolize_keys
