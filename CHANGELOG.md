@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.4](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.3...active_cypher/v0.10.4) (2025-06-17)
+
+
+### Bug Fixes
+
+* handle wrong env ([#45](https://github.com/seuros/activecypher/issues/45)) ([9829473](https://github.com/seuros/activecypher/commit/9829473acadbf62ad19026ac08eea798b8f088d9))
+
 ## [0.10.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.2...active_cypher/v0.10.3) (2025-06-08)
 
 
