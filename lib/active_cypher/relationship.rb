@@ -366,24 +366,21 @@ module ActiveCypher
 
       props  = attributes.except('internal_id').compact
       rel_ty = self.class.relationship_type
-      arrow  = '->' # outgoing by default
-
       adapter = self.class.connection.id_handler
-      parts = []
 
-      # Build the Cypher query based on the adapter
-      id_clause = adapter.with_direct_node_ids(from_node.internal_id, to_node.internal_id)
-      parts << "MATCH (p), (h) WHERE #{id_clause}"
-      parts << "CREATE (p)-[r:#{rel_ty}]#{arrow}(h)"
-      parts << 'SET r += $props' unless props.empty? # only if we have props
-      parts << "RETURN #{adapter.return_id}"
+      # Use Cyrel DSL for consistency and safety
+      query = ::Cyrel.match(:p, :h)
+                     .where(adapter.with_direct_node_ids(from_node.internal_id, to_node.internal_id))
+                     .create(p: { rel_ty => :h })
 
-      cypher = parts.join(' ')
-      params = { props: props }
+      # Add properties if present
+      query = query.set(r: props) unless props.empty?
 
-      # Execute Cypher query
-      result = self.class.connection.execute_cypher(cypher, params, 'Create Relationship')
+      # Return the relationship ID
+      query = query.return(adapter.return_id)
 
+      # Execute query
+      result = self.class.connection.execute_cypher(query.to_cypher, query.params, 'Create Relationship')
       row = result.first
 
       # Try different ways to access the ID

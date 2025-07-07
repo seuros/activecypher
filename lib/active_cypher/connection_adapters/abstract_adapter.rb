@@ -49,6 +49,14 @@ module ActiveCypher
         end
       end
 
+      # Hydrates attributes from a database record
+      # @param record [Hash] The raw record from the database
+      # @param node_alias [Symbol] The alias used for the node in the query
+      # @return [Hash] The hydrated attributes
+      def hydrate_record(record, node_alias)
+        raise NotImplementedError, "#{self.class} must implement #hydrate_record"
+      end
+
       # Get current adapter type for ID handling
       # Helper for generating ID-related Cypher functions that are database-specific
       module CypherFunction

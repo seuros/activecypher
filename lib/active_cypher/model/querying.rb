@@ -37,29 +37,25 @@ module ActiveCypher
 
           labels = respond_to?(:labels) ? self.labels : [label_name]
           adapter = connection.id_handler
-          label_string = labels.map { |l| ":#{l}" }.join
 
-          # Handle ID format based on adapter's preferred flavor of existential crisis
-          # Neo4j insists on string IDs like "4:uuid:wtf" because simple integers are for peasants
-          # Memgraph keeps it real with numeric IDs because it doesn't need to prove anything
+          # Handle ID format based on adapter type
           formatted_id = if adapter.id_function == 'elementId'
                            internal_db_id.to_s  # String for Neo4j
                          else
                            internal_db_id.to_i  # Numeric for Memgraph
                          end
 
-          cypher = <<~CYPHER
-            MATCH (#{node_alias}#{label_string})
-            WHERE #{adapter.node_id_equals_value(node_alias, formatted_id)}
-            RETURN #{node_alias}, #{adapter.return_node_id(node_alias)}
-            LIMIT 1
-          CYPHER
+          # Use Cyrel DSL for better performance and consistency
+          query = ::Cyrel.match(n: labels)
+                         .where(adapter.node_id_equals_value(:n, formatted_id))
+                         .return(:n, adapter.return_node_id(:n).as(:internal_id))
+                         .limit(1)
 
-          result = connection.execute_cypher(cypher)
+          result = connection.execute_cypher(query.to_cypher, query.params)
           record = result.first
 
           if record
-            attrs = _hydrate_attributes_from_memgraph_record(record, node_alias)
+            attrs = connection.hydrate_record(record, node_alias)
             return instantiate(attrs)
           end
 
@@ -97,28 +93,6 @@ module ActiveCypher
         # @return [Object] The new, possibly persisted record
         # Because sometimes you just want to live dangerously.
         def create(attrs = {}) = new(attrs).tap(&:save)
-
-        private
-
-        def _hydrate_attributes_from_memgraph_record(record, node_alias)
-          attrs = {}
-          node_data = record[node_alias] || record[node_alias.to_s]
-
-          if node_data.is_a?(Array) && node_data.length >= 2
-            properties_container = node_data[1]
-            if properties_container.is_a?(Array) && properties_container.length >= 3
-              properties = properties_container[2]
-              properties.each { |k, v| attrs[k.to_sym] = v } if properties.is_a?(Hash)
-            end
-          elsif node_data.is_a?(Hash)
-            node_data.each { |k, v| attrs[k.to_sym] = v }
-          elsif node_data.respond_to?(:properties)
-            attrs = node_data.properties.symbolize_keys
-          end
-
-          attrs[:internal_id] = record[:internal_id] || record['internal_id']
-          attrs
-        end
       end
     end
   end
