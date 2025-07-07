@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.5](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.4...active_cypher/v0.10.5) (2025-07-07)
+
+
+### Bug Fixes
+
+* refactor querying and relationships to use Cyrel DSL consistently ([#47](https://github.com/seuros/activecypher/issues/47)) ([341b448](https://github.com/seuros/activecypher/commit/341b448ce2a8b0b4ac8af6a3bb97cd8d4cfd4aa7))
+
 ## [0.10.4](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.3...active_cypher/v0.10.4) (2025-06-17)
 
 
