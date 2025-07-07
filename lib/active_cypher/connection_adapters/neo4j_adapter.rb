@@ -130,6 +130,30 @@ module ActiveCypher
         metadata.compact
       end
 
+      # Hydrates attributes from a Neo4j record
+      # @param record [Hash] The raw record from Neo4j
+      # @param node_alias [Symbol] The alias used for the node in the query
+      # @return [Hash] The hydrated attributes
+      def hydrate_record(record, node_alias)
+        attrs = {}
+        node_data = record[node_alias] || record[node_alias.to_s]
+
+        if node_data.is_a?(Array) && node_data.length >= 2
+          properties_container = node_data[1]
+          if properties_container.is_a?(Array) && properties_container.length >= 3
+            properties = properties_container[2]
+            properties.each { |k, v| attrs[k.to_sym] = v } if properties.is_a?(Hash)
+          end
+        elsif node_data.is_a?(Hash)
+          node_data.each { |k, v| attrs[k.to_sym] = v }
+        elsif node_data.respond_to?(:properties)
+          attrs = node_data.properties.symbolize_keys
+        end
+
+        attrs[:internal_id] = record[:internal_id] || record['internal_id']
+        attrs
+      end
+
       module Persistence
         include PersistenceMethods
         module_function :create_record, :update_record, :destroy_record
