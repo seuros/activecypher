@@ -37,6 +37,7 @@ module ActiveCypher
 
           labels = respond_to?(:labels) ? self.labels : [label_name]
           adapter = connection.id_handler
+          label_string = labels.map { |l| ":#{l}" }.join
 
           # Handle ID format based on adapter type
           formatted_id = if adapter.id_function == 'elementId'
@@ -45,13 +46,14 @@ module ActiveCypher
                            internal_db_id.to_i  # Numeric for Memgraph
                          end
 
-          # Use Cyrel DSL for better performance and consistency
-          query = ::Cyrel.match(n: labels)
-                         .where(adapter.node_id_equals_value(:n, formatted_id))
-                         .return(:n, adapter.return_node_id(:n).as(:internal_id))
-                         .limit(1)
+          cypher = <<~CYPHER
+            MATCH (#{node_alias}#{label_string})
+            WHERE #{adapter.node_id_equals_value(node_alias, formatted_id)}
+            RETURN #{node_alias}, #{adapter.return_node_id(node_alias)}
+            LIMIT 1
+          CYPHER
 
-          result = connection.execute_cypher(query.to_cypher, query.params)
+          result = connection.execute_cypher(cypher)
           record = result.first
 
           if record
