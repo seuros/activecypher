@@ -255,18 +255,20 @@ class TransactionTest < ActiveSupport::TestCase
   # --- Timeout tests ---
 
   test 'transaction with timeout parameter' do
-    # This test creates a long-running query that should timeout
-    # Note: The actual timeout behavior depends on database support
-    begin
-      @connection.write_transaction(timeout: 100) do |tx|
-        # Create a query that takes longer than 100ms
-        # This is database-specific and may not timeout on all databases
-        tx.run('CREATE (n:TestNode {name: "timeout-test"})')
-        'completed'
-      end
-    rescue ActiveCypher::QueryError => e
-      # Some databases may raise a timeout error
-      assert_match(/timeout/i, e.message)
+    # This test verifies timeout parameter is accepted
+    # Note: Actual timeout behavior depends on database support
+    result = @connection.write_transaction(timeout: 5000) do |tx|
+      tx.run('CREATE (n:TestNode {name: "timeout-test"})')
+      'completed'
+    end
+
+    assert_equal 'completed', result
+
+    # Verify the node was created
+    Sync do
+      session = @connection.session
+      result = session.run('MATCH (n:TestNode {name: "timeout-test"}) RETURN count(n) AS count')
+      assert_equal 1, result.single[:count]
     end
   end
 

@@ -166,6 +166,17 @@ module ActiveCypher
         async_run_transaction(:read, db: db, timeout: timeout, metadata: metadata, &block)
       end
 
+      # Close the session and any active transaction.
+      def close
+        instrument('session.close') do
+          # If there's an active transaction, try to roll it back
+          @current_transaction&.rollback if @current_transaction&.active?
+
+          # Mark current transaction as complete
+          complete_transaction(@current_transaction) if @current_transaction
+        end
+      end
+
       private
 
       def _execute_transaction_block(mode, db, timeout, metadata, &block)
@@ -214,17 +225,6 @@ module ActiveCypher
 
           # Reset the connection
           @connection.reset!
-        end
-      end
-
-      # Close the session and any active transaction.
-      def close
-        instrument('session.close') do
-          # If there's an active transaction, try to roll it back
-          @current_transaction&.rollback if @current_transaction&.active?
-
-          # Mark current transaction as complete
-          complete_transaction(@current_transaction) if @current_transaction
         end
       end
     end
