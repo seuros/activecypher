@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.10.6](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.5...active_cypher/v0.10.6) (2025-07-14)
+
+
+### Bug Fixes
+
+* test transaction and async ([#49](https://github.com/seuros/activecypher/issues/49)) ([bc00e61](https://github.com/seuros/activecypher/commit/bc00e61ea4a0477e9427e45c50a43568f950d957))
+
 ## [0.10.5](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.4...active_cypher/v0.10.5) (2025-07-07)
 
 
