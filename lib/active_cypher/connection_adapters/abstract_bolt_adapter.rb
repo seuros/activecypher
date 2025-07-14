@@ -12,6 +12,13 @@ module ActiveCypher
       include Instrumentation
       attr_reader :connection
 
+      # Returns the raw Bolt connection object
+      # This is useful for accessing low-level connection methods like
+      # read_transaction, write_transaction, async_read_transaction, etc.
+      def raw_connection
+        @connection
+      end
+
       # Establish a connection if not already active.
       # This includes auth token prep, URI parsing, and quiet suffering.
       def connect
