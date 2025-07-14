@@ -119,54 +119,35 @@ module ActiveCypher
       # @param metadata [Hash] Transaction metadata to send to the server.
       # @yield [tx] The transaction to use for queries.
       # @return The result of the block.
-      def run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &)
-        # Ensure we're running in an Async context
+      def run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &block)
         if Async::Task.current?
-          # Already in an Async task, proceed normally
-          begin
-            execute_transaction(mode, db: db, timeout: timeout, metadata: metadata, &)
-          rescue StandardError => e
-            # Ensure errors are properly propagated
-            raise e
-          end
+          # Already in an async context, just run the block.
+          # The block will run asynchronously within the current task.
+          _execute_transaction_block(mode, db, timeout, metadata, &block)
         else
-          # Wrap in an Async task
-          result = nil
-          error = nil
-
+          # Not in an async context, so we need to create one and wait for it to complete.
           Async do
-            result = execute_transaction(mode, db: db, timeout: timeout, metadata: metadata, &)
-          rescue StandardError => e
-            error = e
+            _execute_transaction_block(mode, db, timeout, metadata, &block)
           end.wait
-
-          # Re-raise any error outside the async block
-          raise error if error
-
-          result
         end
       end
 
-      # Helper method to execute the transaction
-      def execute_transaction(mode, db:, timeout:, metadata:)
-        tx = begin_transaction(db: db,
-                               access_mode: mode,
-                               tx_timeout: timeout,
-                               tx_metadata: metadata)
+      # Asynchronously execute a block of code within a transaction.
+      # This method is asynchronous and will return an `Async::Task` that will complete when the transaction is finished.
+      #
+      # @param mode [Symbol] The access mode (:read or :write).
+      # @param db [String] The database name to run the transaction against.
+      # @param timeout [Integer] Transaction timeout in milliseconds.
+      # @param metadata [Hash] Transaction metadata to send to the server.
+      # @yield [tx] The transaction to use for queries.
+      # @return [Async::Task] A task that will complete with the result of the block.
+      def async_run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &block)
+        # Ensure we are in an async task, otherwise the behavior is undefined.
+        raise 'Cannot run an async transaction outside of an Async task' unless Async::Task.current?
 
-        result = yield tx           # your block runs here
-        tx.commit                   # happy path
-        result
-      rescue StandardError => e     # any error → rollback → wrap
-        begin
-          tx.rollback
-        rescue StandardError => rollback_error
-          # Log rollback error but continue with the original error
-          puts "Error during rollback: #{rollback_error.message}" if ENV['DEBUG']
+        Async do
+          _execute_transaction_block(mode, db, timeout, metadata, &block)
         end
-
-        # Preserve the original error
-        raise ActiveCypher::TransactionError, e.message
       end
 
       def write_transaction(db: nil, timeout: nil, metadata: nil, &)
@@ -175,6 +156,44 @@ module ActiveCypher
 
       def read_transaction(db: nil, timeout: nil, metadata: nil, &)
         run_transaction(:read, db: db, timeout: timeout, metadata: metadata, &)
+      end
+
+      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &block)
+        async_run_transaction(:write, db: db, timeout: timeout, metadata: metadata, &block)
+      end
+
+      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &block)
+        async_run_transaction(:read, db: db, timeout: timeout, metadata: metadata, &block)
+      end
+
+      private
+
+      def _execute_transaction_block(mode, db, timeout, metadata, &block)
+        tx = begin_transaction(db: db, access_mode: mode, tx_timeout: timeout, tx_metadata: metadata)
+        begin
+          result = block.call(tx)
+          tx.commit
+          result
+        rescue StandardError => e
+          # On any error, rollback the transaction and re-raise the original exception
+          begin
+            tx.rollback
+          rescue StandardError => rollback_error
+            # Log rollback error but continue with the original error
+            puts "Error during rollback: #{rollback_error.message}" if ENV['DEBUG']
+          end
+
+          # Reset the connection to ensure it's in a clean state for the next transaction
+          begin
+            @connection.reset!
+          rescue StandardError => reset_error
+            # If reset fails, the connection will be marked non-viable by the pool
+            puts "Error during connection reset: #{reset_error.message}" if ENV['DEBUG']
+          end
+
+          # Wrap the error in TransactionError to maintain compatibility
+          raise ActiveCypher::TransactionError, e.message
+        end
       end
 
       # Access the current bookmarks for this session.

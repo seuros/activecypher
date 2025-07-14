@@ -480,6 +480,26 @@ module ActiveCypher
         Bolt::Session.new(self, **)
       end
 
+      # Synchronously execute a read transaction.
+      def read_transaction(db: nil, timeout: nil, metadata: nil, &)
+        session(database: db).read_transaction(db: db, timeout: timeout, metadata: metadata, &)
+      end
+
+      # Synchronously execute a write transaction.
+      def write_transaction(db: nil, timeout: nil, metadata: nil, &)
+        session(database: db).write_transaction(db: db, timeout: timeout, metadata: metadata, &)
+      end
+
+      # Asynchronously execute a read transaction.
+      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &block)
+        session(database: db).async_read_transaction(db: db, timeout: timeout, metadata: metadata, &block)
+      end
+
+      # Asynchronously execute a write transaction.
+      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &block)
+        session(database: db).async_write_transaction(db: db, timeout: timeout, metadata: metadata, &block)
+      end
+
       # ────────────────────────────────────────────────────────────────────
       # PRIVATE HELPER METHODS
       # ────────────────────────────────────────────────────────────────────
