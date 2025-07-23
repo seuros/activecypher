@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.11.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.6...active_cypher/v0.11.0) (2025-07-23)
+
+
+### Features
+
+* show version and health in connection ([#51](https://github.com/seuros/activecypher/issues/51)) ([4d39bde](https://github.com/seuros/activecypher/commit/4d39bde22d46fbfff444c0e17c21188218563662))
+
 ## [0.10.6](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.5...active_cypher/v0.10.6) (2025-07-14)
 
 
