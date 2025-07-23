@@ -5,43 +5,11 @@ require 'active_cypher/bolt'
 require 'async'
 
 class SessionTest < ActiveSupport::TestCase
-  # NOTE: Assumes Docker containers (neo4j, memgraph) from docker-compose.yml are running
-  NEO4J_CONFIG = { host: '127.0.0.1', port: 7687,
-                   auth_token: { scheme: 'basic', principal: 'neo4j', credentials: 'activecypher' } }.freeze
-  MEMGRAPH_CONFIG = { host: '127.0.0.1', port: 7688,
-                      auth_token: { scheme: 'basic', principal: 'memgraph', credentials: 'activecypher' } }.freeze
-
-  def setup_connection(config)
-    adapter = ActiveCypher::ConnectionAdapters::Neo4jAdapter.new({
-                                                                   uri: "bolt://#{config[:host]}:#{config[:port]}",
-                                                                   username: config[:auth_token][:principal],
-                                                                   password: config[:auth_token][:credentials]
-                                                                 })
-    connection = ActiveCypher::Bolt::Connection.new(
-      config[:host],
-      config[:port],
-      adapter,
-      auth_token: config[:auth_token],
-      timeout_seconds: 10 # Increased timeout slightly for tests
-    )
-    begin
-      connection.connect
-    rescue ActiveCypher::ConnectionError => e
-      skip "Database connection failed: #{e.message}"
-    end
-    connection
-  end
-
-  def teardown_connection(connection)
-    connection&.close
-  rescue StandardError => e
-    puts "Error during connection teardown: #{e.message}" if ENV['DEBUG']
-  end
 
   # --- Neo4j Tests ---
 
   test '[Neo4j] session can run simple query and get result' do
-    connection = setup_connection(NEO4J_CONFIG)
+    connection = neo4j_connection
     session = ActiveCypher::Bolt::Session.new(connection)
 
     result = Sync do
@@ -57,11 +25,10 @@ class SessionTest < ActiveSupport::TestCase
     assert_equal false, result.open? # Should be consumed
     assert_kind_of Hash, result.summary # Check summary is accessible
   ensure
-    teardown_connection(connection)
   end
 
   test '[Neo4j] session can run query with parameters' do
-    connection = setup_connection(NEO4J_CONFIG)
+    connection = neo4j_connection
     session = ActiveCypher::Bolt::Session.new(connection)
 
     result = Sync do
@@ -71,11 +38,10 @@ class SessionTest < ActiveSupport::TestCase
     record = result.single
     assert_equal({ total: 15 }, record)
   ensure
-    teardown_connection(connection)
   end
 
   test '[Neo4j] session handles database error' do
-    connection = setup_connection(NEO4J_CONFIG)
+    connection = neo4j_connection
     session = ActiveCypher::Bolt::Session.new(connection)
 
     Sync do
@@ -86,11 +52,10 @@ class SessionTest < ActiveSupport::TestCase
       assert_match(/Unknown function/, error.message)
     end
   ensure
-    teardown_connection(connection)
   end
 
   test '[Neo4j] session can handle multiple results' do
-    connection = setup_connection(NEO4J_CONFIG)
+    connection = neo4j_connection
     session = ActiveCypher::Bolt::Session.new(connection)
 
     result = Sync do
@@ -105,11 +70,10 @@ class SessionTest < ActiveSupport::TestCase
     values = records.map { |r| r[:n] }
     assert_equal [1, 2, 3, 4, 5], values
   ensure
-    teardown_connection(connection)
   end
 
   test '[Neo4j] session supports iteration' do
-    connection = setup_connection(NEO4J_CONFIG)
+    connection = neo4j_connection
     session = ActiveCypher::Bolt::Session.new(connection)
 
     result = Sync do
@@ -125,7 +89,6 @@ class SessionTest < ActiveSupport::TestCase
     assert_equal 6, sum
     assert_equal false, result.open? # Should be consumed after iteration
   ensure
-    teardown_connection(connection)
   end
 
   # Additional tests that could be implemented:

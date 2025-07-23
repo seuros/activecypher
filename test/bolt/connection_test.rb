@@ -4,60 +4,17 @@ require 'test_helper'
 require 'async'
 
 class ConnectionTest < ActiveSupport::TestCase
-  # NOTE: Assumes Docker containers (neo4j, memgraph) from docker-compose.yml are running
-  # Or GHA CI is running the tests with the containers
-  NEO4J_CONFIG = { host: '127.0.0.1', port: 7687,
-                   auth_token: { scheme: 'basic', principal: 'neo4j', credentials: 'activecypher' } }.freeze
-  MEMGRAPH_CONFIG = { host: '127.0.0.1', port: 7688, auth_token: { scheme: 'basic', principal: 'memgraph',
-                                                                   credentials: 'activecypher' } }.freeze
-
-  def create_adapter(host, port, username, password)
-    ActiveCypher::ConnectionAdapters::Neo4jAdapter.new({
-                                                         uri: "bolt://#{host}:#{port}",
-                                                         username: username,
-                                                         password: password
-                                                       })
-  end
-
-  def safe_close(connection)
-    return unless connection
-
-    connection.close if connection.connected?
-  rescue StandardError => e
-    puts "Error closing connection: #{e.message}" if ENV['DEBUG']
-  end
 
   # --- Neo4j Tests ---
 
   test '[Neo4j] successful connection and handshake' do
-    adapter = create_adapter(
-      NEO4J_CONFIG[:host],
-      NEO4J_CONFIG[:port],
-      NEO4J_CONFIG[:auth_token][:principal],
-      NEO4J_CONFIG[:auth_token][:credentials]
-    )
+    connection = neo4j_connection
 
-    connection = nil
-    begin
-      connection = ActiveCypher::Bolt::Connection.new(
-        NEO4J_CONFIG[:host],
-        NEO4J_CONFIG[:port],
-        adapter,
-        auth_token: NEO4J_CONFIG[:auth_token],
-        timeout_seconds: 5
-      )
-
-      # This should not raise an exception
-      Sync { connection.connect }
-
-      # Verify connection state and properties
-      assert connection.connected?, 'Connection should be in connected state'
-      assert_equal 5.8, connection.protocol_version
-      assert_match(%r{Neo4j/}, connection.server_agent)
-      assert connection.connection_id, 'Connection ID should be present'
-    ensure
-      safe_close(connection)
-    end
+    # Verify connection state and properties
+    assert connection.connected?, 'Connection should be in connected state'
+    assert_equal 5.8, connection.protocol_version
+    assert_match(%r{Neo4j/}, connection.server_agent)
+    assert connection.connection_id, 'Connection ID should be present'
   end
 
   test '[Neo4j] connection fails with bad port' do
@@ -161,29 +118,11 @@ class ConnectionTest < ActiveSupport::TestCase
   # --- Memgraph Tests ---
 
   test '[Memgraph] successful connection and handshake' do
-    connection = nil
-    begin
-      adapter = ActiveCypher::ConnectionAdapters::MemgraphAdapter.new({
-                                                                        uri: "bolt://#{MEMGRAPH_CONFIG[:host]}:#{MEMGRAPH_CONFIG[:port]}",
-                                                                        username: MEMGRAPH_CONFIG[:auth_token][:principal],
-                                                                        password: MEMGRAPH_CONFIG[:auth_token][:credentials]
-                                                                      })
+    connection = memgraph_connection
 
-      connection = ActiveCypher::Bolt::Connection.new(
-        MEMGRAPH_CONFIG[:host],
-        MEMGRAPH_CONFIG[:port],
-        adapter,
-        auth_token: MEMGRAPH_CONFIG[:auth_token],
-        timeout_seconds: 5
-      )
-
-      Sync { connection.connect }
-      assert connection.connected?
-      assert_equal 5.2, connection.protocol_version # Check negotiated version
-      assert_match(/Memgraph/, connection.server_agent) # Memgraph agent might vary
-      assert connection.connection_id
-    ensure
-      safe_close(connection)
-    end
+    assert connection.connected?
+    assert_equal 5.2, connection.protocol_version # Check negotiated version
+    assert_match(/Memgraph/, connection.server_agent) # Memgraph agent might vary
+    assert connection.connection_id
   end
 end

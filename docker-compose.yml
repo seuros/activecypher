@@ -1,15 +1,4 @@
 services:
-  postgres:
-    image: ghcr.io/seuros/postgis-with-extensions:17-4
-    ports:
-      - "5437:5432"
-    environment:
-      POSTGRES_USER: ubuntu
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: mydb
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   neo4j:
     image: neo4j:latest
     ports:

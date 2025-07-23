@@ -40,3 +40,7 @@ FileUtils.mkdir_p(File.expand_path('tmp', __dir__))
 
 ActiveSupport::TestCase.include ActiveCypherTest::PersistedHelper
 Rails::Generators::TestCase.include GeneratorTestHelpers
+
+# Load test helpers
+require_relative 'support/database_test_helpers'
+ActiveSupport::TestCase.include DatabaseTestHelpers
