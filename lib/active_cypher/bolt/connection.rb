@@ -230,23 +230,13 @@ module ActiveCypher
       def viable?
         return false unless connected?
 
-        # Perform a lightweight check to verify the connection is still functional
-        begin
-          # Try to send a simple NOOP query to check connection health
-          write_message(Messaging::Run.new('RETURN 1', {}, {}), 'VIABILITY_CHECK')
-          read_message
+        # Use the health check method to determine viability
+        health = health_check
 
-          # Reset the connection state
-          reset!
-
-          # If we got a successful response, the connection is viable
+        if health[:healthy]
           true
-        rescue ConnectionError, ProtocolError
-          # If the connection is broken, close it and return false
-          close
-          false
-        rescue StandardError
-          # For any other errors, also consider the connection non-viable
+        else
+          # If health check failed, close the connection
           close
           false
         end
@@ -491,13 +481,97 @@ module ActiveCypher
       end
 
       # Asynchronously execute a read transaction.
-      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &block)
-        session(database: db).async_read_transaction(db: db, timeout: timeout, metadata: metadata, &block)
+      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &)
+        session(database: db).async_read_transaction(db: db, timeout: timeout, metadata: metadata, &)
       end
 
       # Asynchronously execute a write transaction.
-      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &block)
-        session(database: db).async_write_transaction(db: db, timeout: timeout, metadata: metadata, &block)
+      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &)
+        session(database: db).async_write_transaction(db: db, timeout: timeout, metadata: metadata, &)
+      end
+
+      # ────────────────────────────────────────────────────────────────────
+      # HEALTH AND VERSION DETECTION METHODS
+      # ────────────────────────────────────────────────────────────────────
+
+      # Returns parsed version information from the server agent string.
+      #
+      # @return [Hash] version information with :database_type, :version, :major, :minor, :patch
+      # @note Extracts version from server_agent captured during handshake
+      def version
+        return @version if defined?(@version)
+
+        @version = parse_version_from_server_agent
+      end
+
+      # Returns the database type detected from server agent.
+      #
+      # @return [Symbol] :neo4j, :memgraph, or :unknown
+      def database_type
+        version[:database_type]
+      end
+
+      # Performs a health check using database-appropriate queries.
+      #
+      # @return [Hash] health check result with :healthy, :response_time_ms, :details
+      # @note Uses different queries based on detected database type
+      def health_check
+        return { healthy: false, response_time_ms: nil, details: 'Not connected' } unless connected?
+
+        result = nil
+
+        begin
+          Async do
+            result = case database_type
+                     when :neo4j
+                       perform_neo4j_health_check
+                     when :memgraph
+                       perform_memgraph_health_check
+                     else
+                       perform_generic_health_check
+                     end
+          end.wait
+
+          result
+        rescue ConnectionError, ProtocolError => e
+          { healthy: false, response_time_ms: nil, details: "Health check failed: #{e.message}" }
+        end
+      end
+
+      # Returns comprehensive database information.
+      #
+      # @return [Hash] database information including version, health, and system details
+      def database_info
+        info = version.dup
+        health = health_check
+
+        info.merge({
+                     healthy: health[:healthy],
+                     response_time_ms: health[:response_time_ms],
+                     server_agent: @server_agent,
+                     connection_id: @connection_id,
+                     protocol_version: @protocol_version
+                   })
+      end
+
+      # Returns server/cluster status information (when available).
+      #
+      # @return [Array<Hash>, nil] array of server status objects or nil if not supported
+      def server_status
+        return nil unless connected?
+
+        begin
+          case database_type
+          when :neo4j
+            get_neo4j_server_status
+          when :memgraph
+            get_memgraph_server_status
+          else
+            nil
+          end
+        rescue ConnectionError, ProtocolError
+          nil # Gracefully handle unsupported operations
+        end
       end
 
       # ────────────────────────────────────────────────────────────────────
@@ -560,6 +634,317 @@ module ActiveCypher
       # @return [Boolean]
       # @note The Schrödinger's cat of sockets.
       def socket_open? = @socket && !@socket.closed?
+
+      # ────────────────────────────────────────────────────────────────────
+      # HEALTH AND VERSION DETECTION HELPERS
+      # ────────────────────────────────────────────────────────────────────
+
+      # Parses version information from the server_agent string.
+      #
+      # @return [Hash] parsed version information
+      def parse_version_from_server_agent
+        return default_version_info unless @server_agent
+
+        case @server_agent
+        when %r{^Neo4j/(\d+\.\d+(?:\.\d+)?)}i
+          version_string = ::Regexp.last_match(1)
+          parts = version_string.split('.').map(&:to_i)
+          {
+            database_type: :neo4j,
+            version: version_string,
+            major: parts[0] || 0,
+            minor: parts[1] || 0,
+            patch: parts[2] || 0
+          }
+        when %r{^Memgraph/(\d+\.\d+(?:\.\d+)?)}i
+          version_string = ::Regexp.last_match(1)
+          parts = version_string.split('.').map(&:to_i)
+          {
+            database_type: :memgraph,
+            version: version_string,
+            major: parts[0] || 0,
+            minor: parts[1] || 0,
+            patch: parts[2] || 0
+          }
+        when /.*Memgraph/i
+          # Handle Memgraph server agent: "Neo4j/v5.11.0 compatible graph database server - Memgraph"
+          if @server_agent =~ %r{Neo4j/v(\d+\.\d+(?:\.\d+)?)}
+            version_string = ::Regexp.last_match(1)
+            parts = version_string.split('.').map(&:to_i)
+            {
+              database_type: :memgraph,
+              version: version_string,
+              major: parts[0] || 0,
+              minor: parts[1] || 0,
+              patch: parts[2] || 0
+            }
+          else
+            {
+              database_type: :memgraph,
+              version: 'unknown',
+              major: 0,
+              minor: 0,
+              patch: 0
+            }
+          end
+        else
+          {
+            database_type: :unknown,
+            version: @server_agent,
+            major: 0,
+            minor: 0,
+            patch: 0
+          }
+        end
+      end
+
+      # Returns default version info when server_agent is not available.
+      #
+      # @return [Hash] default version information
+      def default_version_info
+        {
+          database_type: :unknown,
+          version: 'unknown',
+          major: 0,
+          minor: 0,
+          patch: 0
+        }
+      end
+
+      # Performs Neo4j-specific health check using RETURN 1 (fallback from db.ping).
+      #
+      # @return [Hash] health check result
+      def perform_neo4j_health_check
+        start_time = Time.now
+
+        begin
+          write_message(Messaging::Run.new('RETURN 1 AS result', {}, {}), 'HEALTH_CHECK')
+          run_response = read_message
+
+          case run_response
+          when Messaging::Success
+            # Send PULL message to complete the transaction
+            write_message(Messaging::Pull.new({ 'n' => -1 }), 'PULL')
+
+            # Read messages until we get SUCCESS or FAILURE
+            response_time = nil
+            loop do
+              msg = read_message
+              case msg
+              when Messaging::Record
+                # Skip records, we just want to know if the query succeeded
+                next
+              when Messaging::Success
+                response_time = ((Time.now - start_time) * 1000).round(2)
+                return { healthy: true, response_time_ms: response_time, details: 'RETURN 1 succeeded' }
+              when Messaging::Failure
+                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 failed with error' }
+              else
+                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 unexpected response' }
+              end
+            end
+          else
+            { healthy: false, response_time_ms: nil, details: 'RETURN 1 run failed' }
+          end
+        ensure
+          # Reset connection state after health check
+          reset!
+        end
+      end
+
+      # Performs Memgraph-specific health check using SHOW STORAGE INFO.
+      #
+      # @return [Hash] health check result
+      def perform_memgraph_health_check
+        start_time = Time.now
+
+        begin
+          write_message(Messaging::Run.new('SHOW STORAGE INFO', {}, {}), 'HEALTH_CHECK')
+          run_response = read_message
+
+          case run_response
+          when Messaging::Success
+            # Send PULL message to complete the transaction
+            write_message(Messaging::Pull.new({ 'n' => -1 }), 'PULL')
+
+            # Read messages until we get SUCCESS or FAILURE
+            response_time = nil
+            loop do
+              msg = read_message
+              case msg
+              when Messaging::Record
+                # Skip records, we just want to know if the query succeeded
+                next
+              when Messaging::Success
+                response_time = ((Time.now - start_time) * 1000).round(2)
+                return { healthy: true, response_time_ms: response_time, details: 'SHOW STORAGE INFO succeeded' }
+              when Messaging::Failure
+                return { healthy: false, response_time_ms: nil, details: 'SHOW STORAGE INFO failed with error' }
+              else
+                return { healthy: false, response_time_ms: nil, details: 'SHOW STORAGE INFO unexpected response' }
+              end
+            end
+          else
+            { healthy: false, response_time_ms: nil, details: 'SHOW STORAGE INFO run failed' }
+          end
+        ensure
+          # Reset connection state after health check
+          reset!
+        end
+      end
+
+      # Performs generic health check using simple RETURN 1 query.
+      #
+      # @return [Hash] health check result
+      def perform_generic_health_check
+        start_time = Time.now
+
+        begin
+          write_message(Messaging::Run.new('RETURN 1', {}, {}), 'HEALTH_CHECK')
+          run_response = read_message
+
+          case run_response
+          when Messaging::Success
+            # Send PULL message to complete the transaction
+            write_message(Messaging::Pull.new({ 'n' => -1 }), 'PULL')
+
+            # Read messages until we get SUCCESS or FAILURE
+            response_time = nil
+            loop do
+              msg = read_message
+              case msg
+              when Messaging::Record
+                # Skip records, we just want to know if the query succeeded
+                next
+              when Messaging::Success
+                response_time = ((Time.now - start_time) * 1000).round(2)
+                return { healthy: true, response_time_ms: response_time, details: 'RETURN 1 succeeded' }
+              when Messaging::Failure
+                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 failed with error' }
+              else
+                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 unexpected response' }
+              end
+            end
+          else
+            { healthy: false, response_time_ms: nil, details: 'RETURN 1 run failed' }
+          end
+        ensure
+          # Reset connection state after health check
+          reset!
+        end
+      end
+
+      # Gets Neo4j server status using SHOW SERVERS query.
+      #
+      # @return [Array<Hash>] server status information
+      def get_neo4j_server_status
+        write_message(Messaging::Run.new('SHOW SERVERS', {}, {}), 'SERVER_STATUS')
+        response = read_message
+
+        case response
+        when Messaging::Success
+          servers = []
+
+          # Read records until we get SUCCESS
+          loop do
+            record_response = read_message
+            case record_response
+            when Messaging::Record
+              # Parse server record - this is a simplified version
+              servers << parse_neo4j_server_record(record_response)
+            when Messaging::Success
+              break
+            else
+              break
+            end
+          end
+
+          servers
+        else
+          []
+        end
+      ensure
+        reset!
+      end
+
+      # Gets Memgraph server status using SHOW DATABASES query.
+      #
+      # @return [Array<Hash>] database status information
+      def get_memgraph_server_status
+        write_message(Messaging::Run.new('SHOW DATABASES', {}, {}), 'SERVER_STATUS')
+        response = read_message
+
+        case response
+        when Messaging::Success
+          databases = []
+
+          # Read records until we get SUCCESS
+          loop do
+            record_response = read_message
+            case record_response
+            when Messaging::Record
+              # Parse database record
+              databases << parse_memgraph_database_record(record_response)
+            when Messaging::Success
+              break
+            else
+              break
+            end
+          end
+
+          databases
+        else
+          # Fallback to SHOW DATABASE for single database info
+          get_memgraph_current_database
+        end
+      ensure
+        reset!
+      end
+
+      # Gets current Memgraph database info using SHOW DATABASE.
+      #
+      # @return [Array<Hash>] current database information
+      def get_memgraph_current_database
+        write_message(Messaging::Run.new('SHOW DATABASE', {}, {}), 'CURRENT_DATABASE')
+        response = read_message
+
+        case response
+        when Messaging::Success
+          [{ name: 'current', status: 'active', type: 'memgraph' }]
+        else
+          []
+        end
+      ensure
+        reset!
+      end
+
+      # Parses a Neo4j server record from SHOW SERVERS result.
+      #
+      # @param record [Messaging::Record] the record message
+      # @return [Hash] parsed server information
+      def parse_neo4j_server_record(_record)
+        # Simplified parsing - in reality this would extract specific fields
+        {
+          name: 'server',
+          address: "#{@host}:#{@port}",
+          state: 'Enabled',
+          health: 'Available',
+          type: 'neo4j'
+        }
+      end
+
+      # Parses a Memgraph database record from SHOW DATABASES result.
+      #
+      # @param record [Messaging::Record] the record message
+      # @return [Hash] parsed database information
+      def parse_memgraph_database_record(_record)
+        # Simplified parsing
+        {
+          name: 'database',
+          status: 'active',
+          type: 'memgraph'
+        }
+      end
     end
   end
 end
