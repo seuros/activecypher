@@ -10,6 +10,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        rails: ['8.0.2', '8.1.0.beta1']
+
+    env:
+      RAILS_VERSION: ${{ matrix.rails }}
+
     services:
       neo4j:
         image: neo4j:latest # Neo4j 2025‑LTS is the current latest tag
