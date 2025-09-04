@@ -34,7 +34,6 @@ module ActiveCypher
     include Model::Persistence
     include Model::Destruction
     include Model::Countable
-    include Model::Inspectable
 
     class << self
       # Attempts to retrieve a connection from the handler.
@@ -59,6 +58,24 @@ module ActiveCypher
               'Ensure `connects_to` is configured for this model or its ancestors, ' \
               'and `cypher_databases.yml` has the corresponding entries.'
       end
+    end
+
+    # Custom object inspection method for pretty-printing a compact,
+    # single-line summary of the object. Output examples:
+    #
+    #   #<UserNode id="26" name="Alice" age=34>   => persisted object
+    #   #<UserNode (new) name="Bob">              => object not yet saved
+    #
+    def inspect
+      # Put 'internal_id' first like it's the main character (even if it's nil)
+      ordered = attributes.dup
+      ordered = ordered.slice('internal_id').merge(ordered.except('internal_id'))
+
+      # Turn each attr into "key: value" because we humans fear raw hashes
+      parts = ordered.map { |k, v| "#{k}: #{v.inspect}" }
+
+      # Wrap it all up in a fake-sane object string, so you can pretend your data is organized.
+      "#<#{self.class} #{parts.join(', ')}>"
     end
 
     # Because Rails needs to feel included, too.

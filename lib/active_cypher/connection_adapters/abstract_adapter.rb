@@ -57,33 +57,6 @@ module ActiveCypher
         raise NotImplementedError, "#{self.class} must implement #hydrate_record"
       end
 
-      # Get current adapter type for ID handling
-      # Helper for generating ID-related Cypher functions that are database-specific
-      module CypherFunction
-        # Generate ID equality clause with the ID value embedded in the query for Memgraph
-        def self.id_equals(var, id_value, adapter)
-          func = id_function(adapter)
-          "#{func}(#{var}) = #{id_value}"
-        end
-
-        # Generate ID equality clause using a parameterized ID value for Neo4j
-        def self.id_equals_param(var, param_name, adapter)
-          func = id_function(adapter)
-          "#{func}(#{var}) = $#{param_name}"
-        end
-
-        # Generate a node variable with ID predicate
-        def self.node_with_id(node_var, id_value, adapter)
-          func = id_function(adapter)
-          "#{func}(#{node_var}) = #{id_value}"
-        end
-
-        # Return ID expression
-        def self.return_id(var, as_name, adapter)
-          func = id_function(adapter)
-          "#{func}(#{var}) AS #{as_name}"
-        end
-      end
 
       # Turns rows into symbols, because Rubyists fear strings.
       # @param rows [Array<Hash>] The rows to process

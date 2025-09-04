@@ -11,13 +11,8 @@ module Cyrel
 
       def initialize
         @output = StringIO.new
-        if defined?(Concurrent)
-          @parameters = Concurrent::Hash.new
-          @param_counter = Concurrent::AtomicFixnum.new(0)
-        else
-          @parameters = {}
-          @param_counter = 0
-        end
+        @parameters = {}
+        @param_counter = 0
         @first_clause = true
         @loop_variables = Set.new # Track loop variables that shouldn't be parameterized
       end
@@ -573,17 +568,9 @@ module Cyrel
         existing_key = @parameters.key(value)
         return existing_key if existing_key
 
-        if defined?(Concurrent) && @parameters.is_a?(Concurrent::Hash)
-          # Thread-safe parameter registration
-
-          counter = @param_counter.increment
-          key = :"p#{counter}"
-        else
-          # Non-concurrent version
-
-          @param_counter += 1
-          key = :"p#{@param_counter}"
-        end
+        # Parameter registration
+        @param_counter += 1
+        key = :"p#{@param_counter}"
         @parameters[key] = value
         key
       end

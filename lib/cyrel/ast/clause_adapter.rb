@@ -9,20 +9,14 @@ module Cyrel
 
       def initialize(ast_node)
         @ast_node = ast_node
-        @ast_node_hash = ast_node.hash
         super()
       end
 
       def render(query)
-        # Use a simple cache key based on AST node structure
-        cache_key = [@ast_node_hash, @ast_node.class.name].join(':')
-
-        SimpleCache.instance.fetch(cache_key) do
-          # Create a compiler that delegates parameter registration to the query
-          compiler = QueryIntegratedCompiler.new(query)
-          compiler.compile(ast_node)
-          compiler.output.string
-        end
+        # Create a compiler that delegates parameter registration to the query
+        compiler = QueryIntegratedCompiler.new(query)
+        compiler.compile(ast_node)
+        compiler.output.string
       end
 
       # Ruby 3.0+ pattern matching support

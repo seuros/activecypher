@@ -5,6 +5,6 @@ class NumericTestNode < ApplicationGraphNode
   attribute :float_value, :float
   attribute :decimal_value, :decimal
   attribute :name, :string
-  
+
   validates :name, presence: true
 end
