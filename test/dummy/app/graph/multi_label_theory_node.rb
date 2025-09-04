@@ -5,7 +5,7 @@ class MultiLabelTheoryNode < ApplicationGraphNode
   label :FirstLabel
   label :SecondLabel
   label :ThirdLabel
-  
+
   attribute :name, :string
   attribute :description, :string
   attribute :level, :integer
