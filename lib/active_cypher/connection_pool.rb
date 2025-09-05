@@ -90,7 +90,7 @@ module ActiveCypher
         begin
           adapter.disconnect
         rescue StandardError
-          nil
+          # Ignore disconnect errors during timeout cleanup
         end
         raise ConnectionError, "Connection timed out after #{@spec[:pool_timeout]} seconds"
       end

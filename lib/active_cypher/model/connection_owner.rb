@@ -30,7 +30,6 @@ module ActiveCypher
         # Always dynamically fetch the connection for the current db_key
         def connection
           handler = connection_handler
-          db_key = nil
 
           if respond_to?(:connects_to_mappings) && connects_to_mappings.is_a?(Hash)
             db_key = connects_to_mappings[:writing] # Default to :writing mapping
