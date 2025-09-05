@@ -5,6 +5,7 @@ module ActiveCypher
     # Manages transaction state (BEGIN/COMMIT/ROLLBACK) and runs queries within a transaction.
     class Transaction
       include Instrumentation
+
       attr_reader :bookmarks, :metadata, :connection
 
       # Initializes a new Transaction instance.
@@ -147,11 +148,7 @@ module ActiveCypher
       rescue ConnectionError
         @state = :failed
         # Mark transaction as completed in the session
-        begin
-          @session.complete_transaction(self)
-        rescue StandardError
-          nil
-        end
+        @session.complete_transaction(self)
         raise
       end
 
@@ -184,11 +181,7 @@ module ActiveCypher
         ensure
           # Always mark as rolled back and complete the transaction
           @state = :rolled_back
-          begin
-            @session.complete_transaction(self)
-          rescue StandardError
-            nil
-          end
+          @session.complete_transaction(self)
         end
       end
 

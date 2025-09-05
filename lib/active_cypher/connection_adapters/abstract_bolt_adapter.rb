@@ -10,6 +10,7 @@ module ActiveCypher
     # It's like ActiveRecord::ConnectionAdapter, but for weirdos like me who use graph databases.
     class AbstractBoltAdapter < AbstractAdapter
       include Instrumentation
+
       attr_reader :connection
 
       # Returns the raw Bolt connection object
@@ -71,7 +72,7 @@ module ActiveCypher
       # Clean disconnection. Resets the internal state.
       def disconnect
         instrument_connection(:disconnect) do
-          @connection&.close
+          @connection.close if @connection
           @connection = nil
           true
         end

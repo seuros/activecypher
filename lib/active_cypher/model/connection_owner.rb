@@ -23,7 +23,8 @@ module ActiveCypher
 
         # Returns the adapter class being used by this model
         def adapter_class
-          connection&.class
+          conn = connection
+          conn&.class
         end
 
         # Always dynamically fetch the connection for the current db_key

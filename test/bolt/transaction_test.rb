@@ -192,7 +192,7 @@ class TransactionTest < ActiveSupport::TestCase
 
   test 'transaction preserves original error message' do
     error = assert_raises(ActiveCypher::TransactionError) do
-      @connection.write_transaction do |tx|
+      @connection.write_transaction do |_tx|
         raise 'Custom application error'
       end
     end
@@ -244,7 +244,7 @@ class TransactionTest < ActiveSupport::TestCase
       session = @connection.session
       task = session.async_read_transaction(metadata: { test: true }) do |tx|
         result = tx.run('MATCH (n:TestNode {name: $name}) RETURN n.value AS value',
-                       { name: 'param-test' })
+                        { name: 'param-test' })
         result.single[:value]
       end
 

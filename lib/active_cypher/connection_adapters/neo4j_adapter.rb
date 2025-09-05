@@ -33,8 +33,6 @@ module ActiveCypher
 
         Schema::Catalog.new(indexes: idx_defs, constraints: con_defs,
                             node_types: [], edge_types: [])
-      rescue StandardError
-        Schema::Catalog.new(indexes: [], constraints: [], node_types: [], edge_types: [])
       end
 
       # Use elementId() for Neo4j
@@ -156,6 +154,7 @@ module ActiveCypher
 
       module Persistence
         include PersistenceMethods
+
         module_function :create_record, :update_record, :destroy_record
       end
 

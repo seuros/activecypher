@@ -15,8 +15,6 @@ module Cyrel
 
       def resolve_log_level(log_level_str)
         Logger.const_get(log_level_str.upcase)
-      rescue StandardError
-        Logger::UNKNOWN
       end
 
       def logger

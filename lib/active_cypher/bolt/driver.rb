@@ -47,11 +47,7 @@ module ActiveCypher
             # Check if connection is viable before using it
             unless conn.viable?
               # Create a fresh connection, because hope springs eternal
-              begin
-                conn.close
-              rescue StandardError
-                nil
-              end
+              conn.close
               conn = build_connection
             end
 
@@ -64,11 +60,7 @@ module ActiveCypher
               # Check if connection is viable before using it
               unless conn.viable?
                 # Create a fresh connection, because why not
-                begin
-                  conn.close
-                rescue StandardError
-                  nil
-                end
+                conn.close
                 conn = build_connection
               end
 
@@ -88,8 +80,6 @@ module ActiveCypher
       def verify_connectivity
         with_session { |s| s.run('RETURN 1') }
         true
-      rescue StandardError
-        false
       end
 
       # Closes the connection pool. Because sometimes you just need to let go.
@@ -119,11 +109,7 @@ module ActiveCypher
         begin
           connection.connect
         rescue StandardError => e
-          begin
-            connection.close
-          rescue StandardError
-            nil
-          end
+          connection.close
           raise e
         end
 

@@ -5,7 +5,6 @@ require 'active_cypher/bolt'
 require 'async'
 
 class SessionTest < ActiveSupport::TestCase
-
   # --- Neo4j Tests ---
 
   test '[Neo4j] session can run simple query and get result' do
@@ -24,7 +23,6 @@ class SessionTest < ActiveSupport::TestCase
 
     assert_equal false, result.open? # Should be consumed
     assert_kind_of Hash, result.summary # Check summary is accessible
-  ensure
   end
 
   test '[Neo4j] session can run query with parameters' do
@@ -37,7 +35,6 @@ class SessionTest < ActiveSupport::TestCase
 
     record = result.single
     assert_equal({ total: 15 }, record)
-  ensure
   end
 
   test '[Neo4j] session handles database error' do
@@ -51,7 +48,6 @@ class SessionTest < ActiveSupport::TestCase
 
       assert_match(/Unknown function/, error.message)
     end
-  ensure
   end
 
   test '[Neo4j] session can handle multiple results' do
@@ -69,7 +65,6 @@ class SessionTest < ActiveSupport::TestCase
     # Values should be 1 through 5
     values = records.map { |r| r[:n] }
     assert_equal [1, 2, 3, 4, 5], values
-  ensure
   end
 
   test '[Neo4j] session supports iteration' do
@@ -88,7 +83,6 @@ class SessionTest < ActiveSupport::TestCase
 
     assert_equal 6, sum
     assert_equal false, result.open? # Should be consumed after iteration
-  ensure
   end
 
   # Additional tests that could be implemented:
