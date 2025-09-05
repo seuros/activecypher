@@ -14,11 +14,7 @@ module ActiveCypher
         self.backend ||= begin
           base = Logger.new($stdout)
           base.level = ENV.fetch('AC_LOG_LEVEL', 'info').upcase
-                          .then do |lvl|
-            Logger.const_get(lvl)
-          rescue StandardError
-            Logger::INFO
-          end
+                          .then { |lvl| Logger.const_get(lvl) }
           ActiveSupport::TaggedLogging.new(base).tap { |l| l.tagged! 'ActiveCypher' }
         end
       end

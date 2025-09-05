@@ -148,11 +148,7 @@ module ActiveCypher
       rescue ConnectionError
         @state = :failed
         # Mark transaction as completed in the session
-        begin
-          @session.complete_transaction(self)
-        rescue StandardError
-          nil
-        end
+        @session.complete_transaction(self)
         raise
       end
 
@@ -185,11 +181,7 @@ module ActiveCypher
         ensure
           # Always mark as rolled back and complete the transaction
           @state = :rolled_back
-          begin
-            @session.complete_transaction(self)
-          rescue StandardError
-            nil
-          end
+          @session.complete_transaction(self)
         end
       end
 

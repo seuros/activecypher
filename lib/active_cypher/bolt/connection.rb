@@ -133,7 +133,7 @@ module ActiveCypher
       #
       # @note The digital equivalent of ghosting.
       def close
-        @socket&.close if connected?
+        @socket.close if connected?
       rescue IOError
       ensure
         @socket = nil

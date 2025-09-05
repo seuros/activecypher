@@ -27,7 +27,6 @@ module ActiveCypher
 
       @conn_ref = nil # holds the adapter instance
       @creation_mutex = Mutex.new # prevents multiple threads from creating connections simultaneously
-      @retry_count = 0
     end
 
     # Returns a live adapter, initializing it once in a thread‑safe way.
@@ -89,8 +88,8 @@ module ActiveCypher
       rescue Timeout::Error
         begin
           adapter.disconnect
-        rescue StandardError
-          # Ignore disconnect errors during timeout cleanup
+        rescue StandardError => e
+          puts "Warning: Error disconnecting during timeout cleanup: #{e.message}" if ENV['DEBUG']
         end
         raise ConnectionError, "Connection timed out after #{@spec[:pool_timeout]} seconds"
       end

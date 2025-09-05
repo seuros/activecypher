@@ -34,19 +34,11 @@ module ActiveCypher
           if respond_to?(:connects_to_mappings) && connects_to_mappings.is_a?(Hash)
             db_key = connects_to_mappings[:writing] # Default to :writing mapping
             if db_key && (pool = handler.pool(db_key))
-              conn = pool.connection
-              return conn if conn
-
-              raise ActiveCypher::ConnectionNotEstablished,
-                    "Connection pool returned nil for #{name}, db_key=#{db_key.inspect}"
+              return pool.connection
             end
           end
 
-          # Try superclass, but ensure we don't return nil
-          if superclass.respond_to?(:connection)
-            superclass_conn = superclass.connection
-            return superclass_conn if superclass_conn
-          end
+          return superclass.connection if superclass.respond_to?(:connection)
 
           raise ActiveCypher::ConnectionNotEstablished,
                 "No connection pool found for #{name}, db_key=#{db_key.inspect}"

@@ -11,8 +11,6 @@ module ActiveCypher
       def schema_catalog
         rows = run('SHOW SCHEMA')
         parse_schema(rows)
-      rescue StandardError
-        introspect_fallback
       end
 
       # Use id() for Memgraph instead of elementId()

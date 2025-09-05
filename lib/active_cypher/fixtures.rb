@@ -32,11 +32,7 @@ module ActiveCypher
 
       # 5. Gather unique connections for all model classes referenced in this profile
       model_classes = dsl_context.nodes.map { |node| node[:model_class] }.uniq
-      connections = model_classes.map do |klass|
-        klass.connection
-      rescue StandardError
-        nil
-      end.compact.uniq
+      connections = model_classes.map(&:connection).compact.uniq
 
       # 6. Wipe all nodes in each relevant connection
       connections.each do |conn|
@@ -78,11 +74,7 @@ module ActiveCypher
       end
 
       # Gather unique connections from all model classes
-      connections = model_classes.map do |klass|
-        klass.connection
-      rescue StandardError
-        nil
-      end.compact.uniq
+      connections = model_classes.map(&:connection).compact.uniq
 
       # Wipe all nodes in each connection
       connections.each do |conn|
@@ -104,17 +96,13 @@ module ActiveCypher
         next unless klass < ActiveCypher::Base
         next if klass.respond_to?(:abstract_class?) && klass.abstract_class?
 
-        begin
-          conn = klass.connection
-          # Store connection details for comparison
-          model_connections[klass] = {
-            adapter: conn.class.name,
-            config: conn.instance_variable_get(:@config),
-            object_id: conn.object_id
-          }
-        rescue StandardError
-          # Skip if can't get connection
-        end
+        conn = klass.connection
+        # Store connection details for comparison
+        model_connections[klass] = {
+          adapter: conn.class.name,
+          config: conn.instance_variable_get(:@config),
+          object_id: conn.object_id
+        }
       end
 
       relationships.each do |rel|

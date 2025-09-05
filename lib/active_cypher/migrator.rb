@@ -64,8 +64,6 @@ module ActiveCypher
     def existing_versions
       @connection.execute_cypher('MATCH (m:SchemaMigration) RETURN m.version AS version')
                  .map { |r| r[:version].to_s }
-    rescue StandardError
-      []
     end
 
     def ensure_schema_migration_constraint

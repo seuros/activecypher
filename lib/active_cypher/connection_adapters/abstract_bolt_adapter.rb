@@ -72,7 +72,7 @@ module ActiveCypher
       # Clean disconnection. Resets the internal state.
       def disconnect
         instrument_connection(:disconnect) do
-          @connection&.close
+          @connection.close if @connection
           @connection = nil
           true
         end

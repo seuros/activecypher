@@ -73,11 +73,7 @@ module ActiveCypher
 
       return @connection if defined?(@connection) && @connection
 
-      begin
-        from_class.constantize.connection
-      rescue StandardError
-        nil
-      end
+      from_class.constantize.connection
     end
 
     # --------------------------------------------------------------
@@ -301,9 +297,14 @@ module ActiveCypher
           _run(:update) { update_relationship }
         end
       end
-    rescue StandardError => e
-      log_error "Failed to save #{self.class}: #{e.class} – #{e.message}"
-      false
+    rescue ActiveCypher::RecordNotSaved, RuntimeError => e
+      # Only catch specific validation errors, let other errors propagate
+      if e.message.include?('must be persisted') || e.message.include?('creation returned no id')
+        log_error "Failed to save #{self.class}: #{e.message}"
+        false
+      else
+        raise
+      end
     end
 
     # Bang version of save - raises exception if save fails
@@ -396,9 +397,6 @@ module ActiveCypher
       @new_record = false
       changes_applied
       true
-    rescue StandardError => e
-      log_error "Failed to save #{self.class}: #{e.class} – #{e.message}"
-      false
     end
 
     def update_relationship
