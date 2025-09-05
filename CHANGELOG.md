@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.11.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.11.0...active_cypher/v0.11.1) (2025-09-05)
+
+
+### Bug Fixes
+
+* remove abstractions after months of testing ([#54](https://github.com/seuros/activecypher/issues/54)) ([c4746f9](https://github.com/seuros/activecypher/commit/c4746f9f637b5b8997c1f27dbc8b7784f710d5be))
+* remove defensive coding ([#56](https://github.com/seuros/activecypher/issues/56)) ([a641d10](https://github.com/seuros/activecypher/commit/a641d10d40c580939561647383ad4d2a0e5a1b96))
+
 ## [0.11.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.10.6...active_cypher/v0.11.0) (2025-07-23)
 
 
