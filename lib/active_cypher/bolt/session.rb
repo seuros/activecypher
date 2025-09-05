@@ -7,6 +7,7 @@ module ActiveCypher
     # It maintains a connection to the database server and allows running queries.
     class Session
       include Instrumentation
+
       attr_reader :connection, :database
 
       def initialize(connection, database: nil)
@@ -119,15 +120,15 @@ module ActiveCypher
       # @param metadata [Hash] Transaction metadata to send to the server.
       # @yield [tx] The transaction to use for queries.
       # @return The result of the block.
-      def run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &block)
+      def run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &)
         if Async::Task.current?
           # Already in an async context, just run the block.
           # The block will run asynchronously within the current task.
-          _execute_transaction_block(mode, db, timeout, metadata, &block)
+          _execute_transaction_block(mode, db, timeout, metadata, &)
         else
           # Not in an async context, so we need to create one and wait for it to complete.
           Async do
-            _execute_transaction_block(mode, db, timeout, metadata, &block)
+            _execute_transaction_block(mode, db, timeout, metadata, &)
           end.wait
         end
       end
@@ -141,12 +142,12 @@ module ActiveCypher
       # @param metadata [Hash] Transaction metadata to send to the server.
       # @yield [tx] The transaction to use for queries.
       # @return [Async::Task] A task that will complete with the result of the block.
-      def async_run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &block)
+      def async_run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &)
         # Ensure we are in an async task, otherwise the behavior is undefined.
         raise 'Cannot run an async transaction outside of an Async task' unless Async::Task.current?
 
         Async do
-          _execute_transaction_block(mode, db, timeout, metadata, &block)
+          _execute_transaction_block(mode, db, timeout, metadata, &)
         end
       end
 
@@ -158,12 +159,12 @@ module ActiveCypher
         run_transaction(:read, db: db, timeout: timeout, metadata: metadata, &)
       end
 
-      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &block)
-        async_run_transaction(:write, db: db, timeout: timeout, metadata: metadata, &block)
+      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &)
+        async_run_transaction(:write, db: db, timeout: timeout, metadata: metadata, &)
       end
 
-      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &block)
-        async_run_transaction(:read, db: db, timeout: timeout, metadata: metadata, &block)
+      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &)
+        async_run_transaction(:read, db: db, timeout: timeout, metadata: metadata, &)
       end
 
       # Close the session and any active transaction.

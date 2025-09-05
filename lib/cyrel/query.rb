@@ -15,6 +15,7 @@ module Cyrel
   class Query
     include Parameterizable
     include Logging
+
     attr_reader :parameters, :clauses # Expose clauses for merge logic
 
     def initialize

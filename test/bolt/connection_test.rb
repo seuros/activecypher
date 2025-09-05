@@ -4,7 +4,6 @@ require 'test_helper'
 require 'async'
 
 class ConnectionTest < ActiveSupport::TestCase
-
   # --- Neo4j Tests ---
 
   test '[Neo4j] successful connection and handshake' do

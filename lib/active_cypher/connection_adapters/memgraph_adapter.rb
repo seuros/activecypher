@@ -198,6 +198,7 @@ module ActiveCypher
 
       module Persistence
         include PersistenceMethods
+
         module_function :create_record, :update_record, :destroy_record
       end
 

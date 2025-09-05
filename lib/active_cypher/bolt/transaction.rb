@@ -5,6 +5,7 @@ module ActiveCypher
     # Manages transaction state (BEGIN/COMMIT/ROLLBACK) and runs queries within a transaction.
     class Transaction
       include Instrumentation
+
       attr_reader :bookmarks, :metadata, :connection
 
       # Initializes a new Transaction instance.

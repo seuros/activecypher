@@ -10,6 +10,7 @@ module ActiveCypher
     # It's like ActiveRecord::ConnectionAdapter, but for weirdos like me who use graph databases.
     class AbstractBoltAdapter < AbstractAdapter
       include Instrumentation
+
       attr_reader :connection
 
       # Returns the raw Bolt connection object

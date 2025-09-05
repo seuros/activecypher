@@ -57,7 +57,6 @@ module ActiveCypher
         raise NotImplementedError, "#{self.class} must implement #hydrate_record"
       end
 
-
       # Turns rows into symbols, because Rubyists fear strings.
       # @param rows [Array<Hash>] The rows to process
       # @return [Array<Hash>] The processed rows
