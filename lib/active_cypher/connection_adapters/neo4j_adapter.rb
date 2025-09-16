@@ -40,7 +40,8 @@ module ActiveCypher
 
       # Helper methods for Cypher query generation with IDs
       def self.with_direct_id(id)
-        "elementId(r) = #{id}"
+        # Quote the element ID to handle special characters in Neo4j element IDs
+        "elementId(r) = '#{id}'"
       end
 
       def self.with_param_id
@@ -48,7 +49,8 @@ module ActiveCypher
       end
 
       def self.with_direct_node_ids(a_id, b_id)
-        "elementId(p) = #{a_id} AND elementId(h) = #{b_id}"
+        # Quote the element IDs to handle special characters like colons in UUID-based IDs
+        "elementId(p) = '#{a_id}' AND elementId(h) = '#{b_id}'"
       end
 
       def self.with_param_node_ids
