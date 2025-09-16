@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.11.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.11.1...active_cypher/v0.11.2) (2025-09-16)
+
+
+### Bug Fixes
+
+* Handle UUID for neo4j adapter ([#57](https://github.com/seuros/activecypher/issues/57)) ([4330049](https://github.com/seuros/activecypher/commit/4330049d062086b53590cab84384adc42a176de5))
+
 ## [0.11.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.11.0...active_cypher/v0.11.1) (2025-09-05)
 
 
