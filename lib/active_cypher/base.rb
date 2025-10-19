@@ -44,11 +44,14 @@ module ActiveCypher
         # Determine the current role (e.g., :writing, :reading)
         # ActiveCypher::RuntimeRegistry.current_role defaults to :writing
         # Only use db_key for pool lookup
-        if respond_to?(:connects_to_mappings) && connects_to_mappings.is_a?(Hash)
-          db_key = connects_to_mappings[:writing] # or whichever role is appropriate
-          if db_key && (pool = connection_handler.pool(db_key))
-            return pool.connection
-          end
+        mapping = connects_to_mappings if respond_to?(:connects_to_mappings)
+        role = ActiveCypher::RuntimeRegistry.current_role || :writing
+
+        db_key = ActiveCypher::Model::ConnectionOwner.db_key_for(mapping, role)
+        db_key = db_key.to_sym if db_key.respond_to?(:to_sym)
+
+        if db_key && (pool = connection_handler.pool(db_key))
+          return pool.connection
         end
 
         return @connection if defined?(@connection) && @connection&.active?
