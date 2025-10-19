@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.12.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.11.2...active_cypher/v0.12.0) (2025-10-19)
+
+
+### Features
+
+* Improve multi-role connection handling and coverage ([#59](https://github.com/seuros/activecypher/issues/59)) ([0e09afe](https://github.com/seuros/activecypher/commit/0e09afe83595c01c2f82cb84839172065191ae78))
+
 ## [0.11.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.11.1...active_cypher/v0.11.2) (2025-09-16)
 
 
