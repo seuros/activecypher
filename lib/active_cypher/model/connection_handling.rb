@@ -26,34 +26,54 @@ module ActiveCypher
           # If you're lazy and don't specify :reading, it defaults to :writing. You're welcome.
           symbolized_mapping[:reading] ||= symbolized_mapping[:writing]
 
+          processed_specs = {}
+
           symbolized_mapping.each do |role, db_key|
-            # db_key can be a symbol (config name) or a nested hash. We’re not judging.
-            spec_name = db_key.is_a?(Hash) ? db_key.values.first : db_key
+            spec_names_for(db_key).each do |spec_name|
+              spec_key = spec_name.respond_to?(:to_sym) ? spec_name.to_sym : spec_name
 
-            spec = ActiveCypher::CypherConfig.for(spec_name) # Boom. Pulls your DB config.
-            config_for_adapter = spec.dup
+              next if processed_specs.key?(spec_key)
 
-            # If the spec has a URL, parse it and let it override the boring YAML values.
-            if spec[:url]
-              resolver = ActiveCypher::ConnectionUrlResolver.new(spec[:url])
-              url_config = resolver.to_hash
-              raise ArgumentError, "Invalid connection URL: #{spec[:url]}" unless url_config
+              processed_specs[spec_key] = true
 
-              config_for_adapter = url_config.merge(spec.except(*url_config.keys))
+              # Reuse existing pools rather than instantiating duplicates
+              next if connection_handler.pool(spec_key)
+
+              begin
+                spec = ActiveCypher::CypherConfig.for(spec_key) # Boom. Pulls your DB config.
+              rescue KeyError => e
+                raise ActiveCypher::UnknownConnectionError,
+                      "connects_to role `#{role}`: database configuration key `#{spec_name.inspect}` not found in cypher_databases.yml – #{e.message}"
+              end
+
+              config_for_adapter = spec.dup
+
+              # If the spec has a URL, parse it and let it override the boring YAML values.
+              if spec[:url]
+                resolver = ActiveCypher::ConnectionUrlResolver.new(spec[:url])
+                url_config = resolver.to_hash
+                raise ArgumentError, "Invalid connection URL: #{spec[:url]}" unless url_config
+
+                config_for_adapter = url_config.merge(spec.except(*url_config.keys))
+              end
+
+              # Create a unique connection pool for this role/config combo.
+              pool = ActiveCypher::ConnectionPool.new(config_for_adapter)
+
+              # Register the pool under this spec name.
+              connection_handler.set(spec_key, pool)
             end
-
-            # Create a unique connection pool for this role/config combo.
-            pool = ActiveCypher::ConnectionPool.new(config_for_adapter)
-
-            # Register the pool under this spec name.
-            connection_handler.set(spec_name, pool)
-          rescue KeyError => e
-            raise ActiveCypher::UnknownConnectionError,
-                  "connects_to role `#{role}`: database configuration key `#{spec_name.inspect}` not found in cypher_databases.yml – #{e.message}"
           end
 
           # Save the mapping for later — introspection, debugging, blaming, etc.
           self.connects_to_mappings = symbolized_mapping
+        end
+
+        private
+
+        def spec_names_for(db_key)
+          values = db_key.is_a?(Hash) ? db_key.values : db_key
+          Array(values).flatten.compact
         end
       end
     end
