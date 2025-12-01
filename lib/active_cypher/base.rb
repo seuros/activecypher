@@ -46,6 +46,7 @@ module ActiveCypher
         # Only use db_key for pool lookup
         mapping = connects_to_mappings if respond_to?(:connects_to_mappings)
         role = ActiveCypher::RuntimeRegistry.current_role || :writing
+        # Debug guardrails removed in release code; rely on role/shard registry.
 
         db_key = ActiveCypher::Model::ConnectionOwner.db_key_for(mapping, role)
         db_key = db_key.to_sym if db_key.respond_to?(:to_sym)

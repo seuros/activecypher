@@ -43,14 +43,15 @@ module ActiveCypher
       def with_session(**kw)
         Sync do
           @pool.acquire do |conn|
-            # Check if connection is viable before using it
-            unless conn.viable?
-              # Create a fresh connection, because hope springs eternal
-              conn.close
-              conn = build_connection
-            end
+            conn.mark_used!
+            session = Bolt::Session.new(conn, **kw)
 
-            yield Bolt::Session.new(conn, **kw)
+            yield session
+          ensure
+            # Make sure any open transaction is cleaned up before returning the
+            # connection to the pool, so the next borrower doesn't inherit
+            # IN_TRANSACTION state.
+            session&.close
           end
         end
       rescue Async::TimeoutError => e

@@ -59,25 +59,29 @@ module ActiveCypher
     # --------------------------------------------------------------
     # Connection fallback
     # --------------------------------------------------------------
-    # Relationship classes usually share the same Bolt pool as the
-    # node they originate from; delegate there unless the relationship
-    # class was given its own pool explicitly.
-    #
-    #   WorksAtRelationship.connection  # -> PersonNode.connection
-    #
-    def self.connection
-      # If this is a concrete relationship class with from_class defined,
-      # prefer delegating to that node's connection (so role/shard routing is respected).
-      if !abstract_class? && (fc = from_class_name)
-        return fc.constantize.connection
-      end
+      # Relationship classes usually share the same Bolt pool as the
+      # node they originate from; delegate there unless the relationship
+      # class was given its own pool explicitly.
+      #
+      #   WorksAtRelationship.connection  # -> PersonNode.connection
+      #
+      def self.connection
+        # If this is a concrete relationship class with from_class defined,
+        # prefer delegating to that node's connection (so role/shard routing is respected).
+        if !abstract_class? && (fc = from_class_name)
+          klass = fc.constantize
+          role  = ActiveCypher::RuntimeRegistry.current_role
+          shard = ActiveCypher::RuntimeRegistry.current_shard
 
-      # Otherwise, fall back to node_base_class if present (even if abstract)
+          return klass.connected_to(role: role, shard: shard) do
+            klass.connection
+          end
+        end
+
+        # Otherwise, fall back to node_base_class if present (even if abstract)
       if (klass = node_base_class)
         return klass.connection
       end
-
-      return @connection if defined?(@connection) && @connection
 
       from_class.constantize.connection
     end
