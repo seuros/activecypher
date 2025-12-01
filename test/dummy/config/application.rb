@@ -13,5 +13,8 @@ Bundler.require(*Rails.groups)
 module Dummy
   class Application < Rails::Application
     config.load_defaults Rails::VERSION::STRING.to_f
+
+    # Point ActiveCypher migrator to dummy app migrations
+    config.paths.add 'graphdb/migrate'
   end
 end

@@ -98,6 +98,16 @@ module ActiveCypher
         mode.to_s # Default implementation
       end
 
+      # Ensure schema migration constraint exists for tracking migrations.
+      # Override in subclasses for database-specific syntax.
+      def ensure_schema_migration_constraint
+        execute_cypher(<<~CYPHER, {}, 'SchemaMigration')
+          CREATE CONSTRAINT graph_schema_migration IF NOT EXISTS
+          FOR (m:SchemaMigration)
+          REQUIRE m.version IS UNIQUE
+        CYPHER
+      end
+
       # Prepare transaction metadata with database-specific attributes
       def prepare_tx_metadata(metadata, _db, _access_mode)
         metadata # Default implementation

@@ -29,32 +29,74 @@ module ActiveCypher
     # DSL ---------------------------------------------------------------
 
     def create_node_index(label, *props, unique: false, if_not_exists: true, name: nil)
-      props_clause = props.map { |p| "n.#{p}" }.join(', ')
-      cypher = +'CREATE '
-      cypher << 'UNIQUE ' if unique
-      cypher << 'INDEX'
-      cypher << " #{name}" if name
-      cypher << ' IF NOT EXISTS' if if_not_exists
-      cypher << " FOR (n:#{label}) ON (#{props_clause})"
-      operations << cypher
+      cypher = if connection.vendor == :memgraph
+                 # Memgraph syntax: CREATE INDEX ON :Label(prop)
+                 props.map { |p| "CREATE INDEX ON :#{label}(#{p})" }
+               else
+                 # Neo4j syntax
+                 props_clause = props.map { |p| "n.#{p}" }.join(', ')
+                 c = +'CREATE '
+                 c << 'UNIQUE ' if unique
+                 c << 'INDEX'
+                 c << " #{name}" if name
+                 c << ' IF NOT EXISTS' if if_not_exists
+                 c << " FOR (n:#{label}) ON (#{props_clause})"
+                 [c]
+               end
+      operations.concat(Array(cypher))
     end
 
     def create_rel_index(rel_type, *props, if_not_exists: true, name: nil)
-      props_clause = props.map { |p| "r.#{p}" }.join(', ')
-      cypher = +'CREATE INDEX'
-      cypher << " #{name}" if name
-      cypher << ' IF NOT EXISTS' if if_not_exists
-      cypher << " FOR ()-[r:#{rel_type}]-() ON (#{props_clause})"
-      operations << cypher
+      cypher = if connection.vendor == :memgraph
+                 # Memgraph syntax: CREATE EDGE INDEX ON :REL_TYPE(prop)
+                 props.map { |p| "CREATE EDGE INDEX ON :#{rel_type}(#{p})" }
+               else
+                 # Neo4j syntax
+                 props_clause = props.map { |p| "r.#{p}" }.join(', ')
+                 c = +'CREATE INDEX'
+                 c << " #{name}" if name
+                 c << ' IF NOT EXISTS' if if_not_exists
+                 c << " FOR ()-[r:#{rel_type}]-() ON (#{props_clause})"
+                 [c]
+               end
+      operations.concat(Array(cypher))
     end
 
     def create_uniqueness_constraint(label, *props, if_not_exists: true, name: nil)
-      props_clause = props.map { |p| "n.#{p}" }.join(', ')
-      cypher = +'CREATE CONSTRAINT'
-      cypher << " #{name}" if name
-      cypher << ' IF NOT EXISTS' if if_not_exists
-      cypher << " FOR (n:#{label}) REQUIRE (#{props_clause}) IS UNIQUE"
+      cypher = if connection.vendor == :memgraph
+                 # Memgraph syntax: CREATE CONSTRAINT ON (n:Label) ASSERT n.prop IS UNIQUE
+                 # Note: Memgraph doesn't support IF NOT EXISTS or named constraints
+                 props_clause = props.map { |p| "n.#{p}" }.join(', ')
+                 "CREATE CONSTRAINT ON (n:#{label}) ASSERT #{props_clause} IS UNIQUE"
+               else
+                 # Neo4j syntax
+                 props_clause = props.map { |p| "n.#{p}" }.join(', ')
+                 c = +'CREATE CONSTRAINT'
+                 c << " #{name}" if name
+                 c << ' IF NOT EXISTS' if if_not_exists
+                 c << " FOR (n:#{label}) REQUIRE (#{props_clause}) IS UNIQUE"
+                 c
+               end
       operations << cypher
+    end
+
+    def create_fulltext_index(name, label, *props, if_not_exists: true)
+      cypher = if connection.vendor == :memgraph
+                 # Memgraph TEXT INDEX syntax (requires --experimental-enabled='text-search')
+                 # Memgraph only supports single property per text index, so create one per prop
+                 props.map.with_index do |p, i|
+                   index_name = props.size > 1 ? "#{name}_#{p}" : name.to_s
+                   "CREATE TEXT INDEX #{index_name} ON :#{label}(#{p})"
+                 end
+               else
+                 # Neo4j syntax
+                 props_clause = props.map { |p| "n.#{p}" }.join(', ')
+                 c = +"CREATE FULLTEXT INDEX #{name}"
+                 c << ' IF NOT EXISTS' if if_not_exists
+                 c << " FOR (n:#{label}) ON EACH [#{props_clause}]"
+                 [c]
+               end
+      operations.concat(Array(cypher))
     end
 
     def execute(cypher_string)
@@ -64,17 +106,15 @@ module ActiveCypher
     private
 
     def execute_operations
-      tx = connection.begin_transaction if connection.respond_to?(:begin_transaction)
-      operations.each do |cypher|
-        if tx
-          tx.run(cypher)
-        else
-          connection.execute_cypher(cypher)
-        end
+      if connection.vendor == :memgraph
+        # Memgraph requires auto-commit for DDL operations
+        operations.each { |cypher| connection.execute_ddl(cypher) }
+      else
+        # Run each DDL individually (implicit auto-commit) to avoid session/async issues
+        operations.each { |cypher| connection.execute_cypher(cypher) }
       end
-      connection.commit_transaction(tx) if tx
     rescue StandardError
-      connection.rollback_transaction(tx) if tx
+      # Memgraph DDL is auto-committed, no rollback possible
       raise
     end
   end

@@ -60,3 +60,10 @@ jobs:
           GRAPHDB_URL: memgraph://memgraph:activecypher@localhost:17688
         run: |
           bin/rails test
+
+      - name: Run graph migrations on both connections
+        env:
+          NEO4J_URL: neo4j://neo4j:activecypher@localhost:17687
+          GRAPHDB_URL: memgraph://memgraph:activecypher@localhost:17688
+        run: |
+          bundle exec ruby -e "require './test/dummy/config/environment'; [ApplicationGraphNode, Neo4jRecord].each { |k| ActiveCypher::Migrator.new(k.connection).migrate!; raise 'migrations not up' unless ActiveCypher::Migrator.new(k.connection).status.all? { |s| s[:status] == 'up' } }"
