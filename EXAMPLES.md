@@ -268,7 +268,7 @@ Your `config/cypher_databases.yml` should include connection details. The prefer
 ```yaml
 development:
   primary:
-    url: <%= ENV.fetch('GRAPHDB_URL', 'neo4j://caffeine_addict:espresso123@localhost:7687/coffee_empire') %>
+    url: <%= ENV.fetch('GRAPHDB_URL', 'neo4j://caffeine_addict:espresso123@localhost:17687/coffee_empire') %>
     
   analytics_db:
     url: neo4j://bean_counter:latte_art@analytics-db.example.com:7687/hipster_metrics
@@ -285,7 +285,7 @@ development:
   primary:
     adapter: neo4j  # or memgraph (the cooler, younger sibling)
     host: localhost
-    port: 7687
+    port: 17687
     username: barista_supreme
     password: no_decaf_please
     database: coffee_supply_chain

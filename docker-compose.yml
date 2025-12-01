@@ -2,7 +2,7 @@ services:
   neo4j:
     image: neo4j:latest
     ports:
-      - "7687:7687" # Bolt
+      - "17687:7687" # Bolt (host:container)
     environment:
       NEO4J_AUTH: neo4j/activecypher
     volumes:
@@ -11,8 +11,8 @@ services:
   memgraph:
     image: memgraph/memgraph-mage:latest
     ports:
-      - "7688:7687" # Bolt protocol
-      - "7444:7444"
+      - "17688:7687" # Bolt protocol (host:container)
+      - "17444:7444"
     environment:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=activecypher

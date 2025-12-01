@@ -21,7 +21,7 @@ jobs:
       neo4j:
         image: neo4j:latest # Neo4j 2025‑LTS is the current latest tag
         ports:
-          - 7687:7687 # Bolt
+          - 17687:7687 # Bolt
         env:
           NEO4J_AUTH: neo4j/activecypher
         options: >-
@@ -31,15 +31,15 @@ jobs:
       memgraph:
         image: memgraph/memgraph-mage:latest # 3.x series
         ports:
-          - "7688:7688" # Bolt (host:container)
-          - "7444:7444" # REST / Lab
+          - "17688:7687" # Bolt (host:container)
+          - "17444:7444" # REST / Lab
         env:
           MEMGRAPH_USER: memgraph
           MEMGRAPH_PASSWORD: activecypher
-          MEMGRAPH_BOLT_PORT: 7688 # keeps everything on one port
+          MEMGRAPH_BOLT_PORT: 7687 # keeps everything on one port
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Ruby 3.4
         uses: ruby/setup-ruby@v1
@@ -48,7 +48,7 @@ jobs:
 
       - name: Wait for services to accept TCP connections
         run: |
-          for svc in 7687 7688; do
+          for svc in 17687 17688; do
             printf "⏳ waiting on port %s … " "$svc"
             until nc -z 127.0.0.1 "$svc"; do sleep 2; done
             echo "ready"
@@ -56,7 +56,7 @@ jobs:
 
       - name: Run Minitest suite
         env:
-          NEO4J_URL: neo4j://neo4j:activecypher@localhost:7687
-          GRAPHDB_URL: memgraph://memgraph:activecypher@localhost:7688
+          NEO4J_URL: neo4j://neo4j:activecypher@localhost:17687
+          GRAPHDB_URL: memgraph://memgraph:activecypher@localhost:17688
         run: |
           bin/rails test

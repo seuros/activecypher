@@ -13,8 +13,8 @@ check_port() {
 }
 
 main() {
-  check_port 7688 "Memgraph"
-  check_port 7687 "Neo4j"
+  check_port 17688 "Memgraph"
+  check_port 17687 "Neo4j"
 }
 
 main "$@"

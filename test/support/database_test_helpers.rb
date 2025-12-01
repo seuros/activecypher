@@ -2,9 +2,9 @@
 
 module DatabaseTestHelpers
   # Configuration constants for backward compatibility with error condition tests
-  NEO4J_CONFIG = { host: '127.0.0.1', port: 7687,
+  NEO4J_CONFIG = { host: '127.0.0.1', port: 17687,
                    auth_token: { scheme: 'basic', principal: 'neo4j', credentials: 'activecypher' } }.freeze
-  MEMGRAPH_CONFIG = { host: '127.0.0.1', port: 7688, auth_token: { scheme: 'basic', principal: 'memgraph',
+  MEMGRAPH_CONFIG = { host: '127.0.0.1', port: 17688, auth_token: { scheme: 'basic', principal: 'memgraph',
                                                                    credentials: 'activecypher' } }.freeze
 
   # Gets the Neo4j connection from the abstract Neo4jRecord class

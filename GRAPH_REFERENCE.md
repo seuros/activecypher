@@ -10,13 +10,13 @@ For detailed ActiveCypher Ruby gem usage, see the main [README.md](README.md).
 cypher-shell -u neo4j -p activecypher
 
 # Memgraph
-mgconsole --host localhost --port 7688 --username memgraph --password activecypher --use-ssl=false
+mgconsole --host localhost --port 17688 --username memgraph --password activecypher --use-ssl=false
 ```
 
 ### Environment Variables
 ```bash
-NEO4J_URL="neo4j://neo4j:activecypher@localhost:7687"
-GRAPHDB_URL="memgraph://memgraph:activecypher@localhost:7688"
+NEO4J_URL="neo4j://neo4j:activecypher@localhost:17687"
+GRAPHDB_URL="memgraph://memgraph:activecypher@localhost:17688"
 ```
 
 ### Basic Cypher Queries
@@ -46,11 +46,11 @@ MATCH (p:Person {name: 'Alice'}) DELETE p;
 ```bash
 # Execute from file
 cypher-shell -u neo4j -p activecypher < queries.cypher
-mgconsole --host localhost --port 7688 --username memgraph --password activecypher < queries.cypher
+mgconsole --host localhost --port 17688 --username memgraph --password activecypher < queries.cypher
 
 # Single query
 echo "MATCH (n) RETURN count(n);" | cypher-shell -u neo4j -p activecypher
-echo "MATCH (n) RETURN count(n);" | mgconsole --host localhost --port 7688 --username memgraph --password activecypher
+echo "MATCH (n) RETURN count(n);" | mgconsole --host localhost --port 17688 --username memgraph --password activecypher
 
 # Exit shell
 :exit (Neo4j)

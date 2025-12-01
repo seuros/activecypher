@@ -4,16 +4,16 @@
 
 development:
   neo4j:
-    url: neo4j://neo4j:activecypher@localhost:7687
+    url: neo4j://neo4j:activecypher@localhost:17687
     migrations_paths: graphdb/neo4j
 
   primary:
-    url: memgraph://memgraph:activecypher@localhost:7688
+    url: memgraph://memgraph:activecypher@localhost:17688
 
 test:
   neo4j:
-    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:7687') %>
+    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:17687') %>
     migrations_paths: graphdb/neo4j
 
   primary:
-    url: <%= ENV.fetch('GRAPHDB_URL', 'memgraph://memgraph:activecypher@localhost:7688') %>
+    url: <%= ENV.fetch('GRAPHDB_URL', 'memgraph://memgraph:activecypher@localhost:17688') %>

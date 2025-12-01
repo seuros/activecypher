@@ -47,16 +47,16 @@ This will create a `config/cypher_databases.yml` file in your Rails application.
 
 development:
   primary:
-    url: memgraph://memgraph:activecypher@localhost:7688
+    url: memgraph://memgraph:activecypher@localhost:17688
   neo4j:
-    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:7687') %>
+    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:17687') %>
     migrations_paths: graphdb/neo4j
 
 test:
   primary:
-    url: memgraph://memgraph:activecypher@localhost:7688
+    url: memgraph://memgraph:activecypher@localhost:17688
   neo4j:
-    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:7687') %>
+    url: <%= ENV.fetch('NEO4J_URL', 'neo4j://neo4j:activecypher@localhost:17687') %>
     migrations_paths: graphdb/neo4j
 
 production:
@@ -83,10 +83,10 @@ Similar to ActiveRecord's `DATABASE_URL`, ActiveCypher supports the `GRAPHDB_URL
 Example:
 ```bash
 # For Neo4j
-export GRAPHDB_URL="neo4j://username:password@localhost:7687/database_name"
+export GRAPHDB_URL="neo4j://username:password@localhost:17687/database_name"
 
 # For Memgraph
-export GRAPHDB_URL="memgraph://username:password@localhost:7688"
+export GRAPHDB_URL="memgraph://username:password@localhost:17688"
 ```
 
 When `GRAPHDB_URL` is set, it takes precedence over the corresponding entry in `cypher_databases.yml` for the primary connection.
@@ -366,7 +366,7 @@ For setting up Neo4j and Memgraph databases and direct command-line access, see 
 ### Sanity Check
 
 Run `bin/sanity` to verify that Memgraph and Neo4j servers are reachable on
-ports 7688 and 7687. The script exits with an error if either service is not
+ports 17688 and 17687. The script exits with an error if either service is not
 listening.
 
 
