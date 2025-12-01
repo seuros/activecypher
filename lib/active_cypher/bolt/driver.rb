@@ -44,7 +44,14 @@ module ActiveCypher
         Sync do
           @pool.acquire do |conn|
             conn.mark_used!
-            yield Bolt::Session.new(conn, **kw)
+            session = Bolt::Session.new(conn, **kw)
+
+            yield session
+          ensure
+            # Make sure any open transaction is cleaned up before returning the
+            # connection to the pool, so the next borrower doesn't inherit
+            # IN_TRANSACTION state.
+            session&.close
           end
         end
       rescue Async::TimeoutError => e
