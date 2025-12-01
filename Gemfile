@@ -7,7 +7,7 @@ gemspec
 
 gem 'rake', '~> 13.0'
 
-rails_version = ENV['RAILS_VERSION'] || '8.0.2'
+rails_version = ENV['RAILS_VERSION'] || '8.1.1'
 gem 'railties', "~> #{rails_version}"
 
 gem 'minitest', '~> 5.0'

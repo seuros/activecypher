@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        rails: ['8.0.2', '8.1.0.beta1']
+        rails: ['8.0.2', '8.1.1']
 
     env:
       RAILS_VERSION: ${{ matrix.rails }}
