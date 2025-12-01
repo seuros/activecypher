@@ -43,13 +43,7 @@ module ActiveCypher
       def with_session(**kw)
         Sync do
           @pool.acquire do |conn|
-            # Check if connection is viable before using it
-            unless conn.viable?
-              # Create a fresh connection, because hope springs eternal
-              conn.close
-              conn = build_connection
-            end
-
+            conn.mark_used!
             yield Bolt::Session.new(conn, **kw)
           end
         end

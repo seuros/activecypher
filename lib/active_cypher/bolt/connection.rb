@@ -15,7 +15,8 @@ module ActiveCypher
       include VersionEncoding
 
       attr_reader :host, :port, :timeout_seconds, :socket,
-                  :protocol_version, :server_agent, :connection_id, :adapter
+                  :protocol_version, :server_agent, :connection_id, :adapter,
+                  :count
 
       # Override inspect to redact sensitive information
       def inspect
@@ -68,6 +69,7 @@ module ActiveCypher
         @connection_id      = nil
         @reconnect_attempts = 0
         @max_reconnect_attempts = 3
+        @count = 0
       end
 
       # ───────────────────────── connection lifecycle ────────────── #
@@ -222,6 +224,9 @@ module ActiveCypher
       #
       # @return [Boolean]
       def reusable?   = connected?
+
+      # Increment the usage counter for compatibility with Async::Pool diagnostics.
+      def mark_used! = @count += 1
 
       # This method is required by Async::Pool to check if the connection is viable for reuse
       #
