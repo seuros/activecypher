@@ -79,7 +79,7 @@ module ActiveCypher
         connect
         logger.debug { "[DDL] #{cypher}" }
 
-        Async do
+        Sync do
           # Send RUN directly without BEGIN/COMMIT wrapper
           connection.write_message(Bolt::Messaging::Run.new(cypher, params, {}))
           connection.write_message(Bolt::Messaging::Pull.new({ n: -1 }))
@@ -97,7 +97,7 @@ module ActiveCypher
 
           pull_response = connection.read_message
           pull_response
-        end.wait
+        end
       end
 
       # Override run to execute queries without explicit transactions

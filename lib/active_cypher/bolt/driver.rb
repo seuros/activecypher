@@ -41,8 +41,7 @@ module ActiveCypher
       # @yieldparam session [Bolt::Session] The session to use
       # @return [Object] The result of the block
       def with_session(**kw)
-        if Async::Task.current?
-          # We're already in an Async context, use the pool directly
+        Sync do
           @pool.acquire do |conn|
             # Check if connection is viable before using it
             unless conn.viable?
@@ -53,20 +52,6 @@ module ActiveCypher
 
             yield Bolt::Session.new(conn, **kw)
           end
-        else
-          # We're not in an Async context, create one and wait
-          Async do
-            @pool.acquire do |conn|
-              # Check if connection is viable before using it
-              unless conn.viable?
-                # Create a fresh connection, because why not
-                conn.close
-                conn = build_connection
-              end
-
-              yield Bolt::Session.new(conn, **kw)
-            end
-          end.wait
         end
       rescue Async::TimeoutError => e
         raise ActiveCypher::ConnectionError, "Connection pool timeout: #{e.message}"

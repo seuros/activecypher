@@ -56,11 +56,17 @@ module ActiveCypher
     end
 
     def migration_files
-      root = defined?(Rails) && Rails.respond_to?(:root) ? Rails.root : Pathname.new(Dir.pwd)
+      roots = [Pathname.new(Dir.pwd)]
+      if defined?(Rails) && Rails.respond_to?(:root)
+        rails_root = Rails.root
+        roots << rails_root unless rails_root.to_s == Dir.pwd
+      end
 
-      migration_dirs.flat_map do |dir|
-        Dir[root.join(dir, '*.rb')]
-      end.sort
+      files = migration_dirs.flat_map do |dir|
+        roots.flat_map { |r| Dir[r.join(dir, '*.rb')] }
+      end
+
+      files.sort_by { |path| File.basename(path)[0, 14] }
     end
 
     def existing_versions

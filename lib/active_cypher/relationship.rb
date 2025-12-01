@@ -67,7 +67,7 @@ module ActiveCypher
     #
     def self.connection
       # If a node_base_class is set (directly or by convention), always delegate to its connection
-      if (klass = node_base_class)
+      if (klass = node_base_class) && !klass.abstract_class?
         return klass.connection
       end
 
