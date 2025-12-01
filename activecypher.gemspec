@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'activemodel', '~> 8.0'
-  spec.add_dependency 'async', '~> 2.34'
+  spec.add_dependency 'async', '>= 2.34.0'
   spec.add_dependency 'async-pool', '>= 0.11.0'
   spec.add_dependency 'io-endpoint', '~> 0.14'
   spec.add_dependency 'io-event', '~> 1.10'

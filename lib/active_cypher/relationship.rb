@@ -62,19 +62,25 @@ module ActiveCypher
     # Relationship classes usually share the same Bolt pool as the
     # node they originate from; delegate there unless the relationship
     # class was given its own pool explicitly.
-    #
-    #   WorksAtRelationship.connection  # -> PersonNode.connection
-    #
-    def self.connection
-      # If this is a concrete relationship class with from_class defined,
-      # prefer delegating to that node's connection (so role/shard routing is respected).
-      if !abstract_class? && (fc = from_class_name)
-        return fc.constantize.connection
-      end
+      #
+      #   WorksAtRelationship.connection  # -> PersonNode.connection
+      #
+      def self.connection
+        # If this is a concrete relationship class with from_class defined,
+        # prefer delegating to that node's connection (so role/shard routing is respected).
+        if !abstract_class? && (fc = from_class_name)
+          role = ActiveCypher::RuntimeRegistry.current_role
+          shard = ActiveCypher::RuntimeRegistry.current_shard
+          warn("[Relationship.connection] #{name} role=#{role} shard=#{shard}") if ENV['DEBUG_REL_CONN']
 
-      # Otherwise, fall back to node_base_class if present (even if abstract)
-      if (klass = node_base_class)
-        return klass.connection
+          return fc.constantize.connected_to(role: role, shard: shard) do
+            fc.constantize.connection
+          end
+        end
+
+        # Otherwise, fall back to node_base_class if present (even if abstract)
+        if (klass = node_base_class)
+          return klass.connection
       end
 
       return @connection if defined?(@connection) && @connection
