@@ -68,7 +68,6 @@ module ActiveCypher
           handler = connection_handler
           mapping = connects_to_mappings if respond_to?(:connects_to_mappings)
           role = ActiveCypher::RuntimeRegistry.current_role || :writing
-
           db_key = ConnectionOwner.db_key_for(mapping, role)
           db_key = db_key.to_sym if db_key.respond_to?(:to_sym)
 

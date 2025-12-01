@@ -13,19 +13,21 @@ module ActiveCypher
     module_function
 
     def current_role
-      get(ROLE_KEY) || :writing
+      get(ROLE_KEY) || thread_store[ROLE_KEY] || :writing
     end
 
     def current_role=(value)
       set(ROLE_KEY, value)
+      thread_store[ROLE_KEY] = value
     end
 
     def current_shard
-      get(SHARD_KEY) || :default
+      get(SHARD_KEY) || thread_store[SHARD_KEY] || :default
     end
 
     def current_shard=(value)
       set(SHARD_KEY, value)
+      thread_store[SHARD_KEY] = value
     end
 
     # ── storage helpers ────────────────────────────────────────────
@@ -40,8 +42,12 @@ module ActiveCypher
     end
 
     def fiber_store
-      registry = Thread.current[:active_cypher_fiber_store] ||= {}
+      registry = thread_store[:active_cypher_fiber_store] ||= {}
       registry[Fiber.current.object_id] ||= {}
+    end
+
+    def thread_store
+      Thread.current[:active_cypher_thread_store] ||= {}
     end
   end
 end
