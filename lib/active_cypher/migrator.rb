@@ -56,9 +56,17 @@ module ActiveCypher
     end
 
     def migration_files
-      migration_dirs.flat_map do |dir|
-        Dir[File.expand_path(File.join(dir, '*.rb'), Dir.pwd)]
-      end.sort
+      roots = [Pathname.new(Dir.pwd)]
+      if defined?(Rails) && Rails.respond_to?(:root)
+        rails_root = Rails.root
+        roots << rails_root unless rails_root.to_s == Dir.pwd
+      end
+
+      files = migration_dirs.flat_map do |dir|
+        roots.flat_map { |r| Dir[r.join(dir, '*.rb')] }
+      end
+
+      files.sort_by { |path| File.basename(path)[0, 14] }
     end
 
     def existing_versions
@@ -67,11 +75,7 @@ module ActiveCypher
     end
 
     def ensure_schema_migration_constraint
-      @connection.execute_cypher(<<~CYPHER)
-        CREATE CONSTRAINT graph_schema_migration IF NOT EXISTS
-        FOR (m:SchemaMigration)
-        REQUIRE m.version IS UNIQUE
-      CYPHER
+      @connection.ensure_schema_migration_constraint
     end
   end
 end

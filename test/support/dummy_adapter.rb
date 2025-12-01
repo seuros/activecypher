@@ -35,6 +35,14 @@ class DummyAdapter < ActiveCypher::ConnectionAdapters::AbstractAdapter
 
   def vendor = :memgraph
 
+  def ensure_schema_migration_constraint
+    @executed << 'CREATE CONSTRAINT graph_schema_migration'
+  end
+
+  def execute_ddl(cypher, params = {})
+    execute_cypher(cypher, params)
+  end
+
   # Return self as id_handler for compatibility with relationship tests
   def id_handler
     self.class

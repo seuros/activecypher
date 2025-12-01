@@ -98,6 +98,16 @@ module ActiveCypher
         mode.to_s # Default implementation
       end
 
+      # Ensure schema migration constraint exists for tracking migrations.
+      # Override in subclasses for database-specific syntax.
+      def ensure_schema_migration_constraint
+        execute_cypher(<<~CYPHER, {}, 'SchemaMigration')
+          CREATE CONSTRAINT graph_schema_migration IF NOT EXISTS
+          FOR (m:SchemaMigration)
+          REQUIRE m.version IS UNIQUE
+        CYPHER
+      end
+
       # Prepare transaction metadata with database-specific attributes
       def prepare_tx_metadata(metadata, _db, _access_mode)
         metadata # Default implementation
@@ -118,35 +128,37 @@ module ActiveCypher
         return false unless active?
 
         instrument_connection(:reset, config) do
-          # Wrap in async to handle the connection reset properly
+          # Use Sync for efficient synchronous execution within async context
           result = nil
           error = nil
 
-          Async do
-            begin
-              # Try to execute a simple query first
-              session = Bolt::Session.new(@connection)
-              session.run('RETURN 1 AS check', {})
-              session.close
-              result = true
-            rescue StandardError => e
-              # Query failed, need to reset the connection
-              logger.debug { "Connection needs reset: #{e.message}" }
-
-              # Send RESET message directly
+          begin
+            result = Sync do
               begin
-                @connection.write_message(Bolt::Messaging::Reset.new)
-                response = @connection.read_message
-                result = response.is_a?(Bolt::Messaging::Success)
-                logger.debug { "Reset response: #{response.class}" }
-              rescue StandardError => reset_error
-                logger.error { "Reset failed: #{reset_error.message}" }
-                result = false
+                # Try to execute a simple query first
+                session = Bolt::Session.new(@connection)
+                session.run('RETURN 1 AS check', {})
+                session.close
+                true
+              rescue StandardError => e
+                # Query failed, need to reset the connection
+                logger.debug { "Connection needs reset: #{e.message}" }
+
+                # Send RESET message directly
+                begin
+                  @connection.write_message(Bolt::Messaging::Reset.new)
+                  response = @connection.read_message
+                  logger.debug { "Reset response: #{response.class}" }
+                  response.is_a?(Bolt::Messaging::Success)
+                rescue StandardError => reset_error
+                  logger.error { "Reset failed: #{reset_error.message}" }
+                  false
+                end
               end
             end
           rescue StandardError => e
             error = e
-          end.wait
+          end
 
           raise error if error
 

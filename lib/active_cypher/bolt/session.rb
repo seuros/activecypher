@@ -121,15 +121,8 @@ module ActiveCypher
       # @yield [tx] The transaction to use for queries.
       # @return The result of the block.
       def run_transaction(mode = :write, db: nil, timeout: nil, metadata: nil, &)
-        if Async::Task.current?
-          # Already in an async context, just run the block.
-          # The block will run asynchronously within the current task.
+        Sync do
           _execute_transaction_block(mode, db, timeout, metadata, &)
-        else
-          # Not in an async context, so we need to create one and wait for it to complete.
-          Async do
-            _execute_transaction_block(mode, db, timeout, metadata, &)
-          end.wait
         end
       end
 

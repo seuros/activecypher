@@ -63,6 +63,43 @@ module ActiveCypher
         self.class
       end
 
+      # Memgraph uses different constraint syntax than Neo4j
+      def ensure_schema_migration_constraint
+        execute_ddl(<<~CYPHER)
+          CREATE CONSTRAINT ON (m:SchemaMigration) ASSERT m.version IS UNIQUE
+        CYPHER
+      rescue ActiveCypher::QueryError => e
+        # Ignore if constraint already exists
+        raise unless e.message.include?('already exists')
+      end
+
+      # Execute DDL statements (constraints, indexes) without explicit transaction
+      # Memgraph requires auto-commit for schema manipulation
+      def execute_ddl(cypher, params = {})
+        connect
+        logger.debug { "[DDL] #{cypher}" }
+
+        Sync do
+          # Send RUN directly without BEGIN/COMMIT wrapper
+          connection.write_message(Bolt::Messaging::Run.new(cypher, params, {}))
+          connection.write_message(Bolt::Messaging::Pull.new({ n: -1 }))
+
+          # Read responses
+          run_response = connection.read_message
+          unless run_response.is_a?(Bolt::Messaging::Success)
+            # Read any remaining messages to clear connection state
+            connection.read_message rescue nil
+            # Send RESET to clear connection state
+            connection.write_message(Bolt::Messaging::Reset.new)
+            connection.read_message rescue nil
+            raise QueryError, "DDL failed for: #{cypher.inspect}\nError: #{run_response.fields.first}"
+          end
+
+          pull_response = connection.read_message
+          pull_response
+        end
+      end
+
       # Override run to execute queries without explicit transactions
       # Memgraph auto‑commits each query, so we send RUN + PULL directly
       def run(cypher, params = {}, context: 'Query', db: nil, access_mode: :write)

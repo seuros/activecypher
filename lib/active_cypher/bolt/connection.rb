@@ -84,7 +84,7 @@ module ActiveCypher
         error = nil
 
         begin
-          Async do |task|
+          Sync do |task|
             task.with_timeout(@timeout_seconds) do
               @socket = open_socket
               perform_handshake
@@ -102,7 +102,7 @@ module ActiveCypher
             close
             # Store the error instead of raising
             error = ConnectionError.new("Error during connection: #{e.message}")
-          end.wait
+          end
         rescue Async::TimeoutError => e
           error = ConnectionError.new("Connection timed out to #{host}:#{port} - #{e.message}")
         rescue StandardError => e
@@ -521,16 +521,16 @@ module ActiveCypher
         result = nil
 
         begin
-          Async do
-            result = case database_type
-                     when :neo4j
-                       perform_neo4j_health_check
-                     when :memgraph
-                       perform_memgraph_health_check
-                     else
-                       perform_generic_health_check
-                     end
-          end.wait
+          result = Sync do
+            case database_type
+            when :neo4j
+              perform_neo4j_health_check
+            when :memgraph
+              perform_memgraph_health_check
+            else
+              perform_generic_health_check
+            end
+          end
 
           result
         rescue ConnectionError, ProtocolError => e
