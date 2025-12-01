@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.12.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.12.0...active_cypher/v0.12.1) (2025-12-01)
+
+
+### Bug Fixes
+
+* require async-pool &gt;= 0.11 and track pool usage ([#62](https://github.com/seuros/activecypher/issues/62)) ([0fa1533](https://github.com/seuros/activecypher/commit/0fa1533887deaaf579cfb60cba065c345a1a5b33))
+
 ## [0.12.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.11.2...active_cypher/v0.12.0) (2025-10-19)
 
 
