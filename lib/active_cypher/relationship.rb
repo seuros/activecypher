@@ -66,8 +66,14 @@ module ActiveCypher
     #   WorksAtRelationship.connection  # -> PersonNode.connection
     #
     def self.connection
-      # If a node_base_class is set (directly or by convention), always delegate to its connection
-      if (klass = node_base_class) && !klass.abstract_class?
+      # If this is a concrete relationship class with from_class defined,
+      # prefer delegating to that node's connection (so role/shard routing is respected).
+      if !abstract_class? && (fc = from_class_name)
+        return fc.constantize.connection
+      end
+
+      # Otherwise, fall back to node_base_class if present (even if abstract)
+      if (klass = node_base_class)
         return klass.connection
       end
 

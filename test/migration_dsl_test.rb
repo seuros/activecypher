@@ -10,6 +10,8 @@ class MigrationDSLTest < ActiveSupport::TestCase
       @executed = []
     end
 
+    def vendor = :neo4j
+
     def execute_cypher(cypher, _params = {}, _ctx = 'Query')
       @executed << cypher.strip
       []
