@@ -129,6 +129,10 @@ module ActiveCypher
       # Prevent subclasses from overriding node_base_class
       def inherited(subclass)
         super
+        # Reset abstract_class for subclasses (mirrors Model::Abstract behavior
+        # which gets overridden by this method definition)
+        subclass.abstract_class = false
+
         return unless _node_base_class
 
         subclass._node_base_class = _node_base_class
