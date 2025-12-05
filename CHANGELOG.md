@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.12.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.12.1...active_cypher/v0.12.2) (2025-12-05)
+
+
+### Bug Fixes
+
+* use connection pool for async operations to prevent concurrent access ([#64](https://github.com/seuros/activecypher/issues/64)) ([345490f](https://github.com/seuros/activecypher/commit/345490f1d7593914a0fd81c4a3edccbe55353e2f))
+
 ## [0.12.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.12.0...active_cypher/v0.12.1) (2025-12-01)
 
 
