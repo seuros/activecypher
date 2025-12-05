@@ -6,21 +6,21 @@ require 'async'
 class AsyncApiIntegrationTest < ActiveSupport::TestCase
   def setup
     # Clear the database before each test
-    connection.raw_connection.write_transaction do |tx|
-      tx.run('MATCH (n) DETACH DELETE n')
+    adapter.with_session do |session|
+      session.run('MATCH (n) DETACH DELETE n')
     end
   end
 
-  def test_async_read_transaction_returns_correct_data
+  def test_async_with_session_returns_correct_data
     # Create some test data synchronously first
-    connection.raw_connection.write_transaction do |tx|
-      tx.run("CREATE (:Person {name: 'Alice'})")
+    adapter.with_session do |session|
+      session.run("CREATE (:Person {name: 'Alice'})")
     end
 
     Async do
-      # Use async_read_transaction to fetch the data
-      task = connection.raw_connection.async_read_transaction do |tx|
-        result = tx.run("MATCH (p:Person {name: 'Alice'}) RETURN p.name AS name")
+      # Use async_with_session to fetch the data
+      task = adapter.async_with_session do |session|
+        result = session.run("MATCH (p:Person {name: 'Alice'}) RETURN p.name AS name", {}, mode: :read)
         result.single[:name]
       end
 
@@ -30,17 +30,17 @@ class AsyncApiIntegrationTest < ActiveSupport::TestCase
     end
   end
 
-  def test_async_write_transaction_creates_data
+  def test_async_with_session_creates_data
     Async do
-      # Use async_write_transaction to create a new node
-      write_task = connection.raw_connection.async_write_transaction do |tx|
-        tx.run("CREATE (:Person {name: 'Bob'})")
+      # Use async_with_session to create a new node
+      write_task = adapter.async_with_session do |session|
+        session.run("CREATE (:Person {name: 'Bob'})")
       end
       write_task.wait
 
-      # Use async_read_transaction to verify the node was created
-      read_task = connection.raw_connection.async_read_transaction do |tx|
-        result = tx.run("MATCH (p:Person {name: 'Bob'}) RETURN p.name AS name")
+      # Use async_with_session to verify the node was created
+      read_task = adapter.async_with_session do |session|
+        result = session.run("MATCH (p:Person {name: 'Bob'}) RETURN p.name AS name", {}, mode: :read)
         result.single[:name]
       end
 
@@ -51,8 +51,8 @@ class AsyncApiIntegrationTest < ActiveSupport::TestCase
 
   private
 
-  def connection
-    # Use Neo4jRecord connection since Memgraph doesn't support transactions
+  def adapter
+    # Use Neo4jRecord adapter since Memgraph doesn't support transactions
     Neo4jRecord.connection
   end
 end

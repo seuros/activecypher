@@ -10,6 +10,11 @@ end
 require_relative 'dummy/config/environment'
 require 'rails/test_help'
 
+# Load async-safe for detecting concurrent access violations in async tests.
+# Use Async::Safe.enable! in specific tests that need concurrency monitoring.
+# Do NOT enable globally as it interferes with sequential test execution.
+require 'async/safe'
+
 PropCheck::Property.configure do |c|
   c.n_runs = ENV.fetch('PROP_CHECK_RUNS', 50).to_i
 end
