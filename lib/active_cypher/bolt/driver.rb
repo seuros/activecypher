@@ -40,24 +40,27 @@ module ActiveCypher
       #
       # @yieldparam session [Bolt::Session] The session to use
       # @return [Object] The result of the block
-      def with_session(**kw)
+      def with_session(**kw, &block)
         Sync do
-          @pool.acquire do |conn|
-            conn.mark_used!
-            session = Bolt::Session.new(conn, **kw)
-
-            yield session
-          ensure
-            # Make sure any open transaction is cleaned up before returning the
-            # connection to the pool, so the next borrower doesn't inherit
-            # IN_TRANSACTION state.
-            session&.close
-          end
+          _acquire_session(**kw, &block)
         end
       rescue Async::TimeoutError => e
         raise ActiveCypher::ConnectionError, "Connection pool timeout: #{e.message}"
       rescue StandardError => e
         raise ActiveCypher::ConnectionError, "Connection error: #{e.message}"
+      end
+
+      # Asynchronously yields a Session. Each call acquires its own connection from the pool,
+      # making it safe for concurrent use across fibers.
+      #
+      # @yieldparam session [Bolt::Session] The session to use
+      # @return [Async::Task] A task that resolves to the block's result
+      def async_with_session(**kw, &block)
+        raise 'Cannot run async_with_session outside of an Async task' unless Async::Task.current?
+
+        Async do
+          _acquire_session(**kw, &block)
+        end
       end
 
       # Checks if the database is alive, or just faking it for your benefit.
@@ -77,6 +80,25 @@ module ActiveCypher
       end
 
       private
+
+      # Internal: acquires a connection and yields a session.
+      # @yieldparam session [Bolt::Session]
+      # @return [Object] The result of the block
+      def _acquire_session(**kw)
+        @pool.acquire do |conn|
+          conn.mark_used!
+          session = Bolt::Session.new(conn, **kw)
+
+          begin
+            yield session
+          ensure
+            # Make sure any open transaction is cleaned up before returning the
+            # connection to the pool, so the next borrower doesn't inherit
+            # IN_TRANSACTION state.
+            session&.close
+          end
+        end
+      end
 
       # Builds a new connection, because the old one just wasn't good enough.
       #

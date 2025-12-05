@@ -485,15 +485,6 @@ module ActiveCypher
         session(database: db).write_transaction(db: db, timeout: timeout, metadata: metadata, &)
       end
 
-      # Asynchronously execute a read transaction.
-      def async_read_transaction(db: nil, timeout: nil, metadata: nil, &)
-        session(database: db).async_read_transaction(db: db, timeout: timeout, metadata: metadata, &)
-      end
-
-      # Asynchronously execute a write transaction.
-      def async_write_transaction(db: nil, timeout: nil, metadata: nil, &)
-        session(database: db).async_write_transaction(db: db, timeout: timeout, metadata: metadata, &)
-      end
 
       # ────────────────────────────────────────────────────────────────────
       # HEALTH AND VERSION DETECTION METHODS

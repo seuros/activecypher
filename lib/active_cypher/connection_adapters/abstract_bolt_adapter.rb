@@ -11,11 +11,12 @@ module ActiveCypher
     class AbstractBoltAdapter < AbstractAdapter
       include Instrumentation
 
-      attr_reader :connection
+      attr_reader :connection, :driver
 
       # Returns the raw Bolt connection object
       # This is useful for accessing low-level connection methods like
-      # read_transaction, write_transaction, async_read_transaction, etc.
+      # read_transaction, write_transaction, etc.
+      # NOTE: For concurrent async operations, use with_session or async_with_session instead.
       def raw_connection
         @connection
       end
@@ -54,6 +55,18 @@ module ActiveCypher
                          }
                        end
 
+          # Create the driver with connection pool for concurrent operations
+          @driver = Bolt::Driver.new(
+            uri: "bolt://#{host}:#{port}",
+            adapter: self,
+            auth_token: auth,
+            pool_size: config.fetch(:pool_size, 10),
+            secure: ssl_params[:secure],
+            verify_cert: ssl_params[:verify_cert]
+          )
+
+          # Also create a single connection for backwards compatibility
+          # This connection is used for simple synchronous operations
           @connection = Bolt::Connection.new(
             host, port, self,
             auth_token: auth,
@@ -72,10 +85,32 @@ module ActiveCypher
       # Clean disconnection. Resets the internal state.
       def disconnect
         instrument_connection(:disconnect) do
-          @connection.close if @connection
+          @driver&.close
+          @driver = nil
+          @connection&.close
           @connection = nil
           true
         end
+      end
+
+      # Yields a Session from the connection pool. Safe for concurrent use.
+      # Each call acquires its own connection from the pool.
+      #
+      # @yieldparam session [Bolt::Session] The session to use
+      # @return [Object] The result of the block
+      def with_session(**kw, &block)
+        connect
+        @driver.with_session(**kw, &block)
+      end
+
+      # Asynchronously yields a Session from the connection pool.
+      # Each call acquires its own connection, making it safe for concurrent fibers.
+      #
+      # @yieldparam session [Bolt::Session] The session to use
+      # @return [Async::Task] A task that resolves to the block's result
+      def async_with_session(**kw, &block)
+        connect
+        @driver.async_with_session(**kw, &block)
       end
 
       # Runs a Cypher query via Bolt session.

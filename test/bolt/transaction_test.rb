@@ -6,8 +6,9 @@ require 'async'
 
 class TransactionTest < ActiveSupport::TestCase
   def setup
-    # Use the Neo4jRecord connection which is properly configured from cypher_databases.yml
-    @connection = Neo4jRecord.connection.raw_connection
+    # Use the Neo4jRecord adapter which has both raw_connection and driver
+    @adapter = Neo4jRecord.connection
+    @connection = @adapter.raw_connection
 
     # Clear test data before each test
     Sync do
@@ -86,9 +87,9 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal 'completed', result
   end
 
-  # --- Connection-level asynchronous transaction tests ---
+  # --- Adapter-level asynchronous session tests ---
 
-  test 'connection async_read_transaction returns task and executes correctly' do
+  test 'adapter async_with_session returns task and executes correctly' do
     # Create test data
     Sync do
       session = @connection.session
@@ -96,8 +97,8 @@ class TransactionTest < ActiveSupport::TestCase
     end
 
     Async do
-      task = @connection.async_read_transaction do |tx|
-        result = tx.run('MATCH (n:TestNode {name: "async-read"}) RETURN n.value AS value')
+      task = @adapter.async_with_session do |session|
+        result = session.run('MATCH (n:TestNode {name: "async-read"}) RETURN n.value AS value', {}, mode: :read)
         result.single[:value]
       end
 
@@ -107,10 +108,10 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
-  test 'connection async_write_transaction creates data asynchronously' do
+  test 'adapter async_with_session creates data asynchronously' do
     Async do
-      task = @connection.async_write_transaction do |tx|
-        tx.run('CREATE (n:TestNode {name: "async-write", value: 200})')
+      task = @adapter.async_with_session do |session|
+        session.run('CREATE (n:TestNode {name: "async-write", value: 200})')
         'async-success'
       end
 
@@ -118,8 +119,8 @@ class TransactionTest < ActiveSupport::TestCase
       assert_equal 'async-success', result
 
       # Verify data was created
-      verify_task = @connection.async_read_transaction do |tx|
-        result = tx.run('MATCH (n:TestNode {name: "async-write"}) RETURN n.value AS value')
+      verify_task = @adapter.async_with_session do |session|
+        result = session.run('MATCH (n:TestNode {name: "async-write"}) RETURN n.value AS value', {}, mode: :read)
         result.single[:value]
       end
 
@@ -127,13 +128,13 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
-  test 'multiple async transactions can run concurrently' do
+  test 'multiple async sessions can run concurrently' do
     Async do
-      # Create multiple nodes concurrently
+      # Create multiple nodes concurrently - each gets its own connection from pool
       tasks = 5.times.map do |i|
-        @connection.async_write_transaction do |tx|
-          tx.run('CREATE (n:TestNode {name: $name, value: $value})',
-                 { name: "concurrent-#{i}", value: i * 10 })
+        @adapter.async_with_session do |session|
+          session.run('CREATE (n:TestNode {name: $name, value: $value})',
+                      { name: "concurrent-#{i}", value: i * 10 })
           i
         end
       end
@@ -143,8 +144,8 @@ class TransactionTest < ActiveSupport::TestCase
       assert_equal [0, 1, 2, 3, 4], results
 
       # Verify all nodes were created
-      count_task = @connection.async_read_transaction do |tx|
-        result = tx.run('MATCH (n:TestNode) WHERE n.name STARTS WITH "concurrent-" RETURN count(n) AS count')
+      count_task = @adapter.async_with_session do |session|
+        result = session.run('MATCH (n:TestNode) WHERE n.name STARTS WITH "concurrent-" RETURN count(n) AS count', {}, mode: :read)
         result.single[:count]
       end
 
@@ -171,18 +172,20 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
-  test 'async transaction handles errors correctly' do
+  test 'async session handles errors correctly' do
     Async do
-      task = @connection.async_write_transaction do |tx|
-        tx.run('CREATE (n:TestNode {name: "async-error-test"})')
-        raise 'Intentional error'
+      task = @adapter.async_with_session do |session|
+        session.write_transaction do |tx|
+          tx.run('CREATE (n:TestNode {name: "async-error-test"})')
+          raise 'Intentional error'
+        end
       end
 
       assert_raises(ActiveCypher::TransactionError) { task.wait }
 
       # Verify rollback occurred
-      verify_task = @connection.async_read_transaction do |tx|
-        result = tx.run('MATCH (n:TestNode {name: "async-error-test"}) RETURN count(n) AS count')
+      verify_task = @adapter.async_with_session do |session|
+        result = session.run('MATCH (n:TestNode {name: "async-error-test"}) RETURN count(n) AS count', {}, mode: :read)
         result.single[:count]
       end
 
@@ -272,11 +275,13 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
-  test 'async transaction with timeout' do
+  test 'async session with write transaction' do
     Async do
-      task = @connection.async_write_transaction(timeout: 1000) do |tx|
-        tx.run('CREATE (n:TestNode {name: "async-timeout-test", value: 1000})')
-        'timeout-success'
+      task = @adapter.async_with_session do |session|
+        session.write_transaction(timeout: 1000) do |tx|
+          tx.run('CREATE (n:TestNode {name: "async-timeout-test", value: 1000})')
+          'timeout-success'
+        end
       end
 
       result = task.wait

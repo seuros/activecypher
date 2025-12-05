@@ -27,4 +27,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'io-event', '~> 1.10'
   spec.add_dependency 'io-stream', '~> 0.6'
   spec.metadata['rubygems_mfa_required'] = 'true'
+
+  spec.add_development_dependency 'async-safe'
 end
