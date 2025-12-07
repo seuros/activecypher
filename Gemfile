@@ -13,5 +13,7 @@ gem 'railties', "~> #{rails_version}"
 gem 'minitest', '~> 5.0'
 
 gem 'prop_check'
+gem 'rails_lens'
 gem 'rubocop'
 gem 'simplecov'
+gem 'sqlite3'

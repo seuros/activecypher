@@ -29,4 +29,5 @@ Gem::Specification.new do |spec|
   spec.metadata['rubygems_mfa_required'] = 'true'
 
   spec.add_development_dependency 'async-safe'
+  spec.add_development_dependency 'rails_lens'
 end

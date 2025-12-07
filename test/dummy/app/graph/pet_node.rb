@@ -1,6 +1,20 @@
 # frozen_string_literal: true
 
+# <rails-lens:graph:begin>
+# model_type = "node"
+# labels = ["Pet", "Animal"]
+#
+# attributes = [{ name = "name", type = "string" }, { name = "species", type = "string" }, { name = "age", type = "integer" }]
+#
+# [associations]
+# owners = { macro = "has_many", class = "PersonNode", rel = "OWNS_PET", direction = "in", relationship_class = "OwnsPetRel" }
+#
+# [connection]
+# writing = "primary"
+# reading = "primary"
+# <rails-lens:graph:end>
 class PetNode < ApplicationGraphNode
+
   # Define custom labels
   label :Pet
   label :Animal

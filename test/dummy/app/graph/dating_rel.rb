@@ -1,8 +1,17 @@
 # frozen_string_literal: true
 
+# <rails-lens:graph:begin>
+# model_type = "relationship"
+# type = "DATING"
+# from_class = "PersonNode"
+# to_class = "PersonNode"
+#
+# attributes = [{ name = "frequency", type = "string" }, { name = "since", type = "date" }, { name = "status", type = "string" }, { name = "drama_level", type = "integer" }]
+# <rails-lens:graph:end>
 # Alice's comprehensive dating relationship - covers all validation scenarios
 # Because dating is complicated and so are our business rules
 class DatingRel < ApplicationGraphRelationship
+
   from_class 'PersonNode'
   to_class 'PersonNode'
   type 'DATING'
