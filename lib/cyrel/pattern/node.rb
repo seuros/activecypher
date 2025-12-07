@@ -12,14 +12,16 @@ module Cyrel
 
       attribute :alias_name, Cyrel::Types::SymbolType.new
       attribute :labels,     array: :string, default: []
+      attribute :or_labels,  array: :string, default: []  # Memgraph 3.2+: (n:Label1|Label2)
       attribute :properties, Cyrel::Types::HashType.new, default: -> { {} }
 
       validates :alias_name, presence: true
 
-      def initialize(alias_name, labels: nil, properties: {}, **kw)
+      def initialize(alias_name, labels: nil, or_labels: nil, properties: {}, **kw)
         super(
           { alias_name: alias_name,
             labels: Array(labels).compact.flatten,
+            or_labels: Array(or_labels).compact.flatten,
             properties: properties }.merge(kw)
         )
       end
@@ -38,7 +40,14 @@ module Cyrel
 
       def render(query)
         base = +"(#{alias_name}"
-        base << ':' << labels.join(':') unless labels.empty?
+
+        # OR labels take precedence (Memgraph 3.2+: n:Label1|Label2)
+        if or_labels.any?
+          base << ':' << or_labels.join('|')
+        elsif labels.any?
+          base << ':' << labels.join(':')
+        end
+
         unless properties.empty?
           params = properties.with_indifferent_access
           formatted = params.map do |k, v|
@@ -60,6 +69,7 @@ module Cyrel
       def freeze
         super
         labels.freeze
+        or_labels.freeze
         properties.freeze
       end
 

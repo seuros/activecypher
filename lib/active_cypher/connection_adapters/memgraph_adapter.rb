@@ -213,8 +213,13 @@ module ActiveCypher
 
       def protocol_handler_class = ProtocolHandler
 
+      # Memgraph 3.7+ is expected. Earlier versions are untested and may not work.
+      # See: https://memgraph.com/docs for version-specific features.
+      MINIMUM_VERSION = '3.7'
+
       def validate_connection
-        raise ActiveCypher::ConnectionError, "Server at #{config[:uri]} is not Memgraph" unless connection.server_agent.to_s.include?('Memgraph')
+        agent = connection.server_agent.to_s
+        raise ActiveCypher::ConnectionError, "Server at #{config[:uri]} is not Memgraph" unless agent.include?('Memgraph')
 
         true
       end
