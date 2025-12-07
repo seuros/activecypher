@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.14.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.13.0...active_cypher/v0.14.0) (2025-12-07)
+
+
+### Features
+
+* add Memgraph v3 and Neo4j 2025 features ([#68](https://github.com/seuros/activecypher/issues/68)) ([12893a0](https://github.com/seuros/activecypher/commit/12893a01915bf17b77c2903978b5989cc765443c))
+
 ## [0.13.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.12.2...active_cypher/v0.13.0) (2025-12-07)
 
 
