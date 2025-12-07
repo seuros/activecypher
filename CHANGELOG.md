@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.13.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.12.2...active_cypher/v0.13.0) (2025-12-07)
+
+
+### Features
+
+* add RailsLens integration for graph model annotations ([#66](https://github.com/seuros/activecypher/issues/66)) ([e0d082f](https://github.com/seuros/activecypher/commit/e0d082fc91dfbe698a080112a2e9190addb349ff))
+
 ## [0.12.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.12.1...active_cypher/v0.12.2) (2025-12-05)
 
 
