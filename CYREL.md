@@ -120,6 +120,59 @@ query = Cyrel::Query.new
 #=> MATCH (u:User) OPTIONAL MATCH (u:User)-[:FOLLOWS]->(o:Organization) RETURN u, o
 ```
 
+### OR Label Expressions (Memgraph 3.2+)
+
+Match nodes with any of multiple labels using `or_labels`:
+
+```ruby
+# Match nodes that are either Person OR Organization
+node = Cyrel.node(:n, or_labels: ['Person', 'Organization'])
+query = Cyrel::Query.new.match(node).return_(:n)
+#=> MATCH (n:Person|Organization) RETURN n
+
+# With properties
+node = Cyrel.node(:n, or_labels: ['Admin', 'Moderator'], name: 'Alice')
+query = Cyrel::Query.new.match(node).return_(:n)
+#=> MATCH (n:Admin|Moderator {name: $p1}) RETURN n
+
+# Using Pattern::Node directly
+node = Cyrel::Pattern::Node.new(:entity, or_labels: %w[Company Startup], properties: { active: true })
+```
+
+> **Note**: `or_labels` takes precedence over `labels` if both are specified.
+
+### EXISTS Subqueries (Memgraph 3.5+)
+
+Use `exists_block` for complex existence checks with full subquery support:
+
+```ruby
+# Simple EXISTS with pattern match
+path = Cyrel.path { node(:person) > rel(:r, :MANAGES) > node(:team, :Team) }
+
+query = Cyrel::Query.new
+             .match(Cyrel.node(:person, :Person))
+             .where(Cyrel.exists_block { match(path) })
+             .return_(:person)
+#=> MATCH (person:Person) WHERE EXISTS { MATCH (person)-[r:MANAGES]->(team:Team) } RETURN person
+
+# EXISTS with WHERE condition inside
+path = Cyrel.path { node(:a) > rel(:r) > node(:b) }
+condition = Cyrel.prop(:b, :active) == true
+
+exists_expr = Cyrel.exists_block do
+  match(path)
+  where(condition)
+end
+
+query = Cyrel::Query.new
+             .match(Cyrel.node(:a, :User))
+             .where(exists_expr)
+             .return_(:a)
+#=> MATCH (a:User) WHERE EXISTS { MATCH (a)-[r]->(b) WHERE b.active = $p1 } RETURN a
+```
+
+> **Tip**: Build path patterns outside the block using `Cyrel.path { ... }` for cleaner code.
+
 ### Data Manipulation
 
 Cyrel supports creating and modifying graph data.
@@ -189,7 +242,7 @@ Cyrel supports many other Cypher features:
     ```ruby
     query.call('db.labels').yield(:label).return_(:label)
     #=> CALL db.labels() YIELD label RETURN label
-    
+
     # Subqueries
     query.call_subquery do |sub|
       sub.match(node).return_(node)

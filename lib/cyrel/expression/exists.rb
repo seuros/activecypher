@@ -35,5 +35,38 @@ module Cyrel
         "EXISTS(#{rendered_pattern})"
       end
     end
+
+    # Represents an EXISTS { MATCH ... WHERE ... } subquery predicate (Memgraph 3.5+).
+    # Allows full subquery syntax inside EXISTS block.
+    #
+    # @example
+    #   Cyrel.exists_block { match(Cyrel.node(:a) > Cyrel.rel(:r) > Cyrel.node(:b)); where(Cyrel.prop(:b, :active) == true) }
+    #   # => EXISTS { MATCH (a)-[r]->(b) WHERE b.active = $p1 }
+    class ExistsBlock < Base
+      attr_reader :subquery
+
+      # @param subquery [Cyrel::Query] A query object representing the subquery.
+      def initialize(subquery)
+        raise ArgumentError, 'ExistsBlock requires a Cyrel::Query' unless subquery.is_a?(Cyrel::Query)
+
+        @subquery = subquery
+      end
+
+      # Renders the EXISTS { ... } expression.
+      # @param query [Cyrel::Query] The parent query for parameter merging.
+      # @return [String] The Cypher string fragment.
+      def render(query)
+        inner_cypher, inner_params = @subquery.to_cypher
+
+        # Merge subquery parameters into the parent query
+        # The inner query uses its own parameter keys, we need to register values
+        # which will get new keys in the parent query
+        inner_params.each_value do |value|
+          query.register_parameter(value)
+        end
+
+        "EXISTS { #{inner_cypher} }"
+      end
+    end
   end
 end

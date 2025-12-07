@@ -11,8 +11,9 @@ module Cyrel
 
   # Cyrel DSL helper: alias for node creation.
   # Example: Cyrel.n(:person, :Person, name: 'Alice')
-  def n(alias_name = nil, *labels, **properties)
-    Pattern::Node.new(alias_name, labels: labels, properties: properties)
+  # Example: Cyrel.n(:n, or_labels: [:Person, :Organization])  # Memgraph 3.2+
+  def n(alias_name = nil, *labels, or_labels: nil, **properties)
+    Pattern::Node.new(alias_name, labels: labels, or_labels: or_labels, properties: properties)
   end
 
   # Cyrel DSL helper: creates a CALL clause for a procedure.
@@ -29,8 +30,9 @@ module Cyrel
 
   # Cyrel DSL helper: creates a node pattern.
   # Example: Cyrel.node(:n, :Person, name: 'Alice')
-  def node(alias_name = nil, *labels, **properties)
-    Pattern::Node.new(alias_name, labels: labels, properties: properties)
+  # Example: Cyrel.node(:n, or_labels: [:Person, :Organization])  # Memgraph 3.2+
+  def node(alias_name = nil, *labels, or_labels: nil, **properties)
+    Pattern::Node.new(alias_name, labels: labels, or_labels: or_labels, properties: properties)
   end
 
   # Cyrel DSL helper: creates a relationship pattern.
@@ -57,14 +59,14 @@ module Cyrel
       @pending_direction = nil
     end
 
-    def node(alias_name = nil, *labels, **properties)
+    def node(alias_name = nil, *labels, or_labels: nil, **properties)
       # If there's a pending direction, we need to add a relationship first
       if @pending_direction && @elements.any? && @elements.last.is_a?(Cyrel::Pattern::Node)
         @elements << Cyrel::Pattern::Relationship.new(types: [], direction: @pending_direction)
         @pending_direction = nil
       end
 
-      n = Cyrel::Pattern::Node.new(alias_name, labels: labels, properties: properties)
+      n = Cyrel::Pattern::Node.new(alias_name, labels: labels, or_labels: or_labels, properties: properties)
       @elements << n
       self
     end
@@ -248,6 +250,16 @@ module Cyrel
   # Example: Cyrel.exists(pattern)
   def exists(pattern)
     Expression.exists(pattern)
+  end
+
+  # Cyrel DSL helper: creates an EXISTS block with full subquery (Memgraph 3.5+).
+  # Example:
+  #   Cyrel.exists_block { match(Cyrel.node(:a) > Cyrel.rel(:r) > Cyrel.node(:b, :Admin)) }
+  #   # => EXISTS { MATCH (a)-[r]->(b:Admin) }
+  def exists_block(&block)
+    subquery = Query.new
+    subquery.instance_eval(&block)
+    Expression::ExistsBlock.new(subquery)
   end
 
   # Cyrel DSL helper: creates a Logical NOT expression.

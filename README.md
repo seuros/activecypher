@@ -28,6 +28,17 @@ Or install it yourself as:
 $ gem install activecypher
 ```
 
+## Database Requirements
+
+ActiveCypher supports the following graph databases:
+
+| Database | Minimum Version | Notes |
+|----------|-----------------|-------|
+| **Memgraph** | 3.7+ | Required for composite indexes, vector search, text indexes |
+| **Neo4j** | 2025 (Cypher 25) | Calendar versioning; vector relationship indexes supported |
+
+> **Note**: Earlier versions may work but are untested. Memgraph v3.7+ is recommended for full feature support.
+
 ## Configuration
 
 **No manual initialization required!**
@@ -358,6 +369,63 @@ bin/rails graphdb:status
 ```
 
 Migrations are append-only and should not be modified once created.
+
+### Advanced Migration Features
+
+ActiveCypher supports advanced index types for both Memgraph and Neo4j:
+
+#### Composite Indexes (Multiple Properties)
+
+```ruby
+# Create index on multiple properties (Memgraph 3.2+)
+create_node_index :Person, :first_name, :last_name
+# Memgraph: CREATE INDEX ON :Person(first_name, last_name)
+# Neo4j:    CREATE INDEX FOR (n:Person) ON (n.first_name, n.last_name)
+
+# Force separate indexes instead of composite
+create_node_index :Person, :email, :phone, composite: false
+```
+
+#### Vector Indexes (Embeddings Search)
+
+```ruby
+# Node vector index (Memgraph 3.4+, Neo4j 2025)
+create_vector_index :doc_embeddings, :Document, :embedding,
+  dimension: 384,
+  metric: :cosine  # :cosine, :euclidean, :dot_product
+
+# With quantization for memory reduction (Memgraph 3.4+)
+create_vector_index :embeddings, :Node, :vec,
+  dimension: 128,
+  quantization: :scalar
+
+# Relationship vector index (Memgraph 3.4+, Neo4j 2025)
+create_vector_rel_index :similarity_scores, :SIMILAR_TO, :embedding,
+  dimension: 256
+```
+
+#### Text/Fulltext Indexes
+
+```ruby
+# Fulltext index on nodes (both databases)
+create_fulltext_index :search_idx, :Article, :title, :body
+
+# Text index on edges (Memgraph 3.6+ only)
+create_text_edge_index :comment_search, :COMMENTED, :text
+
+# Fulltext index on relationships (Neo4j only)
+create_fulltext_rel_index :rel_search, :REVIEWED, :summary, :notes
+```
+
+#### Bulk Operations (Memgraph 3.6+)
+
+```ruby
+# Drop all indexes (use with caution!)
+drop_all_indexes
+
+# Drop all constraints
+drop_all_constraints
+```
 
 ## Database Setup and Direct Access
 

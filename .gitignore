@@ -9,5 +9,6 @@
 Gemfile.lock
 .idea
 /test/dummy/log/*
+/test/dummy/db/*.sqlite3
 /test/tmp
 *.deb

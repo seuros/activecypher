@@ -186,4 +186,44 @@ class PatternTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Cyrel::Pattern::Path.new([n1, n2]) }
     assert_raises(ArgumentError) { Cyrel::Pattern::Path.new([n1, r, r, n2]) }
   end
+
+  # --- OR Labels Tests (Memgraph 3.2+) ---
+
+  test 'node pattern rendering - or_labels single' do
+    node = Cyrel::Pattern::Node.new(:n, or_labels: ['Person'])
+    query = Cyrel::Query.new
+    assert_equal '(n:Person)', node.render(query)
+  end
+
+  test 'node pattern rendering - or_labels multiple' do
+    node = Cyrel::Pattern::Node.new(:n, or_labels: %w[Person Organization])
+    query = Cyrel::Query.new
+    assert_equal '(n:Person|Organization)', node.render(query)
+  end
+
+  test 'node pattern rendering - or_labels with properties' do
+    node = Cyrel::Pattern::Node.new(:n, or_labels: %w[Person Organization], properties: { name: 'Test' })
+    query = Cyrel::Query.new
+    assert_equal '(n:Person|Organization {name: $p1})', node.render(query)
+    assert_equal({ p1: 'Test' }, query.parameters)
+  end
+
+  test 'node pattern rendering - or_labels takes precedence over labels' do
+    node = Cyrel::Pattern::Node.new(:n, labels: ['Employee'], or_labels: %w[Person Organization])
+    query = Cyrel::Query.new
+    # or_labels should take precedence
+    assert_equal '(n:Person|Organization)', node.render(query)
+  end
+
+  test 'Cyrel.node helper supports or_labels' do
+    node = Cyrel.node(:n, or_labels: %w[Person Company])
+    query = Cyrel::Query.new
+    assert_equal '(n:Person|Company)', node.render(query)
+  end
+
+  test 'Cyrel.n helper supports or_labels' do
+    node = Cyrel.n(:n, or_labels: %w[User Admin])
+    query = Cyrel::Query.new
+    assert_equal '(n:User|Admin)', node.render(query)
+  end
 end
