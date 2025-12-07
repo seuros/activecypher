@@ -60,6 +60,11 @@ module ActiveCypher
       end
     end
 
+    # Load RailsLens integration if RailsLens is available
+    initializer 'active_cypher.rails_lens_integration', after: :load_config_initializers do
+      require 'active_cypher/rails_lens_ext/model_source' if defined?(::RailsLens::ModelSource)
+    end
+
     generators do
       require 'active_cypher/generators/install_generator'
       require 'active_cypher/generators/node_generator'
@@ -70,6 +75,7 @@ module ActiveCypher
     rake_tasks do
       load File.expand_path('../tasks/graphdb_migrate.rake', __dir__)
       load File.expand_path('../tasks/graphdb_schema.rake', __dir__)
+      # Standalone annotation task no longer needed - RailsLens handles it
     end
   end
 end
