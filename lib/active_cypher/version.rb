@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ActiveCypher
-  VERSION = '0.14.0'
+  VERSION = '0.14.1'
 
   def self.gem_version
     Gem::Version.new VERSION
