@@ -59,26 +59,26 @@ module ActiveCypher
     # --------------------------------------------------------------
     # Connection fallback
     # --------------------------------------------------------------
-      # Relationship classes usually share the same Bolt pool as the
-      # node they originate from; delegate there unless the relationship
-      # class was given its own pool explicitly.
-      #
-      #   WorksAtRelationship.connection  # -> PersonNode.connection
-      #
-      def self.connection
-        # If this is a concrete relationship class with from_class defined,
-        # prefer delegating to that node's connection (so role/shard routing is respected).
-        if !abstract_class? && (fc = from_class_name)
-          klass = fc.constantize
-          role  = ActiveCypher::RuntimeRegistry.current_role
-          shard = ActiveCypher::RuntimeRegistry.current_shard
+    # Relationship classes usually share the same Bolt pool as the
+    # node they originate from; delegate there unless the relationship
+    # class was given its own pool explicitly.
+    #
+    #   WorksAtRelationship.connection  # -> PersonNode.connection
+    #
+    def self.connection
+      # If this is a concrete relationship class with from_class defined,
+      # prefer delegating to that node's connection (so role/shard routing is respected).
+      if !abstract_class? && (fc = from_class_name)
+        klass = fc.constantize
+        role  = ActiveCypher::RuntimeRegistry.current_role
+        shard = ActiveCypher::RuntimeRegistry.current_shard
 
-          return klass.connected_to(role: role, shard: shard) do
-            klass.connection
-          end
+        return klass.connected_to(role: role, shard: shard) do
+          klass.connection
         end
+      end
 
-        # Otherwise, fall back to node_base_class if present (even if abstract)
+      # Otherwise, fall back to node_base_class if present (even if abstract)
       if (klass = node_base_class)
         return klass.connection
       end
@@ -313,12 +313,10 @@ module ActiveCypher
       end
     rescue ActiveCypher::RecordNotSaved, RuntimeError => e
       # Only catch specific validation errors, let other errors propagate
-      if e.message.include?('must be persisted') || e.message.include?('creation returned no id')
-        log_error "Failed to save #{self.class}: #{e.message}"
-        false
-      else
-        raise
-      end
+      raise unless e.message.include?('must be persisted') || e.message.include?('creation returned no id')
+
+      log_error "Failed to save #{self.class}: #{e.message}"
+      false
     end
 
     # Bang version of save - raises exception if save fails
