@@ -8,11 +8,13 @@ namespace :graphdb do
     puts 'GraphDB migrations complete'
   end
 
-  # bin/rails graphdb:status
-  desc 'Show graph database migration status'
-  task status: :environment do
-    ActiveCypher::Migrator.new.status.each do |m|
-      puts format('%-4<status>s %<version>s %<name>s', m)
+  namespace :migrate do
+    # bin/rails graphdb:migrate:status
+    desc 'Show graph database migration status'
+    task status: :environment do
+      ActiveCypher::Migrator.new.status.each do |m|
+        puts format('%-4<status>s %<version>s %<name>s', m)
+      end
     end
   end
 end
