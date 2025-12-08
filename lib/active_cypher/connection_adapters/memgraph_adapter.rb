@@ -88,10 +88,18 @@ module ActiveCypher
           run_response = connection.read_message
           unless run_response.is_a?(Bolt::Messaging::Success)
             # Read any remaining messages to clear connection state
-            connection.read_message rescue nil
+            begin
+              connection.read_message
+            rescue StandardError
+              nil
+            end
             # Send RESET to clear connection state
             connection.write_message(Bolt::Messaging::Reset.new)
-            connection.read_message rescue nil
+            begin
+              connection.read_message
+            rescue StandardError
+              nil
+            end
             raise QueryError, "DDL failed for: #{cypher.inspect}\nError: #{run_response.fields.first}"
           end
 
@@ -100,22 +108,71 @@ module ActiveCypher
         end
       end
 
-      # Override run to execute queries without explicit transactions
-      # Memgraph auto‑commits each query, so we send RUN + PULL directly
+      # Override run to execute queries using auto-commit mode.
+      # Memgraph auto-commits each query, so we send RUN + PULL directly
+      # without BEGIN/COMMIT wrapper. This avoids transaction state issues.
       def run(cypher, params = {}, context: 'Query', db: nil, access_mode: :write)
         connect
         logger.debug { "[#{context}] #{cypher} #{params.inspect}" }
 
         instrument_query(cypher, params, context: context, metadata: { db: db, access_mode: access_mode }) do
-          session = Bolt::Session.new(connection)
+          run_auto_commit(cypher, prepare_params(params))
+        end
+      end
 
-          rows = session.run_transaction(access_mode, db: db) do |tx|
-            result = tx.run(cypher, prepare_params(params))
-            result.respond_to?(:to_a) ? result.to_a : result
+      # Execute a query in auto-commit mode (no explicit transaction).
+      # Sends RUN + PULL directly to the connection.
+      #
+      # @param cypher [String] The Cypher query
+      # @param params [Hash] Query parameters
+      # @return [Array<Hash>] The result rows
+      def run_auto_commit(cypher, params = {})
+        Sync do
+          # Send RUN message
+          run_meta = {}
+          connection.write_message(Bolt::Messaging::Run.new(cypher, params, run_meta))
+
+          # Read RUN response
+          run_response = connection.read_message
+
+          case run_response
+          when Bolt::Messaging::Success
+            # Send PULL to get results
+            connection.write_message(Bolt::Messaging::Pull.new({ n: -1 }))
+
+            # Collect records
+            rows = []
+            fields = run_response.metadata['fields'] || []
+
+            loop do
+              msg = connection.read_message
+              case msg
+              when Bolt::Messaging::Record
+                # Convert record values to hash with field names
+                row = fields.zip(msg.values).to_h
+                rows << row
+              when Bolt::Messaging::Success
+                # End of results
+                break
+              when Bolt::Messaging::Failure
+                code = msg.metadata['code']
+                message = msg.metadata['message']
+                connection.reset!
+                raise QueryError, "Query failed: #{code} - #{message}"
+              else
+                raise ProtocolError, "Unexpected response during PULL: #{msg.class}"
+              end
+            end
+
+            rows
+          when Bolt::Messaging::Failure
+            code = run_response.metadata['code']
+            message = run_response.metadata['message']
+            connection.reset!
+            raise QueryError, "Query failed: #{code} - #{message}"
+          else
+            raise ProtocolError, "Unexpected response to RUN: #{run_response.class}"
           end
-
-          session.close
-          rows
         end
       end
 

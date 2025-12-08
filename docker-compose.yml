@@ -10,7 +10,6 @@ services:
 
   memgraph:
     image: memgraph/memgraph-mage:latest
-    command: ["--experimental-enabled=text-search"]
     ports:
       - "17688:7687" # Bolt protocol (host:container)
       - "17444:7444"
