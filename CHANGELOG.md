@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.14.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.14.0...active_cypher/v0.14.1) (2025-12-08)
+
+
+### Bug Fixes
+
+* use auto-commit mode for Memgraph queries ([#70](https://github.com/seuros/activecypher/issues/70)) ([30a0edf](https://github.com/seuros/activecypher/commit/30a0edfa00261415efd32905cd086d850c4b5710))
+
 ## [0.14.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.13.0...active_cypher/v0.14.0) (2025-12-07)
 
 
