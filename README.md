@@ -365,7 +365,7 @@ Run pending migrations with:
 
 ```bash
 bin/rails graphdb:migrate
-bin/rails graphdb:status
+bin/rails graphdb:migrate:status
 ```
 
 Migrations are append-only and should not be modified once created.

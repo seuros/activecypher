@@ -29,7 +29,7 @@ class GraphdbTasksTest < ActiveSupport::TestCase
     ActiveCypher::Base.connects_to_mappings = @old_mappings
 
     Rake::Task['graphdb:migrate'].reenable
-    Rake::Task['graphdb:status'].reenable
+    Rake::Task['graphdb:migrate:status'].reenable
   end
 
   def write_migration(dir, version, name, content)
@@ -40,7 +40,7 @@ class GraphdbTasksTest < ActiveSupport::TestCase
 
   test 'graphdb rake tasks exist' do
     assert Rake::Task.task_defined?('graphdb:migrate')
-    assert Rake::Task.task_defined?('graphdb:status')
+    assert Rake::Task.task_defined?('graphdb:migrate:status')
   end
 
   test 'graphdb tasks run using default connection' do
@@ -52,9 +52,9 @@ class GraphdbTasksTest < ActiveSupport::TestCase
       RUBY
 
       Dir.chdir(dir) do
-        out_status = capture_io { Rake::Task['graphdb:status'].invoke }.first
+        out_status = capture_io { Rake::Task['graphdb:migrate:status'].invoke }.first
         assert_match(/down\s+20250521113035/, out_status)
-        Rake::Task['graphdb:status'].reenable
+        Rake::Task['graphdb:migrate:status'].reenable
         out_migrate = capture_io { Rake::Task['graphdb:migrate'].invoke }.first
         assert_includes out_migrate, 'GraphDB migrations complete'
       end
