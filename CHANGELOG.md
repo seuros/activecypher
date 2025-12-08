@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.14.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.14.1...active_cypher/v0.14.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* move graphdb:status to graphdb:migrate:status to match Rails convention ([#72](https://github.com/seuros/activecypher/issues/72)) ([e9743a4](https://github.com/seuros/activecypher/commit/e9743a4f1782ec51791d75dc4713d1dc784b6a6b))
+
 ## [0.14.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.14.0...active_cypher/v0.14.1) (2025-12-08)
 
 
