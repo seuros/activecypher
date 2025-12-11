@@ -1,5 +1,10 @@
 # ActiveCypher
 
+[![Gem Version](https://badge.fury.io/rb/activecypher.svg)](https://badge.fury.io/rb/activecypher)
+[![CI](https://github.com/seuros/activecypher/actions/workflows/ci.yml/badge.svg)](https://github.com/seuros/activecypher/actions/workflows/ci.yml)
+![Ruby](https://img.shields.io/badge/Ruby-3.4%2B-red)
+![Rails](https://img.shields.io/badge/Rails-8%2B-red)
+
 ActiveCypher is a Ruby gem that provides an ActiveRecord-like interface for interacting with graph databases using the OpenCypher query language. It aims to simplify graph database operations within Ruby and Ruby on Rails applications by leveraging familiar patterns from ActiveModel.
 
 The core of ActiveCypher includes:
