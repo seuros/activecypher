@@ -8,7 +8,11 @@ gemspec
 gem 'rake', '~> 13.0'
 
 rails_version = ENV['RAILS_VERSION'] || '8.1.1'
-gem 'railties', "~> #{rails_version}"
+if rails_version == 'edge'
+  gem 'railties', git: 'https://github.com/rails/rails', branch: 'main'
+else
+  gem 'railties', "~> #{rails_version}"
+end
 
 gem 'minitest', '~> 5.0'
 
