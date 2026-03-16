@@ -114,14 +114,20 @@ module ActiveCypher
 
           # Resolve the target node class
           target_class = target_class_name.constantize
-          a_alias = :start
-          b_alias = :target
 
-          # Pattern nodes (immutable)
-          a_node = Cyrel::Pattern::Node.new(a_alias, labels: self.class.label_name)
-          b_node = Cyrel::Pattern::Node.new(b_alias, labels: target_class.label_name)
+          owner_alias   = :start
+          related_alias = :target
 
-          # Relationship pattern with correct direction
+          # owner = the node we're querying from (self)
+          # related = the node we want to fetch
+          owner_node   = Cyrel::Pattern::Node.new(owner_alias,   labels: self.class.label_name)
+          related_node = Cyrel::Pattern::Node.new(related_alias, labels: target_class.label_name)
+
+          # The relationship token renders the arrow direction itself:
+          #   :out  → -[:TYPE]->   e.g. (start:Person)-[:ENJOYS]->(target:Activity)
+          #   :in   → <-[:TYPE]-   e.g. (start:Activity)<-[:ENJOYS]-(target:Person)
+          #   :both → -[:TYPE]-    e.g. (start)-[:TYPE]-(target)
+          # Node order is always [owner, rel, related] — never swapped.
           rel_direction = case direction
                           when :out  then Cyrel::Direction::OUT
                           when :in   then Cyrel::Direction::IN
@@ -133,17 +139,13 @@ module ActiveCypher
             direction: rel_direction
           )
 
-          # Build undirected / outgoing / incoming path
-          path = case direction
-                 when :in then Cyrel::Pattern::Path.new([b_node, rel_node, a_node])
-                 else Cyrel::Pattern::Path.new([a_node, rel_node, b_node])
-                 end
+          path = Cyrel::Pattern::Path.new([owner_node, rel_node, related_node])
 
           # Compose query  MATCH – WHERE – RETURN
           query = Cyrel::Query.new
                               .match(path)
-                              .where(Cyrel.node_id(a_alias).eq(internal_id))
-                              .return_(b_alias)
+                              .where(Cyrel.node_id(owner_alias).eq(internal_id))
+                              .return_(related_alias)
 
           base_relation = Relation.new(target_class, query)
 
