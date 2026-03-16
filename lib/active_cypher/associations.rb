@@ -133,11 +133,8 @@ module ActiveCypher
             direction: rel_direction
           )
 
-          # Build undirected / outgoing / incoming path
-          path = case direction
-                 when :in then Cyrel::Pattern::Path.new([b_node, rel_node, a_node])
-                 else Cyrel::Pattern::Path.new([a_node, rel_node, b_node])
-                 end
+          # Build path
+          path = Cyrel::Pattern::Path.new([a_node, rel_node, b_node])
 
           # Compose query  MATCH – WHERE – RETURN
           query = Cyrel::Query.new

@@ -18,4 +18,10 @@ class PersonNode < ApplicationGraphNode
   attribute :active, :boolean, default: true
 
   validates :name, presence: true
+
+  has_many :hobbies,
+           class_name: 'HobbyNode',
+           relationship: 'ENJOYS',
+           direction: :out,
+           relationship_class: 'EnjoysRel'
 end
