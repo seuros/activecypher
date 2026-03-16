@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+## [0.15.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.14.2...active_cypher/v0.15.0) (2026-03-16)
+
+
+### Features
+
+* internal_id type coercion, to_a fix, == operator, relation target key ([#80](https://github.com/seuros/activecypher/issues/80)) ([3d13f91](https://github.com/seuros/activecypher/commit/3d13f9129db056e0082704c88255adf0f17da7b5))
+
+
+### Bug Fixes
+
+* correct has_many directionality for :in relationships ([6ecf836](https://github.com/seuros/activecypher/commit/6ecf8362380f40fd182a4c7ca910026a221c76b3))
+* correct has_many directionality for :in relationships ([57c243b](https://github.com/seuros/activecypher/commit/57c243b0e141facefded56f3b67e90c8eb84b7b8))
+* guard nil internal_id, use dig for raw node access, simplify ID_FUNCTION lookup, fix test class name and indentation ([e3f2255](https://github.com/seuros/activecypher/commit/e3f2255ef632ffb7c77cdbe3409f10db92c3aad7))
+
 ## [0.14.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.14.1...active_cypher/v0.14.2) (2025-12-08)
 
 
