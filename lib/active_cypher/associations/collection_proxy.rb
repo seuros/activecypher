@@ -37,7 +37,10 @@ module ActiveCypher
         load_target unless @records
         @records.each(&)
       end
-      alias to_a each
+
+      def to_a
+        each.to_a
+      end
 
       # Returns the size, because counting things is the only certainty in life.
       #
