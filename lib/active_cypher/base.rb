@@ -81,6 +81,15 @@ module ActiveCypher
       # Wrap it all up in a fake-sane object string, so you can pretend your data is organized.
       "#<#{self.class} #{parts.join(', ')}>"
     end
+    
+    def internal_id
+      working_id = super
+      if connection.respond_to? :id_type_conversion
+        return connection.id_type_conversion(working_id)
+      else
+        return working_id
+      end
+    end
 
     # Because Rails needs to feel included, too.
     ActiveSupport.run_load_hooks(:active_cypher, self)
