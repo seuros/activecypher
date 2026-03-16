@@ -9,10 +9,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.allow_failure == true }}
 
     strategy:
+      fail-fast: false
       matrix:
-        rails: ['8.0.2', '8.1.1']
+        rails: ['8.0.2', '8.1.1', 'edge']
+        include:
+          - rails: edge
+            allow_failure: true
 
     env:
       RAILS_VERSION: ${{ matrix.rails }}
