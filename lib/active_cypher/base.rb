@@ -84,10 +84,12 @@ module ActiveCypher
     
     def internal_id
       working_id = super
-      if connection.respond_to? :id_type_conversion
-        return connection.id_type_conversion(working_id)
+      return working_id if working_id.nil?
+
+      if connection.respond_to?(:id_type_conversion)
+        connection.id_type_conversion(working_id)
       else
-        return working_id
+        working_id
       end
     end
 

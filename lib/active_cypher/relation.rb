@@ -164,8 +164,8 @@ module ActiveCypher
         # 1. Pull out the node payload and the elementId string
         # ------------------------------------------------------------
         if row.is_a?(Hash)
-          node_payload = row[:n] || row['n'] || row[:target] || row['target'] ||row
-        element_id   = row[:internal_id] || row['internal_id'] || node_payload[1][0]
+          node_payload = row[:n] || row['n'] || row[:target] || row['target'] || row
+          element_id   = row[:internal_id] || row['internal_id'] || node_payload&.dig(1, 0)
         else # Array row: [node, id]
           node_payload, element_id = row
         end

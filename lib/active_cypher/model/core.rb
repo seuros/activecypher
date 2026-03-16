@@ -38,14 +38,13 @@ module ActiveCypher
       end
       
       def ==(other)
-        # caution! this only checks
-        #   - are the objects the same class
-        #   - with the same internal graph id
-        #   - thus, comparing original vs a modified object with the changes not persisted will return true when maybe it shouldn't
-        return false if other.class != self.class
-      
-        return self.internal_id == other.internal_id
+        # Compares by class and internal graph id only.
+        # Note: an unsaved modification will still compare equal to the persisted version.
+        return false unless other.instance_of?(self.class)
+
+        internal_id == other.internal_id
       end
+
 
     end
   end

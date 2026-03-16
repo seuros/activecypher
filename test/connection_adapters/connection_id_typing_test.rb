@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class RelationshipMergeTest < ActiveSupport::TestCase
+class ConnectionIdTypingTest < ActiveSupport::TestCase
   def setup
     PersonNode.connection.send(:wipe_database, confirm: 'yes, really')
     HobbyNode.connection.send(:wipe_database, confirm: 'yes, really')

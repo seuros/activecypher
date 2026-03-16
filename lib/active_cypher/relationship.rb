@@ -203,12 +203,14 @@ module ActiveCypher
 
         rel_type = relationship_type
 
+        id_func = connection.class::ID_FUNCTION
+
         # Build WHERE conditions for the attributes
         conditions = []
         params = {}
 
         if attributes.key?(:internal_id)
-          where_clause = 'id(r) = $p1'
+          where_clause = "#{id_func}(r) = $p1"
           params['p1'] = attributes[:internal_id]
         else
           attributes.each_with_index do |(key, value), index|
@@ -218,10 +220,6 @@ module ActiveCypher
           end
           where_clause = conditions.join(' AND ')
         end
-
-        # Determine ID function based on adapter type
-        adapter_class = connection.class
-        id_func = adapter_class.const_defined?(:ID_FUNCTION) ? adapter_class::ID_FUNCTION : 'id'
 
         cypher = <<~CYPHER
           MATCH ()-[r:#{rel_type}]-()
@@ -238,8 +236,8 @@ module ActiveCypher
         # Extract relationship data and instantiate
         rel_data = row[:r] || row['r']
         rid = row[:rid] || row['rid']
-        from_node_id = row[:from_node][1][0] || row['from_node'][1][0]
-        to_node_id = row[:to_node][1][0] || row['to_node'][1][0]
+        from_node_id = (row[:from_node] || row['from_node'])&.dig(1, 0)
+        to_node_id   = (row[:to_node]   || row['to_node'])&.dig(1, 0)
         
         # this is extra queries, but easier than navigating instantiation from the row data
         from_node = Object.const_get(self.from_class).find(from_node_id)

@@ -20,9 +20,9 @@ class CompanyNode < Neo4jRecord
   validates :name, presence: true
 
   has_many :call_logs,
-  class_name: 'CallLogNode',
-  relationship: 'CALLED_FOR',
-  direction: :in,
-  relationship_class: 'CalledForRel'
+           class_name: 'CallLogNode',
+           relationship: 'CALLED_FOR',
+           direction: :in,
+           relationship_class: 'CalledForRel'
 
 end
