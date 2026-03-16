@@ -36,6 +36,17 @@ module ActiveCypher
           clear_changes_information
         end
       end
+      
+      def ==(other)
+        # caution! this only checks
+        #   - are the objects the same class
+        #   - with the same internal graph id
+        #   - thus, comparing original vs a modified object with the changes not persisted will return true when maybe it shouldn't
+        return false if other.class != self.class
+      
+        return self.internal_id == other.internal_id
+      end
+
     end
   end
 end
