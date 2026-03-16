@@ -432,15 +432,33 @@ drop_all_indexes
 drop_all_constraints
 ```
 
-## Database Setup and Direct Access
+## Development Setup
 
-For setting up Neo4j and Memgraph databases and direct command-line access, see [GRAPH_REFERENCE.md](GRAPH_REFERENCE.md).
+A `Makefile` is provided for starting the graph databases. It automatically detects **Podman** or **Docker**.
+
+```bash
+make dev       # Start Neo4j + Memgraph
+make dev-ui    # Start Neo4j + Memgraph + Memgraph Lab UI (localhost:3000)
+make down      # Stop databases
+make down-ui   # Stop databases + Lab UI
+```
+
+The compose setup is split into two files:
+
+- **`docker-compose.yml`** — core services: Neo4j and Memgraph
+- **`docker-compose.lab.yml`** — optional [Memgraph Lab](https://memgraph.com/docs/data-visualization) UI, connects to the running Memgraph instance
+
+This keeps the Lab UI opt-in — useful for visualizing graphs and debugging queries interactively, without being part of the default test environment.
 
 ### Sanity Check
 
 Run `bin/sanity` to verify that Memgraph and Neo4j servers are reachable on
 ports 17688 and 17687. The script exits with an error if either service is not
 listening.
+
+### Direct Database Access
+
+For setting up Neo4j and Memgraph databases and direct command-line access, see [GRAPH_REFERENCE.md](GRAPH_REFERENCE.md).
 
 
 ## Features

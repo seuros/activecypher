@@ -19,13 +19,11 @@ services:
     volumes:
       - memgraph_data:/var/lib/memgraph
 
-  memgraphlab:
-    image: memgraph/lab:latest
-    ports:
-      - "3000:3000" # Web UI
-    environment:
-      - QUICK_CONNECT_MG_HOST=memgraph
 volumes:
   postgres_data:
   neo4j_data:
   memgraph_data:
+
+networks:
+  default:
+    name: activecypher_default
