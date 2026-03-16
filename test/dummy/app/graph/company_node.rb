@@ -18,4 +18,11 @@ class CompanyNode < Neo4jRecord
   attribute :active, :boolean, default: true
 
   validates :name, presence: true
+
+  has_many :call_logs,
+  class_name: 'CallLogNode',
+  relationship: 'CALLED_FOR',
+  direction: :in,
+  relationship_class: 'CalledForRel'
+
 end
