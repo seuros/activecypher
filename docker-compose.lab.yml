@@ -1,0 +1,17 @@
+services:
+  memgraphlab:
+    image: memgraph/lab:latest
+    container_name: memgraph-lab-activecypher
+    pull_policy: always
+    ports:
+      - "3000:3000"
+    environment:
+      - QUICK_CONNECT_MG_HOST=memgraph
+      - QUICK_CONNECT_MG_PORT=7687
+    networks:
+      - default
+
+networks:
+  default:
+    name: activecypher_default
+    external: true
