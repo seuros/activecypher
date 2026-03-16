@@ -207,13 +207,17 @@ module ActiveCypher
         conditions = []
         params = {}
 
-        attributes.each_with_index do |(key, value), index|
-          param_name = :"p#{index + 1}"
-          conditions << "r.#{key} = $#{param_name}"
-          params[param_name] = value
+        if attributes.key?(:internal_id)
+          where_clause = 'id(r) = $p1'
+          params['p1'] = attributes[:internal_id]
+        else
+          attributes.each_with_index do |(key, value), index|
+            param_name = :"p#{index + 1}"
+            conditions << "r.#{key} = $#{param_name}"
+            params[param_name] = value
+          end
+          where_clause = conditions.join(' AND ')
         end
-
-        where_clause = conditions.join(' AND ')
 
         # Determine ID function based on adapter type
         adapter_class = connection.class
@@ -234,6 +238,12 @@ module ActiveCypher
         # Extract relationship data and instantiate
         rel_data = row[:r] || row['r']
         rid = row[:rid] || row['rid']
+        from_node_id = row[:from_node][1][0] || row['from_node'][1][0]
+        to_node_id = row[:to_node][1][0] || row['to_node'][1][0]
+        
+        # this is extra queries, but easier than navigating instantiation from the row data
+        from_node = Object.const_get(self.from_class).find(from_node_id)
+        to_node = Object.const_get(self.to_class).find(to_node_id)
 
         # Extract properties from the relationship data
         # Memgraph returns relationships wrapped as [type_code, [actual_data]]
@@ -256,7 +266,7 @@ module ActiveCypher
         attrs = attrs.transform_keys(&:to_sym)
         attrs[:internal_id] = rid if rid
 
-        instantiate(attrs)
+        instantiate(attrs, from_node: from_node, to_node: to_node)
       end
 
       # Find the first relationship or raise an exception
