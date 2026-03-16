@@ -164,8 +164,8 @@ module ActiveCypher
         # 1. Pull out the node payload and the elementId string
         # ------------------------------------------------------------
         if row.is_a?(Hash)
-          node_payload = row[:n] || row['n'] || row
-          element_id   = row[:internal_id] || row['internal_id']
+          node_payload = row[:n] || row['n'] || row[:target] || row['target'] ||row
+        element_id   = row[:internal_id] || row['internal_id'] || node_payload[1][0]
         else # Array row: [node, id]
           node_payload, element_id = row
         end
@@ -176,6 +176,7 @@ module ActiveCypher
         # ------------------------------------------------------------
         if node_payload.is_a?(Array) && node_payload.first == 78
           # Re‑use the adapter's private helper for consistency
+          # why is it private? This seems to be the only place it's called 
           node_payload = model_class.connection
                                     .send(:process_node, node_payload)
         end
