@@ -13,7 +13,7 @@ module ActiveCypher
   class Base
     # @!attribute [rw] connects_to_mappings
     #   @return [Hash] Because every base class needs a mapping it will never use directly.
-    class_attribute :connects_to_mappings, default: {}
+    class_attribute :connects_to_mappings, default: { reading: :primary, writing: :primary }
 
     # Rails/ActiveModel foundations
     include Logging
