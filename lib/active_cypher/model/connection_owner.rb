@@ -7,7 +7,6 @@ module ActiveCypher
     module ConnectionOwner
       extend ActiveSupport::Concern
       include ActiveCypher::Logging
-      include ActiveCypher::Model::ConnectionHandling
 
       def self.db_key_for(mapping, role)
         return nil unless mapping.is_a?(Hash)
@@ -66,7 +65,7 @@ module ActiveCypher
         # Always dynamically fetch the connection for the current db_key
         def connection
           handler = connection_handler
-          mapping = connects_to_mappings if respond_to?(:connects_to_mappings)
+          mapping = connects_to_mappings
           role = ActiveCypher::RuntimeRegistry.current_role || :writing
           db_key = ConnectionOwner.db_key_for(mapping, role)
           db_key = db_key.to_sym if db_key.respond_to?(:to_sym)

@@ -30,6 +30,7 @@ module ActiveCypher
     include Model::Querying
     include Model::Abstract
     include Model::Attributes
+    include Model::ConnectionHandling
     include Model::ConnectionOwner
     include Model::Persistence
     include Model::Destruction
@@ -44,7 +45,7 @@ module ActiveCypher
         # Determine the current role (e.g., :writing, :reading)
         # ActiveCypher::RuntimeRegistry.current_role defaults to :writing
         # Only use db_key for pool lookup
-        mapping = connects_to_mappings if respond_to?(:connects_to_mappings)
+        mapping = connects_to_mappings
         role = ActiveCypher::RuntimeRegistry.current_role || :writing
         # Debug guardrails removed in release code; rely on role/shard registry.
 

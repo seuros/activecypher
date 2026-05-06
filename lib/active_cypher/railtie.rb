@@ -44,8 +44,8 @@ module ActiveCypher
       # Find all abstract node base classes with connects_to mappings
       ObjectSpace.each_object(Class) do |klass|
         next unless klass < ActiveCypher::Base
-        next unless klass.respond_to?(:abstract_class?) && klass.abstract_class?
-        next unless klass.respond_to?(:connects_to_mappings) && klass.connects_to_mappings.present?
+        next unless klass.abstract_class?
+        next if klass.connects_to_mappings.empty?
 
         # Register pools for each role in connects_to mapping
         klass.connects_to_mappings.each_value do |conn_name|
