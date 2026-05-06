@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.15.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.0...active_cypher/v0.15.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* relationships delegate connections to node class, not connects_to ([bf195f9](https://github.com/seuros/activecypher/commit/bf195f9985458c1d59370c404791a8866067472a))
+
 ## [0.15.0](https://github.com/seuros/activecypher/compare/active_cypher/v0.14.2...active_cypher/v0.15.0) (2026-03-16)
 
 
