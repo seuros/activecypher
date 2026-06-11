@@ -89,18 +89,7 @@ module ActiveCypher
         end
 
         def pack_map(map)
-          size = map.size
-
-          if size < 16 # TinyMap
-            write_marker([TINY_MAP_MARKER_BASE | size].pack('C'))
-          elsif size < 256 # MAP_8
-            write_marker([MAP_8_MARKER, size].pack('CC'))
-          elsif size < 65_536 # MAP_16
-            write_marker([MAP_16_MARKER, size].pack('Cn'))
-          else
-            raise ProtocolError, "Map too large to pack (size: #{size})"
-            # write_marker([MAP_32_MARKER, size].pack('CN>'))
-          end
+          write_collection_marker(map.size, TINY_MAP_MARKER_BASE, MAP_8_MARKER, MAP_16_MARKER, 'Map')
 
           map.each do |key, value|
             pack(key.to_s) # Keys must be strings
@@ -109,19 +98,22 @@ module ActiveCypher
         end
 
         def pack_list(list)
-          size = list.size
-          if size < 16 # TinyList
-            write_marker([TINY_LIST_MARKER_BASE | size].pack('C'))
-          elsif size < 256 # LIST_8
-            write_marker([LIST_8_MARKER, size].pack('CC'))
-          elsif size < 65_536 # LIST_16
-            write_marker([LIST_16_MARKER, size].pack('Cn')) # n is already network byte order
-          else
-            raise ProtocolError, "List too large to pack (size: #{size})"
-            # write_marker([LIST_32_MARKER, size].pack('CN>')) # Use N> for network byte order
-          end
+          write_collection_marker(list.size, TINY_LIST_MARKER_BASE, LIST_8_MARKER, LIST_16_MARKER, 'List')
 
           list.each { |item| pack(item) }
+        end
+
+        # Writes the size marker shared by maps and lists (tiny / 8-bit / 16-bit).
+        def write_collection_marker(size, tiny_base, marker8, marker16, label)
+          if size < 16 # Tiny
+            write_marker([tiny_base | size].pack('C'))
+          elsif size < 256 # 8-bit size
+            write_marker([marker8, size].pack('CC'))
+          elsif size < 65_536 # 16-bit size ('n' is network byte order)
+            write_marker([marker16, size].pack('Cn'))
+          else
+            raise ProtocolError, "#{label} too large to pack (size: #{size})"
+          end
         end
 
         def pack_integer(int)

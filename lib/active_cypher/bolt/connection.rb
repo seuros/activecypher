@@ -485,7 +485,6 @@ module ActiveCypher
         session(database: db).write_transaction(db: db, timeout: timeout, metadata: metadata, &)
       end
 
-
       # ────────────────────────────────────────────────────────────────────
       # HEALTH AND VERSION DETECTION METHODS
       # ────────────────────────────────────────────────────────────────────
@@ -514,21 +513,17 @@ module ActiveCypher
       def health_check
         return { healthy: false, response_time_ms: nil, details: 'Not connected' } unless connected?
 
-        result = nil
+        nil
 
         begin
-          result = Sync do
-            case database_type
-            when :neo4j
-              perform_neo4j_health_check
-            when :memgraph
-              perform_memgraph_health_check
-            else
-              perform_generic_health_check
-            end
+          Sync do
+            query = case database_type
+                    when :neo4j then 'RETURN 1 AS result'
+                    when :memgraph then 'SHOW STORAGE INFO'
+                    else 'RETURN 1'
+                    end
+            perform_health_check_query(query)
           end
-
-          result
         rescue ConnectionError, ProtocolError => e
           { healthy: false, response_time_ms: nil, details: "Health check failed: #{e.message}" }
         end
@@ -707,14 +702,15 @@ module ActiveCypher
         }
       end
 
-      # Performs Neo4j-specific health check using RETURN 1 (fallback from db.ping).
+      # Performs a health check by running the given query and draining the result.
       #
+      # @param query [String] database-appropriate health check query
       # @return [Hash] health check result
-      def perform_neo4j_health_check
+      def perform_health_check_query(query)
         start_time = Time.now
 
         begin
-          write_message(Messaging::Run.new('RETURN 1 AS result', {}, {}), 'HEALTH_CHECK')
+          write_message(Messaging::Run.new(query, {}, {}), 'HEALTH_CHECK')
           run_response = read_message
 
           case run_response
@@ -732,97 +728,15 @@ module ActiveCypher
                 next
               when Messaging::Success
                 response_time = ((Time.now - start_time) * 1000).round(2)
-                return { healthy: true, response_time_ms: response_time, details: 'RETURN 1 succeeded' }
+                return { healthy: true, response_time_ms: response_time, details: "#{query} succeeded" }
               when Messaging::Failure
-                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 failed with error' }
+                return { healthy: false, response_time_ms: nil, details: "#{query} failed with error" }
               else
-                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 unexpected response' }
+                return { healthy: false, response_time_ms: nil, details: "#{query} unexpected response" }
               end
             end
           else
-            { healthy: false, response_time_ms: nil, details: 'RETURN 1 run failed' }
-          end
-        ensure
-          # Reset connection state after health check
-          reset!
-        end
-      end
-
-      # Performs Memgraph-specific health check using SHOW STORAGE INFO.
-      #
-      # @return [Hash] health check result
-      def perform_memgraph_health_check
-        start_time = Time.now
-
-        begin
-          write_message(Messaging::Run.new('SHOW STORAGE INFO', {}, {}), 'HEALTH_CHECK')
-          run_response = read_message
-
-          case run_response
-          when Messaging::Success
-            # Send PULL message to complete the transaction
-            write_message(Messaging::Pull.new({ 'n' => -1 }), 'PULL')
-
-            # Read messages until we get SUCCESS or FAILURE
-            response_time = nil
-            loop do
-              msg = read_message
-              case msg
-              when Messaging::Record
-                # Skip records, we just want to know if the query succeeded
-                next
-              when Messaging::Success
-                response_time = ((Time.now - start_time) * 1000).round(2)
-                return { healthy: true, response_time_ms: response_time, details: 'SHOW STORAGE INFO succeeded' }
-              when Messaging::Failure
-                return { healthy: false, response_time_ms: nil, details: 'SHOW STORAGE INFO failed with error' }
-              else
-                return { healthy: false, response_time_ms: nil, details: 'SHOW STORAGE INFO unexpected response' }
-              end
-            end
-          else
-            { healthy: false, response_time_ms: nil, details: 'SHOW STORAGE INFO run failed' }
-          end
-        ensure
-          # Reset connection state after health check
-          reset!
-        end
-      end
-
-      # Performs generic health check using simple RETURN 1 query.
-      #
-      # @return [Hash] health check result
-      def perform_generic_health_check
-        start_time = Time.now
-
-        begin
-          write_message(Messaging::Run.new('RETURN 1', {}, {}), 'HEALTH_CHECK')
-          run_response = read_message
-
-          case run_response
-          when Messaging::Success
-            # Send PULL message to complete the transaction
-            write_message(Messaging::Pull.new({ 'n' => -1 }), 'PULL')
-
-            # Read messages until we get SUCCESS or FAILURE
-            response_time = nil
-            loop do
-              msg = read_message
-              case msg
-              when Messaging::Record
-                # Skip records, we just want to know if the query succeeded
-                next
-              when Messaging::Success
-                response_time = ((Time.now - start_time) * 1000).round(2)
-                return { healthy: true, response_time_ms: response_time, details: 'RETURN 1 succeeded' }
-              when Messaging::Failure
-                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 failed with error' }
-              else
-                return { healthy: false, response_time_ms: nil, details: 'RETURN 1 unexpected response' }
-              end
-            end
-          else
-            { healthy: false, response_time_ms: nil, details: 'RETURN 1 run failed' }
+            { healthy: false, response_time_ms: nil, details: "#{query} run failed" }
           end
         ensure
           # Reset connection state after health check

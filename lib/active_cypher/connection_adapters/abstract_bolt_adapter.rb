@@ -98,9 +98,9 @@ module ActiveCypher
       #
       # @yieldparam session [Bolt::Session] The session to use
       # @return [Object] The result of the block
-      def with_session(**kw, &block)
+      def with_session(**kw, &)
         connect
-        @driver.with_session(**kw, &block)
+        @driver.with_session(**kw, &)
       end
 
       # Asynchronously yields a Session from the connection pool.
@@ -108,9 +108,9 @@ module ActiveCypher
       #
       # @yieldparam session [Bolt::Session] The session to use
       # @return [Async::Task] A task that resolves to the block's result
-      def async_with_session(**kw, &block)
+      def async_with_session(**kw, &)
         connect
-        @driver.async_with_session(**kw, &block)
+        @driver.async_with_session(**kw, &)
       end
 
       # Runs a Cypher query via Bolt session.
@@ -169,26 +169,24 @@ module ActiveCypher
 
           begin
             result = Sync do
-              begin
-                # Try to execute a simple query first
-                session = Bolt::Session.new(@connection)
-                session.run('RETURN 1 AS check', {})
-                session.close
-                true
-              rescue StandardError => e
-                # Query failed, need to reset the connection
-                logger.debug { "Connection needs reset: #{e.message}" }
+              # Try to execute a simple query first
+              session = Bolt::Session.new(@connection)
+              session.run('RETURN 1 AS check', {})
+              session.close
+              true
+            rescue StandardError => e
+              # Query failed, need to reset the connection
+              logger.debug { "Connection needs reset: #{e.message}" }
 
-                # Send RESET message directly
-                begin
-                  @connection.write_message(Bolt::Messaging::Reset.new)
-                  response = @connection.read_message
-                  logger.debug { "Reset response: #{response.class}" }
-                  response.is_a?(Bolt::Messaging::Success)
-                rescue StandardError => reset_error
-                  logger.error { "Reset failed: #{reset_error.message}" }
-                  false
-                end
+              # Send RESET message directly
+              begin
+                @connection.write_message(Bolt::Messaging::Reset.new)
+                response = @connection.read_message
+                logger.debug { "Reset response: #{response.class}" }
+                response.is_a?(Bolt::Messaging::Success)
+              rescue StandardError => reset_error
+                logger.error { "Reset failed: #{reset_error.message}" }
+                false
               end
             end
           rescue StandardError => e

@@ -40,9 +40,9 @@ module ActiveCypher
       #
       # @yieldparam session [Bolt::Session] The session to use
       # @return [Object] The result of the block
-      def with_session(**kw, &block)
+      def with_session(**kw, &)
         Sync do
-          _acquire_session(**kw, &block)
+          _acquire_session(**kw, &)
         end
       rescue Async::TimeoutError => e
         raise ActiveCypher::ConnectionError, "Connection pool timeout: #{e.message}"
@@ -55,11 +55,11 @@ module ActiveCypher
       #
       # @yieldparam session [Bolt::Session] The session to use
       # @return [Async::Task] A task that resolves to the block's result
-      def async_with_session(**kw, &block)
+      def async_with_session(**kw, &)
         raise 'Cannot run async_with_session outside of an Async task' unless Async::Task.current?
 
         Async do
-          _acquire_session(**kw, &block)
+          _acquire_session(**kw, &)
         end
       end
 

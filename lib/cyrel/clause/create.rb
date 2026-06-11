@@ -9,11 +9,7 @@ module Cyrel
       # @param pattern [Cyrel::Pattern::Path, Cyrel::Pattern::Node, Cyrel::Pattern::Relationship]
       #   The pattern to create. Typically a Path or Node.
       def initialize(pattern)
-        # Ensure pattern is a valid type for CREATE
-        unless pattern.is_a?(Cyrel::Pattern::Path) || pattern.is_a?(Cyrel::Pattern::Node) || pattern.is_a?(Cyrel::Pattern::Relationship)
-          raise ArgumentError,
-                "CREATE pattern must be a Cyrel::Pattern::Path, Node, or Relationship, got #{pattern.class}"
-        end
+        Cyrel::Pattern.assert_pattern!(pattern, 'CREATE')
 
         # NOTE: Creating relationships between existing nodes requires coordination.
         # The pattern itself should reference existing aliases defined in a preceding MATCH/MERGE.

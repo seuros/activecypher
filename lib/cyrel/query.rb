@@ -136,13 +136,7 @@ module Cyrel
       # ------------------------------------------------------------------
       processed_conditions = conditions.flat_map do |cond|
         if cond.is_a?(Hash)
-          cond.map do |key, value|
-            Expression::Comparison.new(
-              Expression::PropertyAccess.new(@current_alias || infer_alias, key),
-              :'=',
-              value
-            )
-          end
+          hash_to_conditions(cond)
         else
           cond # already an expression (or coercible)
         end
@@ -155,7 +149,7 @@ module Cyrel
       # ------------------------------------------------------------------
       # 2. Merge with an existing WHERE (if any)
       # ------------------------------------------------------------------
-      existing_where_index = @clauses.find_index { |c| c.is_a?(Clause::Where) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WhereNode)) }
+      existing_where_index = find_clause_index(Clause::Where, AST::WhereNode)
 
       if existing_where_index
         existing_clause = @clauses[existing_where_index]
@@ -258,7 +252,7 @@ module Cyrel
       ast_clause = AST::ClauseAdapter.new(set_node)
 
       # Check for existing SET clause to merge with
-      existing_set_index = @clauses.find_index { |c| c.is_a?(Clause::Set) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::SetNode)) }
+      existing_set_index = find_clause_index(Clause::Set, AST::SetNode)
 
       if existing_set_index
         existing_clause = @clauses[existing_set_index]
@@ -321,58 +315,19 @@ module Cyrel
     # @return [self]
     # Because sometimes you want to pass things along, and sometimes you just want to pass the buck.
     def with(*items, distinct: false, where: nil)
-      # Process items similar to existing Return clause
-      processed_items = items.flatten.map do |item|
-        case item
-        when Expression::Base
-          item
-        when Symbol
-          # Create a RawIdentifier for variable names
-          Clause::Return::RawIdentifier.new(item.to_s)
-        when String
-          # Check if string looks like property access (e.g. "person.name")
-          # If so, treat as raw identifier, otherwise parameterize
-          if item.match?(/\A\w+\.\w+\z/)
-            Clause::Return::RawIdentifier.new(item)
-          else
-            # String literals should be coerced to expressions (parameterized)
-            Expression.coerce(item)
-          end
-        else
-          Expression.coerce(item)
-        end
-      end
+      processed_items = process_projection_items(items)
 
       # Process WHERE conditions if provided
       where_conditions = case where
                          when nil then []
-                         when Hash
-                           # Convert hash to equality comparisons
-                           where.map do |key, value|
-                             Expression::Comparison.new(
-                               Expression::PropertyAccess.new(@current_alias || infer_alias, key),
-                               :'=',
-                               value
-                             )
-                           end
+                         when Hash then hash_to_conditions(where)
                          when Array then where
                          else [where] # Single condition
                          end
 
       # Use AST-based implementation
       with_node = AST::WithNode.new(processed_items, distinct: distinct, where_conditions: where_conditions)
-      ast_clause = AST::ClauseAdapter.new(with_node)
-
-      # Find and replace existing with or add new one
-      existing_with_index = @clauses.find_index { |c| c.is_a?(Clause::With) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::WithNode)) }
-
-      if existing_with_index
-        @clauses[existing_with_index] = ast_clause
-      else
-        add_clause(ast_clause)
-      end
-
-      self
+      replace_or_add_clause(AST::ClauseAdapter.new(with_node), Clause::With, AST::WithNode)
     end
 
     # Adds a RETURN clause.
@@ -384,41 +339,11 @@ module Cyrel
     # is a reserved keyword in Ruby. We're not crazy - we just want to provide
     # a clean DSL while respecting Ruby's language constraints.
     def return_(*items, distinct: false)
-      # Process items similar to existing Return clause
-      processed_items = items.flatten.map do |item|
-        case item
-        when Expression::Base
-          item
-        when Symbol
-          # Create a RawIdentifier for variable names
-          Clause::Return::RawIdentifier.new(item.to_s)
-        when String
-          # Check if string looks like property access (e.g. "person.name")
-          # If so, treat as raw identifier, otherwise parameterize
-          if item.match?(/\A\w+\.\w+\z/)
-            Clause::Return::RawIdentifier.new(item)
-          else
-            # String literals should be coerced to expressions (parameterized)
-            Expression.coerce(item)
-          end
-        else
-          Expression.coerce(item)
-        end
-      end
+      processed_items = process_projection_items(items)
 
       # Use AST-based implementation
       return_node = AST::ReturnNode.new(processed_items, distinct: distinct)
-      ast_clause = AST::ClauseAdapter.new(return_node)
-
-      # Find and replace existing return or add new one
-      existing_return_index = @clauses.find_index { |c| c.is_a?(Clause::Return) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::ReturnNode)) }
-
-      if existing_return_index
-        @clauses[existing_return_index] = ast_clause
-      else
-        add_clause(ast_clause)
-      end
-      self
+      replace_or_add_clause(AST::ClauseAdapter.new(return_node), Clause::Return, AST::ReturnNode)
     end
 
     # Adds or replaces the ORDER BY clause.
@@ -432,17 +357,7 @@ module Cyrel
 
       # Use AST-based implementation
       order_by_node = AST::OrderByNode.new(items_array)
-      ast_clause = AST::ClauseAdapter.new(order_by_node)
-
-      # Find and replace existing order by or add new one
-      existing_order_index = @clauses.find_index { |c| c.is_a?(Clause::OrderBy) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::OrderByNode)) }
-
-      if existing_order_index
-        @clauses[existing_order_index] = ast_clause
-      else
-        add_clause(ast_clause)
-      end
-      self
+      replace_or_add_clause(AST::ClauseAdapter.new(order_by_node), Clause::OrderBy, AST::OrderByNode)
     end
 
     # Adds or replaces the SKIP clause.
@@ -452,17 +367,7 @@ module Cyrel
     def skip(amount)
       # Use AST-based implementation
       skip_node = AST::SkipNode.new(amount)
-      ast_clause = AST::ClauseAdapter.new(skip_node)
-
-      # Find and replace existing skip or add new one
-      existing_skip_index = @clauses.find_index { |c| c.is_a?(Clause::Skip) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::SkipNode)) }
-
-      if existing_skip_index
-        @clauses[existing_skip_index] = ast_clause
-      else
-        add_clause(ast_clause)
-      end
-      self
+      replace_or_add_clause(AST::ClauseAdapter.new(skip_node), Clause::Skip, AST::SkipNode)
     end
 
     # Adds or replaces the LIMIT clause.
@@ -472,18 +377,7 @@ module Cyrel
     def limit(amount)
       # Use AST-based implementation
       limit_node = AST::LimitNode.new(amount)
-      ast_clause = AST::ClauseAdapter.new(limit_node)
-
-      # Find and replace existing limit or add new one
-      existing_limit_index = @clauses.find_index { |c| c.is_a?(Clause::Limit) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(AST::LimitNode)) }
-
-      if existing_limit_index
-        @clauses[existing_limit_index] = ast_clause
-      else
-        add_clause(ast_clause)
-      end
-
-      self
+      replace_or_add_clause(AST::ClauseAdapter.new(limit_node), Clause::Limit, AST::LimitNode)
     end
 
     # Adds a CALL procedure clause.
@@ -598,6 +492,58 @@ module Cyrel
     def load_csv(from:, as:, with_headers: false, fieldterminator: nil)
       load_csv_node = AST::LoadCsvNode.new(from, as, with_headers: with_headers, fieldterminator: fieldterminator)
       add_clause(AST::ClauseAdapter.new(load_csv_node))
+    end
+
+    # Coerces projection items (symbols, strings, expressions) for WITH/RETURN clauses.
+    def process_projection_items(items)
+      items.flatten.map do |item|
+        case item
+        when Expression::Base
+          item
+        when Symbol
+          # Create a RawIdentifier for variable names
+          Clause::Return::RawIdentifier.new(item.to_s)
+        when String
+          # Check if string looks like property access (e.g. "person.name")
+          # If so, treat as raw identifier, otherwise parameterize
+          if item.match?(/\A\w+\.\w+\z/)
+            Clause::Return::RawIdentifier.new(item)
+          else
+            # String literals should be coerced to expressions (parameterized)
+            Expression.coerce(item)
+          end
+        else
+          Expression.coerce(item)
+        end
+      end
+    end
+
+    # Converts a Hash into equality comparisons against the current alias.
+    def hash_to_conditions(hash)
+      hash.map do |key, value|
+        Expression::Comparison.new(
+          Expression::PropertyAccess.new(@current_alias || infer_alias, key),
+          :'=',
+          value
+        )
+      end
+    end
+
+    # Finds the index of an existing clause matching either the legacy clause
+    # class or an AST::ClauseAdapter wrapping the given AST node class.
+    def find_clause_index(clause_class, ast_node_class)
+      @clauses.find_index { |c| c.is_a?(clause_class) || (c.is_a?(AST::ClauseAdapter) && c.ast_node.is_a?(ast_node_class)) }
+    end
+
+    # Replaces an existing matching clause in place, or appends the new one.
+    def replace_or_add_clause(ast_clause, clause_class, ast_node_class)
+      existing_index = find_clause_index(clause_class, ast_node_class)
+      if existing_index
+        @clauses[existing_index] = ast_clause
+      else
+        add_clause(ast_clause)
+      end
+      self
     end
 
     # private
