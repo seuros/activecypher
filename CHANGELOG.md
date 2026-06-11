@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.15.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.1...active_cypher/v0.15.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* clean up code ([#83](https://github.com/seuros/activecypher/issues/83)) ([f8602bd](https://github.com/seuros/activecypher/commit/f8602bdba8903887848d07b2b05013bb8e2f7268))
+
 ## [0.15.1](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.0...active_cypher/v0.15.1) (2026-05-06)
 
 
