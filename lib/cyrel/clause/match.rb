@@ -12,13 +12,7 @@ module Cyrel
       # @param path_variable [Symbol, String, nil] An optional variable to assign to the matched path.
       def initialize(pattern, optional: false, path_variable: nil)
         super() # Call super for Base initialization
-        # Ensure pattern is a valid type
-        unless pattern.is_a?(Cyrel::Pattern::Path) ||
-               pattern.is_a?(Cyrel::Pattern::Node) ||
-               pattern.is_a?(Cyrel::Pattern::Relationship)
-          raise ArgumentError,
-                "Match pattern must be a Cyrel::Pattern::Path, Node, or Relationship, got #{pattern.class}"
-        end
+        Cyrel::Pattern.assert_pattern!(pattern, 'Match')
 
         @pattern = pattern
         @optional = optional

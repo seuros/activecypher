@@ -82,7 +82,7 @@ module ActiveCypher
       # Wrap it all up in a fake-sane object string, so you can pretend your data is organized.
       "#<#{self.class} #{parts.join(', ')}>"
     end
-    
+
     def internal_id
       working_id = super
       return working_id if working_id.nil?

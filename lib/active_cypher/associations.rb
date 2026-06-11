@@ -285,6 +285,12 @@ module ActiveCypher
           instance_variable_set(instance_var, associate)
         end
 
+        define_build_and_create_methods(name, target_class_name)
+      end
+
+      # Defines build_<name> and create_<name> for singular associations
+      # (shared by belongs_to and has_one).
+      def define_build_and_create_methods(name, target_class_name)
         # Define build method (e.g., build_author(name: "New Author"))
         define_method("build_#{name}") do |attributes = {}|
           target_class = target_class_name.constantize
@@ -431,25 +437,7 @@ module ActiveCypher
           instance_variable_set(instance_var, associate)
         end
 
-        # Define build method (e.g., build_profile(data: {...}))
-        define_method("build_#{name}") do |attributes = {}|
-          target_class = target_class_name.constantize
-          # TODO: Potentially set the inverse association reference here
-          # For now, just instantiate the target class
-          target_class.new(attributes)
-        end
-
-        # Define create method (e.g., create_profile(data: {...}))
-        define_method("create_#{name}") do |attributes = {}|
-          # Build the instance
-          instance = public_send("build_#{name}", attributes)
-          # Save the instance
-          instance.save
-          # If save is successful, associate it using the = method
-          public_send("#{name}=", instance) if instance.persisted?
-          # Return the instance
-          instance
-        end
+        define_build_and_create_methods(name, target_class_name)
       end
     end
 

@@ -93,55 +93,34 @@ module Cyrel
       # When called like: node(:a) > rel(:r) > node(:b)
       # The rel(:r) is evaluated first, then > is called
       # So we need to modify the last relationship that was just added
-      if @elements.last.is_a?(Cyrel::Pattern::Relationship)
-        # Replace the last relationship with one that has the correct direction
-        last_rel = @elements.pop
-        new_rel = Cyrel::Pattern::Relationship.new(
-          alias_name: last_rel.alias_name,
-          types: last_rel.types,
-          properties: last_rel.properties,
-          length: last_rel.length,
-          direction: :outgoing
-        )
-        @elements << new_rel
-      else
-        @pending_direction = :outgoing
-      end
-      self
+      apply_direction(:outgoing)
     end
 
     def <(_other)
       # Same logic as > but for incoming direction
-      if @elements.last.is_a?(Cyrel::Pattern::Relationship)
-        last_rel = @elements.pop
-        new_rel = Cyrel::Pattern::Relationship.new(
-          alias_name: last_rel.alias_name,
-          types: last_rel.types,
-          properties: last_rel.properties,
-          length: last_rel.length,
-          direction: :incoming
-        )
-        @elements << new_rel
-      else
-        @pending_direction = :incoming
-      end
-      self
+      apply_direction(:incoming)
     end
 
     def -(_other)
       # Same logic as > but for bidirectional
+      apply_direction(:both)
+    end
+
+    private
+
+    def apply_direction(direction)
       if @elements.last.is_a?(Cyrel::Pattern::Relationship)
+        # Replace the last relationship with one that has the correct direction
         last_rel = @elements.pop
-        new_rel = Cyrel::Pattern::Relationship.new(
+        @elements << Cyrel::Pattern::Relationship.new(
           alias_name: last_rel.alias_name,
           types: last_rel.types,
           properties: last_rel.properties,
           length: last_rel.length,
-          direction: :both
+          direction: direction
         )
-        @elements << new_rel
       else
-        @pending_direction = :both
+        @pending_direction = direction
       end
       self
     end
@@ -256,9 +235,9 @@ module Cyrel
   # Example:
   #   Cyrel.exists_block { match(Cyrel.node(:a) > Cyrel.rel(:r) > Cyrel.node(:b, :Admin)) }
   #   # => EXISTS { MATCH (a)-[r]->(b:Admin) }
-  def exists_block(&block)
+  def exists_block(&)
     subquery = Query.new
-    subquery.instance_eval(&block)
+    subquery.instance_eval(&)
     Expression::ExistsBlock.new(subquery)
   end
 

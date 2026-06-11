@@ -234,10 +234,10 @@ module ActiveCypher
         rid = row[:rid] || row['rid']
         from_node_id = (row[:from_node] || row['from_node'])&.dig(1, 0)
         to_node_id   = (row[:to_node]   || row['to_node'])&.dig(1, 0)
-        
+
         # this is extra queries, but easier than navigating instantiation from the row data
-        from_node = Object.const_get(self.from_class).find(from_node_id)
-        to_node = Object.const_get(self.to_class).find(to_node_id)
+        from_node = Object.const_get(from_class).find(from_node_id)
+        to_node = Object.const_get(to_class).find(to_node_id)
 
         # Extract properties from the relationship data
         # Memgraph returns relationships wrapped as [type_code, [actual_data]]

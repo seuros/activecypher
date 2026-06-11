@@ -36,7 +36,7 @@ module ActiveCypher
           clear_changes_information
         end
       end
-      
+
       def ==(other)
         # Compares by class and internal graph id only.
         # Note: an unsaved modification will still compare equal to the persisted version.
@@ -44,8 +44,6 @@ module ActiveCypher
 
         internal_id == other.internal_id
       end
-
-
     end
   end
 end

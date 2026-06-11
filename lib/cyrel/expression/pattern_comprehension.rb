@@ -13,10 +13,7 @@ module Cyrel
       # @param projection_expression [Cyrel::Expression::Base, Object]
       #   The expression evaluated for each match of the pattern.
       def initialize(pattern, projection_expression)
-        unless pattern.is_a?(Cyrel::Pattern::Path) || pattern.is_a?(Cyrel::Pattern::Node) || pattern.is_a?(Cyrel::Pattern::Relationship)
-          raise ArgumentError,
-                "Pattern Comprehension pattern must be a Path, Node, or Relationship, got #{pattern.class}"
-        end
+        Cyrel::Pattern.assert_pattern!(pattern, 'Pattern Comprehension')
 
         @pattern = pattern
         @projection_expression = Expression.coerce(projection_expression)

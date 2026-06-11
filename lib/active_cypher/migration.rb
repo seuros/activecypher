@@ -92,14 +92,13 @@ module ActiveCypher
     end
 
     def create_uniqueness_constraint(label, *props, if_not_exists: true, name: nil)
+      props_clause = props.map { |p| "n.#{p}" }.join(', ')
       cypher = if connection.vendor == :memgraph
                  # Memgraph syntax: CREATE CONSTRAINT ON (n:Label) ASSERT n.prop IS UNIQUE
                  # Note: Memgraph doesn't support IF NOT EXISTS or named constraints
-                 props_clause = props.map { |p| "n.#{p}" }.join(', ')
                  "CREATE CONSTRAINT ON (n:#{label}) ASSERT #{props_clause} IS UNIQUE"
                else
                  # Neo4j syntax
-                 props_clause = props.map { |p| "n.#{p}" }.join(', ')
                  c = +'CREATE CONSTRAINT'
                  c << " #{name}" if name
                  c << ' IF NOT EXISTS' if if_not_exists
@@ -113,7 +112,7 @@ module ActiveCypher
       cypher = if connection.vendor == :memgraph
                  # Memgraph TEXT INDEX syntax (requires --experimental-enabled='text-search')
                  # Memgraph only supports single property per text index, so create one per prop
-                 props.map.with_index do |p, i|
+                 props.map.with_index do |p, _i|
                    index_name = props.size > 1 ? "#{name}_#{p}" : name.to_s
                    "CREATE TEXT INDEX #{index_name} ON :#{label}(#{p})"
                  end
