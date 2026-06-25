@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.15.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.2...active_cypher/v0.15.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* Use IN rather than = for queries using arrays ([#85](https://github.com/seuros/activecypher/issues/85)) ([e6a8eb6](https://github.com/seuros/activecypher/commit/e6a8eb6774bc96f5007d6d59f213755af199bf74))
+
 ## [0.15.2](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.1...active_cypher/v0.15.2) (2026-06-11)
 
 
