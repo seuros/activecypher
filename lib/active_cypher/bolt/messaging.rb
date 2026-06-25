@@ -67,13 +67,12 @@ module ActiveCypher
         end
       end
 
-      # The HELLO message. Because every protocol needs to start with a greeting before the disappointment.
-      class Hello < Message
-        SIGNATURE = 0x01
-
+      # Base for messages whose single field is a normalized metadata map.
+      # Subclasses only need to define their SIGNATURE.
+      class MetadataMessage < Message
         def initialize(metadata)
           meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
+          super(self.class::SIGNATURE, [meta])
         end
 
         def metadata
@@ -81,22 +80,27 @@ module ActiveCypher
         end
       end
 
-      # The GOODBYE message. For when you've had enough of this session, or life.
-      class Goodbye < Message
-        SIGNATURE = 0x02
-
+      # Base for messages that carry no fields at all.
+      # Subclasses only need to define their SIGNATURE.
+      class EmptyMessage < Message
         def initialize
-          super(SIGNATURE, [])
+          super(self.class::SIGNATURE, [])
         end
       end
 
-      # The RESET message. Because sometimes you just want to pretend nothing ever happened.
-      class Reset < Message
-        SIGNATURE = 0x0F
+      # The HELLO message. Because every protocol needs to start with a greeting before the disappointment.
+      class Hello < MetadataMessage
+        SIGNATURE = 0x01
+      end
 
-        def initialize
-          super(SIGNATURE, [])
-        end
+      # The GOODBYE message. For when you've had enough of this session, or life.
+      class Goodbye < EmptyMessage
+        SIGNATURE = 0x02
+      end
+
+      # The RESET message. Because sometimes you just want to pretend nothing ever happened.
+      class Reset < EmptyMessage
+        SIGNATURE = 0x0F
       end
 
       # The RUN message. Because what else would you do with a database connection?
@@ -148,115 +152,52 @@ module ActiveCypher
       end
 
       # The COMMIT message. For when you want to pretend your changes are permanent.
-      class Commit < Message
+      class Commit < EmptyMessage
         SIGNATURE = 0x12
-
-        def initialize
-          super(SIGNATURE, [])
-        end
       end
 
       # The ROLLBACK message. Because sometimes you just want to undo your mistakes.
-      class Rollback < Message
+      class Rollback < EmptyMessage
         SIGNATURE = 0x13
-
-        def initialize
-          super(SIGNATURE, [])
-        end
       end
 
       # The DISCARD message. For when you want to throw away results, or your hopes.
-      class Discard < Message
+      class Discard < MetadataMessage
         SIGNATURE = 0x2F
 
         # metadata: { n: <N>, qid: <QID> }, where n = -1 means all
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata = fields.first
-        def n        = metadata[:n] || metadata['n']
-        def qid      = metadata[:qid] || metadata['qid']
+        def n   = metadata[:n] || metadata['n']
+        def qid = metadata[:qid] || metadata['qid']
       end
 
       # The PULL message. Because sometimes you just want to see what you got.
-      class Pull < Message
+      class Pull < MetadataMessage
         SIGNATURE = 0x3F
-
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata
-          fields.first
-        end
       end
 
       # The ROUTE message. For when you want to pretend you have control over routing.
-      class Route < Message
+      class Route < MetadataMessage
         SIGNATURE = 0x66
-
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata
-          fields.first
-        end
       end
 
       # The LOGON message. Because authentication is just another chance to be rejected.
-      class Logon < Message
+      class Logon < MetadataMessage
         SIGNATURE = 0x6A
-
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata
-          fields.first
-        end
       end
 
       # The LOGOFF message. For when you want to leave quietly, without making a scene.
-      class Logoff < Message
+      class Logoff < EmptyMessage
         SIGNATURE = 0x6B
-
-        def initialize
-          super(SIGNATURE, [])
-        end
       end
 
       # The TELEMETRY message. Because someone, somewhere, cares about your metrics. Probably.
-      class Telemetry < Message
+      class Telemetry < MetadataMessage
         SIGNATURE = 0x54
-
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata
-          fields.first
-        end
       end
 
       # The SUCCESS message. The rarest of all Bolt messages.
-      class Success < Message
+      class Success < MetadataMessage
         SIGNATURE = 0x70
-
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata
-          fields.first
-        end
       end
 
       # The RECORD message. For when you actually get data back, against all odds.
@@ -273,26 +214,13 @@ module ActiveCypher
       end
 
       # The IGNORED message. For when the server just can't be bothered.
-      class Ignored < Message
+      class Ignored < EmptyMessage
         SIGNATURE = 0x7E
-
-        def initialize
-          super(SIGNATURE, [])
-        end
       end
 
       # The FAILURE message. The most honest message in the protocol.
-      class Failure < Message
+      class Failure < MetadataMessage
         SIGNATURE = 0x7F
-
-        def initialize(metadata)
-          meta = Messaging.normalize_map(metadata)
-          super(SIGNATURE, [meta])
-        end
-
-        def metadata
-          fields.first
-        end
 
         def code
           metadata['code']

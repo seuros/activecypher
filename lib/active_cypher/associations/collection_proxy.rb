@@ -45,7 +45,7 @@ module ActiveCypher
       # Returns the size, because counting things is the only certainty in life.
       #
       # @return [Integer] The number of records in the collection
-      def size   = load_target.size
+      def size = load_target.size
       alias length size
 
       # Fully refresh from the database.

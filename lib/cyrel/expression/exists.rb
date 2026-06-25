@@ -13,10 +13,7 @@ module Cyrel
       # @param pattern [Cyrel::Pattern::Path, Cyrel::Pattern::Node, Cyrel::Pattern::Relationship]
       #   The pattern to check for existence.
       def initialize(pattern)
-        unless pattern.is_a?(Cyrel::Pattern::Path) || pattern.is_a?(Cyrel::Pattern::Node) || pattern.is_a?(Cyrel::Pattern::Relationship)
-          raise ArgumentError,
-                "EXISTS pattern must be a Cyrel::Pattern::Path, Node, or Relationship, got #{pattern.class}"
-        end
+        Cyrel::Pattern.assert_pattern!(pattern, 'EXISTS')
 
         @pattern = pattern
       end

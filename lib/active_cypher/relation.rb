@@ -176,7 +176,7 @@ module ActiveCypher
         # ------------------------------------------------------------
         if node_payload.is_a?(Array) && node_payload.first == 78
           # Re‑use the adapter's private helper for consistency
-          # why is it private? This seems to be the only place it's called 
+          # why is it private? This seems to be the only place it's called
           node_payload = model_class.connection
                                     .send(:process_node, node_payload)
         end

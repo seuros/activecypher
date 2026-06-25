@@ -12,7 +12,7 @@ module Cyrel
 
       attribute :alias_name, Cyrel::Types::SymbolType.new
       attribute :labels,     array: :string, default: []
-      attribute :or_labels,  array: :string, default: []  # Memgraph 3.2+: (n:Label1|Label2)
+      attribute :or_labels,  array: :string, default: [] # Memgraph 3.2+: (n:Label1|Label2)
       attribute :properties, Cyrel::Types::HashType.new, default: -> { {} }
 
       validates :alias_name, presence: true
