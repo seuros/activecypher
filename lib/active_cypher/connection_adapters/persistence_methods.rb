@@ -20,11 +20,7 @@ module ActiveCypher
         # OPTIMIZED: Use string template instead of Cyrel for known-safe CREATE pattern
         # Labels come from model class (safe), props are parameterized (safe)
         label_string = labels.map { |l| ":#{l}" }.join
-        cypher = if adapter.id_function == 'elementId'
-                   "CREATE (n#{label_string} $props) RETURN elementId(n) AS internal_id"
-                 else
-                   "CREATE (n#{label_string} $props) RETURN id(n) AS internal_id"
-                 end
+        cypher = "CREATE (n#{label_string} $props) RETURN #{node_id_expr(adapter)} AS internal_id"
 
         data = model.connection.execute_cypher(cypher, { props: props }, 'Create')
 
@@ -59,11 +55,7 @@ module ActiveCypher
         label_string = labels.map { |l| ":#{l}" }.join
         set_clauses = changes.keys.map { |property| "n.#{property} = $#{property}" }.join(', ')
 
-        cypher = if adapter.id_function == 'elementId'
-                   "MATCH (n#{label_string}) WHERE elementId(n) = $node_id SET #{set_clauses} RETURN n"
-                 else
-                   "MATCH (n#{label_string}) WHERE id(n) = $node_id SET #{set_clauses} RETURN n"
-                 end
+        cypher = "MATCH (n#{label_string}) WHERE #{node_id_expr(adapter)} = $node_id SET #{set_clauses} RETURN n"
 
         params = changes.merge(node_id: node_id_param)
         model.connection.execute_cypher(cypher, params, 'Update')
@@ -91,14 +83,19 @@ module ActiveCypher
         # Labels come from model class (safe)
         label_string = labels.map { |l| ":#{l}" }.join
 
-        cypher = if adapter.id_function == 'elementId'
-                   "MATCH (n#{label_string}) WHERE elementId(n) = $node_id DETACH DELETE n RETURN count(*) AS deleted"
-                 else
-                   "MATCH (n#{label_string}) WHERE id(n) = $node_id DETACH DELETE n RETURN count(*) AS deleted"
-                 end
+        cypher = "MATCH (n#{label_string}) WHERE #{node_id_expr(adapter)} = $node_id DETACH DELETE n RETURN count(*) AS deleted"
 
         result = model.connection.execute_cypher(cypher, { node_id: node_id_param }, 'Destroy')
         result.present? && result.first[:deleted].to_i.positive?
+      end
+
+      private
+
+      # The node-id function call for the adapter's dialect (Neo4j uses elementId, Memgraph id).
+      # @param adapter [#id_function] the connection's id handler
+      # @return [String] "elementId(n)" or "id(n)"
+      def node_id_expr(adapter)
+        adapter.id_function == 'elementId' ? 'elementId(n)' : 'id(n)'
       end
     end
   end

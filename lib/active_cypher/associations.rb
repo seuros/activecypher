@@ -13,6 +13,68 @@ module ActiveCypher
       class_attribute :_reflections, instance_writer: false, default: {}
     end
 
+    # Map a logical association direction to a Cyrel relationship direction.
+    # @param direction [:in, :out, :both]
+    # @return [Symbol] the corresponding Cyrel::Direction value
+    def self.cyrel_direction(direction)
+      case direction
+      when :out then Cyrel::Direction::OUT
+      when :in then Cyrel::Direction::IN
+      when :both then Cyrel::Direction::BOTH
+      else raise AssociationError, "Invalid direction: #{direction}"
+      end
+    end
+
+    # A labelled node pattern pinned to a model class.
+    # @param model_class [Class] the node model class
+    # @param alias_name [Symbol] the pattern alias
+    # @return [Cyrel::Pattern::Node]
+    def self.node_pattern(model_class, alias_name)
+      Cyrel::Pattern::Node.new(alias_name, labels: model_class.label_name)
+    end
+
+    # Build a (start)-[rel]->(end) path between two node patterns.
+    # @param start_node [Cyrel::Pattern::Node] the "from" node pattern
+    # @param end_node [Cyrel::Pattern::Node] the "to" node pattern
+    # @param direction [:in, :out, :both] direction relative to start_node
+    # @param rel_type [String, Symbol] the relationship type
+    # @param rel_alias [Symbol, nil] optional alias for the relationship
+    # @return [Cyrel::Pattern::Path]
+    def self.relationship_path(start_node, end_node, direction, rel_type, rel_alias: nil)
+      rel = Cyrel::Pattern::Relationship.new(alias_name: rel_alias, types: rel_type,
+                                             direction: cyrel_direction(direction))
+      Cyrel::Pattern::Path.new([start_node, rel, end_node])
+    end
+
+    # Build a query matching two nodes pinned by their internal ids, ready to
+    # chain a further .match/.create/.delete_ onto. Cyrel orders clauses
+    # canonically, so the trailing operation may be appended in any order.
+    # @param start_node the model instance at the "from" end
+    # @param start_alias [Symbol] alias for the start node
+    # @param end_node the model instance at the "to" end
+    # @param end_alias [Symbol] alias for the end node
+    # @return [Cyrel::Query]
+    def self.match_endpoints(start_node, start_alias, end_node, end_alias)
+      Cyrel::Query.new
+                  .match(node_pattern(start_node.class, start_alias))
+                  .match(node_pattern(end_node.class, end_alias))
+                  .where(Cyrel.node_id(start_alias).eq(start_node.internal_id))
+                  .where(Cyrel.node_id(end_alias).eq(end_node.internal_id))
+    end
+
+    # Order a pair of endpoints by association direction.
+    # @param receiver the model instance owning the association
+    # @param other the associated model instance
+    # @param direction [:in, :out, :both] direction relative to the receiver
+    # @return [Array] [start_node, end_node]
+    def self.ordered_endpoints(receiver, other, direction)
+      case direction
+      when :out, :both then [receiver, other]
+      when :in then [other, receiver]
+      else raise ArgumentError, "Direction '#{direction}' not supported for this operation"
+      end
+    end
+
     class_methods do
       # Defines a one-to-many association.
       #
@@ -171,25 +233,20 @@ module ActiveCypher
           end
 
           target_class = target_class_name.constantize
-          a_alias = :a
-          b_alias = :b
+          start_alias = :start_node
+          target_alias = :target # Relation#map_results only unwraps the :n or :target alias
 
-          # plain node patterns (no mutating helpers)
-          a_node = Cyrel::Pattern::Node.new(a_alias, labels: self.class.label_name)
-          b_node = Cyrel::Pattern::Node.new(b_alias, labels: target_class.label_name)
-
-          # explicit relationship node – mirrors Arel::Nodes::Join construction
-          rel = Cyrel::Pattern::Relationship.new(
-            types: rel_type,
-            direction: Cyrel::Direction::BOTH # undirected ‹--›
+          # belongs_to matches the relationship undirected (‹--›), regardless of declared direction
+          path = Associations.relationship_path(
+            Associations.node_pattern(self.class, start_alias),
+            Associations.node_pattern(target_class, target_alias),
+            :both, rel_type
           )
-
-          path = Cyrel::Pattern::Path.new([a_node, rel, b_node])
 
           query = Cyrel::Query.new
                               .match(path)
-                              .where(Cyrel.node_id(a_alias).eq(internal_id))
-                              .return_(b_alias)
+                              .where(Cyrel.node_id(start_alias).eq(internal_id))
+                              .return_(target_alias)
                               .limit(1)
 
           relation = Relation.new(target_class, query)
@@ -197,93 +254,7 @@ module ActiveCypher
         end
 
         # Define writer (e.g., author=)
-        define_method("#{name}=") do |associate|
-          instance_var = "@#{name}"
-          # Load current associate lazily only if needed for comparison or deletion
-          current_associate = instance_variable_defined?(instance_var) ? instance_variable_get(instance_var) : nil
-          # Load if not cached and persisted
-          current_associate = public_send(name) if current_associate.nil? && persisted?
-
-          # No change if assigning the same object
-          return associate if associate == current_associate
-
-          raise 'Cannot modify associations on a new record' unless persisted?
-
-          # --- Delete existing relationship (if any) ---
-          if current_associate
-            del_start_alias = :a
-            del_end_alias   = :b
-            del_rel_alias   = :r
-            cyrel_direction = if direction == :in
-                                :out
-                              else
-                                (direction == :both ? :both : direction)
-                              end
-
-            del_query = Cyrel
-                        .match(Cyrel.node(del_start_node.class.label_name).as(del_start_alias))
-                        .match(Cyrel.node(del_end_node.class.label_name).as(del_end_alias))
-                        .match(Cyrel.node(del_start_alias)
-                                      .rel(cyrel_direction, rel_type)
-                                      .as(del_rel_alias)
-                                      .to(del_end_alias))
-                        .where(Cyrel.node_id(del_start_alias).eq(del_start_node.internal_id))
-                        .where(Cyrel.node_id(del_end_alias).eq(del_end_node.internal_id))
-                        .delete(del_rel_alias)
-
-            self.class.connection.execute_cypher(
-              *del_query.to_cypher,
-              'Delete Association (belongs_to)'
-            )
-          end
-
-          # --- Create new relationship (if associate is not nil) ---
-          if associate
-            raise ArgumentError, "Associated object must be an instance of #{target_class_name}" unless associate.is_a?(target_class_name.constantize)
-            raise "Associated object #{associate.inspect} must be persisted" unless associate.persisted?
-
-            # Determine start/end nodes for creation based on direction
-            new_start_node, new_end_node =
-              case direction
-              when :out then [self, associate]
-              when :in   then [associate, self]
-              when :both then [self, associate] # choose a deterministic orientation
-              else raise ArgumentError,
-                         "Direction '#{direction}' not supported for creation via '='"
-              end
-
-            if reflection[:relationship_class]
-              # Use Relationship Model
-              rel_model_class = reflection[:relationship_class].constantize
-              # TODO: Extract relationship properties if passed somehow (e.g., via options hash?)
-              rel_props = {}
-              relationship_instance = rel_model_class.new(rel_props, from_node: new_start_node, to_node: new_end_node)
-              relationship_instance.save # Relationship model handles Cypher generation
-            else
-              # Use direct Cypher generation
-              new_start_alias = :a
-              new_end_alias   = :b
-              arrow           = direction == :both ? :both : :out
-
-              create_query = Cyrel
-                             .match(Cyrel.node(new_start_node.class.label_name).as(new_start_alias))
-                             .match(Cyrel.node(new_end_node.class.label_name).as(new_end_alias))
-                             .where(Cyrel.node_id(new_start_alias).eq(new_start_node.internal_id))
-                             .where(Cyrel.node_id(new_end_alias).eq(new_end_node.internal_id))
-                             .create(Cyrel.node(new_start_alias)
-                                            .rel(arrow, rel_type)
-                                            .to(new_end_alias))
-
-              self.class.connection.execute_cypher(
-                *create_query.to_cypher,
-                'Create Association (belongs_to - Direct)'
-              )
-            end
-          end
-
-          # Update the instance variable cache
-          instance_variable_set(instance_var, associate)
-        end
+        define_singular_writer(name, target_class_name, rel_type, direction, reflection)
 
         define_build_and_create_methods(name, target_class_name)
       end
@@ -312,45 +283,12 @@ module ActiveCypher
         end
       end
 
-      def define_has_one_methods(reflection)
-        name = reflection[:name]
-        target_class_name = reflection[:class_name]
-        rel_type = reflection[:relationship]
-        direction = reflection[:direction] # :in, :out, :both
+      # Defines the writer (name=) for a singular association (has_one / belongs_to).
+      # Both macros build the same delete-then-create Cypher; only the log label,
+      # taken from reflection[:macro], differs.
+      def define_singular_writer(name, target_class_name, rel_type, direction, reflection)
+        macro = reflection[:macro]
 
-        # Define reader method (e.g., profile) - logic is same as belongs_to reader
-        define_method(name) do
-          instance_var = "@#{name}"
-          return instance_variable_get(instance_var) if instance_variable_defined?(instance_var)
-
-          raise ActiveCypher::PersistenceError, 'Association load attempted on unsaved record' unless persisted?
-
-          target_class = target_class_name.constantize
-          start_node_alias = :start_node
-          target_node_alias = :target_node
-
-          start_node_pattern = Cyrel.node(self.class.label_name).as(start_node_alias)
-                                    .where(Cyrel.node_id(start_node_alias).eq(internal_id))
-          target_node_pattern = Cyrel.node(target_class.label_name).as(target_node_alias)
-
-          rel_pattern = case direction
-                        when :out
-                          start_node_pattern.rel(:out, rel_type).to(target_node_pattern)
-                        when :in
-                          target_node_pattern.rel(:out, rel_type).to(start_node_pattern) # Reverse for Cyrel syntax
-                        when :both
-                          start_node_pattern.rel(:both, rel_type).to(target_node_pattern)
-                        else
-                          raise AssociationError, "Invalid direction: #{direction}"
-                        end
-
-          query = Cyrel.match(rel_pattern).return(target_node_alias).limit(1)
-
-          relation = Relation.new(target_class, query)
-          instance_variable_set(instance_var, relation.first)
-        end
-
-        # Define writer (e.g., profile=)
         define_method("#{name}=") do |associate|
           instance_var = "@#{name}"
           # Load current associate lazily only if needed for comparison or deletion
@@ -365,33 +303,15 @@ module ActiveCypher
 
           # --- Delete existing relationship (if any) ---
           if current_associate
-            # Determine start/end nodes for deletion based on direction
-            del_start_node, del_end_node = case direction
-                                           when :out then [self, current_associate]
-                                           when :in then [current_associate, self]
-                                           else raise ArgumentError,
-                                                      "Direction '#{direction}' not supported for deletion via '='"
-                                           end
-
-            # Build Cyrel query to delete the relationship
-            del_start_alias = :a
-            del_end_alias = :b
-            del_rel_alias = :r
-            # Adjust direction for Cyrel pattern if needed
-            cyrel_direction = direction == :in ? :out : direction
-            del_query = Cyrel.match(Cyrel.node(del_start_node.class.label_name)
-                                         .as(del_start_alias).where(Cyrel.node_id(del_start_alias)
-                                                                         .eq(del_start_node.internal_id)))
-                             .match(Cyrel.node(del_end_node.class.label_name)
-                                         .as(del_end_alias).where(Cyrel.node_id(del_end_alias)
-                                                                       .eq(del_end_node.internal_id)))
-                             .match(Cyrel.node(del_start_alias).rel(cyrel_direction,
-                                                                    rel_type).as(del_rel_alias).to(del_end_alias))
-                             .delete(del_rel_alias)
-
-            del_cypher = del_query.to_cypher
-            del_params = { start_id: del_start_node.internal_id, end_id: del_end_node.internal_id }
-            self.class.connection.execute_cypher(del_cypher, del_params, 'Delete Association (has_one)')
+            del_start_node, del_end_node = Associations.ordered_endpoints(self, current_associate, direction)
+            del_arrow = direction == :both ? :both : :out
+            del_query = Associations.match_endpoints(del_start_node, :a, del_end_node, :b)
+                                    .match(Associations.relationship_path(
+                                             Cyrel::Pattern::Node.new(:a), Cyrel::Pattern::Node.new(:b),
+                                             del_arrow, rel_type, rel_alias: :r
+                                           ))
+                                    .delete_(:r)
+            self.class.connection.execute_cypher(*del_query.to_cypher, "Delete Association (#{macro})")
           end
 
           # --- Create new relationship (if associate is not nil) ---
@@ -399,125 +319,123 @@ module ActiveCypher
             raise ArgumentError, "Associated object must be an instance of #{target_class_name}" unless associate.is_a?(target_class_name.constantize)
             raise "Associated object #{associate.inspect} must be persisted" unless associate.persisted?
 
-            # Determine start/end nodes for creation based on direction
-            new_start_node, new_end_node = case direction
-                                           when :out then [self, associate]
-                                           when :in then [associate, self]
-                                           else raise ArgumentError,
-                                                      "Direction '#{direction}' not supported for creation via '='"
-                                           end
+            new_start_node, new_end_node = Associations.ordered_endpoints(self, associate, direction)
 
             if reflection[:relationship_class]
               # Use Relationship Model
               rel_model_class = reflection[:relationship_class].constantize
-              # TODO: Extract relationship properties if passed somehow
-              rel_props = {}
-              relationship_instance = rel_model_class.new(rel_props, from_node: new_start_node, to_node: new_end_node)
-              relationship_instance.save
+              relationship_instance = rel_model_class.new({}, from_node: new_start_node, to_node: new_end_node)
+              relationship_instance.save # Relationship model handles Cypher generation
             else
               # Use direct Cypher generation
-              new_start_alias = :a
-              new_end_alias = :b
-              create_query = Cyrel.match(Cyrel.node(new_start_node.class.label_name)
-                                              .as(new_start_alias).where(Cyrel.node_id(new_start_alias)
-                                                                              .eq(new_start_node.internal_id)))
-                                  .match(Cyrel.node(new_end_node.class.label_name)
-                                              .as(new_end_alias).where(Cyrel.node_id(new_end_alias)
-                                                                            .eq(new_end_node.internal_id)))
-                                  .create(Cyrel.node(new_start_alias).rel(:out, rel_type).to(new_end_alias))
-
-              create_cypher = create_query.to_cypher
-              create_params = { start_id: new_start_node.internal_id, end_id: new_end_node.internal_id }
-              self.class.connection.execute_cypher(create_cypher, create_params,
-                                                   'Create Association (has_one - Direct)')
+              create_query = Associations.match_endpoints(new_start_node, :a, new_end_node, :b)
+                                         .create(Associations.relationship_path(
+                                                   Cyrel::Pattern::Node.new(:a), Cyrel::Pattern::Node.new(:b),
+                                                   :out, rel_type
+                                                 ))
+              self.class.connection.execute_cypher(*create_query.to_cypher, "Create Association (#{macro} - Direct)")
             end
           end
 
           # Update the instance variable cache
           instance_variable_set(instance_var, associate)
         end
+      end
+
+      def define_has_one_methods(reflection)
+        name = reflection[:name]
+        target_class_name = reflection[:class_name]
+        rel_type = reflection[:relationship]
+        direction = reflection[:direction] # :in, :out, :both
+
+        # Define reader method (e.g., profile) - logic is same as belongs_to reader
+        define_method(name) do
+          instance_var = "@#{name}"
+          return instance_variable_get(instance_var) if instance_variable_defined?(instance_var)
+
+          raise ActiveCypher::PersistenceError, 'Association load attempted on unsaved record' unless persisted?
+
+          target_class = target_class_name.constantize
+          start_alias = :start_node
+          target_alias = :target # Relation#map_results only unwraps the :n or :target alias
+
+          path = Associations.relationship_path(
+            Associations.node_pattern(self.class, start_alias),
+            Associations.node_pattern(target_class, target_alias),
+            direction, rel_type
+          )
+
+          query = Cyrel::Query.new
+                              .match(path)
+                              .where(Cyrel.node_id(start_alias).eq(internal_id))
+                              .return_(target_alias)
+                              .limit(1)
+
+          relation = Relation.new(target_class, query)
+          instance_variable_set(instance_var, relation.first)
+        end
+
+        # Define writer (e.g., profile=)
+        define_singular_writer(name, target_class_name, rel_type, direction, reflection)
 
         define_build_and_create_methods(name, target_class_name)
       end
-    end
 
-    # Defines the reader method for a has_many :through association.
-    # Because sometimes you want to join tables, but with extra steps.
-    def self.define_has_many_through_reader(reflection)
-      name = reflection[:name]
-      through_association_name = reflection[:through]
-      source_association_name = reflection[:source] || name # Default source is same name on intermediate model
+      # Defines the reader method for a has_many :through association.
+      # Because sometimes you want to join tables, but with extra steps.
+      def define_has_many_through_reader(reflection)
+        name = reflection[:name]
+        through_association_name = reflection[:through]
+        source_association_name = reflection[:source] || name # Default source is same name on intermediate model
 
-      define_method(name) do
-        raise ActiveCypher::PersistenceError, 'Association load attempted on unsaved record' unless persisted?
+        define_method(name) do
+          raise ActiveCypher::PersistenceError, 'Association load attempted on unsaved record' unless persisted?
 
-        # 1. Get reflection for the intermediate association (e.g., :friendships)
-        through_reflection = self.class._reflections[through_association_name]
-        unless through_reflection
-          raise ArgumentError,
-                "Could not find association '#{through_association_name}' specified in :through option for '#{name}'"
+          # 1. Get reflection for the intermediate association (e.g., :friendships)
+          through_reflection = self.class._reflections[through_association_name]
+          unless through_reflection
+            raise ArgumentError,
+                  "Could not find association '#{through_association_name}' specified in :through option for '#{name}'"
+          end
+
+          intermediate_class = through_reflection[:class_name].constantize
+
+          # 2. Get reflection for the source association on the intermediate model (e.g., :to_node on Friendship)
+          # Note: This assumes the intermediate model also uses ActiveCypher::Associations
+          source_reflection = intermediate_class._reflections[source_association_name]
+          unless source_reflection
+            raise ArgumentError,
+                  "Could not find association '#{source_association_name}' specified as :source (or inferred) on '#{intermediate_class.name}' for '#{name}'"
+          end
+
+          final_target_class = source_reflection[:class_name].constantize
+
+          # 3. Build the multi-hop Cyrel query.
+          # Because why settle for one hop when you can have two and still not get what you want?
+          start_alias = :start_node
+          intermediate_alias = :intermediate_node
+          final_target_alias = :target # Relation#map_results only unwraps the :n or :target alias
+
+          # The intermediate node pattern is shared by both hops so the aliases line up:
+          #   MATCH (start)-[:THROUGH]->(intermediate) MATCH (intermediate)-[:SOURCE]->(final)
+          start_node = Associations.node_pattern(self.class, start_alias)
+          intermediate_node = Associations.node_pattern(intermediate_class, intermediate_alias)
+          final_target_node = Associations.node_pattern(final_target_class, final_target_alias)
+
+          first_hop = Associations.relationship_path(start_node, intermediate_node,
+                                                     through_reflection[:direction], through_reflection[:relationship])
+          second_hop = Associations.relationship_path(intermediate_node, final_target_node,
+                                                      source_reflection[:direction], source_reflection[:relationship])
+
+          query = Cyrel::Query.new
+                              .match(first_hop)
+                              .match(second_hop)
+                              .where(Cyrel.node_id(start_alias).eq(internal_id))
+                              .return_(final_target_alias)
+
+          # Return a Relation scoped to the final target class
+          Relation.new(final_target_class, query)
         end
-
-        intermediate_class = through_reflection[:class_name].constantize
-
-        # 2. Get reflection for the source association on the intermediate model (e.g., :to_node on Friendship)
-        # Note: This assumes the intermediate model also uses ActiveCypher::Associations
-        source_reflection = intermediate_class._reflections[source_association_name]
-        unless source_reflection
-          raise ArgumentError,
-                "Could not find association '#{source_association_name}' specified as :source (or inferred) on '#{intermediate_class.name}' for '#{name}'"
-        end
-
-        final_target_class = source_reflection[:class_name].constantize
-
-        # 3. Build the multi-hop Cyrel query.
-        # Because why settle for one hop when you can have two and still not get what you want?
-        start_node_alias = :start_node
-        intermediate_node_alias = :intermediate_node
-        final_target_node_alias = :final_target
-
-        # Start node pattern
-        start_node_pattern = Cyrel.node(self.class.label_name).as(start_node_alias)
-                                  .where(Cyrel.node_id(start_node_alias).eq(internal_id))
-
-        # Intermediate node pattern (based on through_reflection)
-        intermediate_node_pattern = Cyrel.node(intermediate_class.label_name).as(intermediate_node_alias)
-        through_rel_type = through_reflection[:relationship]
-        through_direction = through_reflection[:direction]
-
-        first_hop_pattern = case through_direction
-                            when :out then start_node_pattern.rel(:out, through_rel_type).to(intermediate_node_pattern)
-                            when :in then intermediate_node_pattern.rel(:out, through_rel_type).to(start_node_pattern)
-                            when :both then start_node_pattern.rel(:both,
-                                                                   through_rel_type).to(intermediate_node_pattern)
-                            else raise ArgumentError, "Invalid direction in through_reflection: #{through_direction}"
-                            end
-
-        # Final target node pattern (based on source_reflection)
-        final_target_node_pattern = Cyrel.node(final_target_class.label_name).as(final_target_node_alias)
-        source_rel_type = source_reflection[:relationship]
-        source_direction = source_reflection[:direction]
-
-        second_hop_pattern = case source_direction
-                             when :out then intermediate_node_pattern.rel(:out,
-                                                                          source_rel_type).to(final_target_node_pattern)
-                             when :in then final_target_node_pattern.rel(:out,
-                                                                         source_rel_type).to(intermediate_node_pattern)
-                             when :both then intermediate_node_pattern.rel(:both,
-                                                                           source_rel_type).to(final_target_node_pattern)
-                             else raise ArgumentError, "Invalid direction in source_reflection: #{source_direction}"
-                             end
-
-        # Combine patterns and return final target
-        # Assuming Cyrel allows chaining matches or building complex patterns
-        # This might need adjustment based on Cyrel's exact path-building API
-        query = Cyrel.match(first_hop_pattern)
-                     .match(second_hop_pattern) # Assumes .match adds to the pattern
-                     .return(final_target_node_alias)
-        # TODO: Add DISTINCT if needed? .return(Cyrel.distinct(final_target_node_alias))
-
-        # Return a Relation scoped to the final target class
-        Relation.new(final_target_class, query)
       end
     end
   end

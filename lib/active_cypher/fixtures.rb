@@ -35,11 +35,7 @@ module ActiveCypher
       connections = model_classes.map(&:connection).compact.uniq
 
       # 6. Wipe all nodes in each relevant connection
-      connections.each do |conn|
-        conn.execute_cypher('MATCH (n) DETACH DELETE n')
-      rescue StandardError => e
-        warn "[ActiveCypher::Fixtures.load] Failed to clear connection #{conn.inspect}: #{e.class}: #{e.message}"
-      end
+      wipe_connections(connections, 'load')
 
       # 7. Evaluate nodes and relationships (batched if large)
       if dsl_context.nodes.size > 100 || dsl_context.relationships.size > 200
@@ -77,12 +73,39 @@ module ActiveCypher
       connections = model_classes.map(&:connection).compact.uniq
 
       # Wipe all nodes in each connection
+      wipe_connections(connections, 'clear_all')
+      true
+    end
+
+    # Build a comparable connection fingerprint for cross-database detection.
+    # @param conn [Object] a model connection
+    # @return [Hash] adapter/config/object_id details
+    def self.connection_details(conn)
+      {
+        adapter: conn.class.name,
+        config: conn.instance_variable_get(:@config),
+        object_id: conn.object_id
+      }
+    end
+
+    # Memoized connection-details lookup for a model class.
+    # @param klass [Class] the model class
+    # @param cache [Hash] class => details mapping, populated on miss
+    # @return [Hash] the connection details
+    def self.conn_details_for(klass, cache)
+      cache[klass] ||= connection_details(klass.connection)
+    end
+
+    # Detach-delete every node across the given connections, logging per-connection failures.
+    # @param connections [Array] connections to wipe
+    # @param context [String] caller name used in the warning prefix
+    # @return [void]
+    def self.wipe_connections(connections, context)
       connections.each do |conn|
         conn.execute_cypher('MATCH (n) DETACH DELETE n')
       rescue StandardError => e
-        warn "[ActiveCypher::Fixtures.clear_all] Failed to clear connection #{conn.inspect}: #{e.class}: #{e.message}"
+        warn "[ActiveCypher::Fixtures.#{context}] Failed to clear connection #{conn.inspect}: #{e.class}: #{e.message}"
       end
-      true
     end
 
     # Validates relationships for cross-DB issues
@@ -96,13 +119,8 @@ module ActiveCypher
         next unless klass < ActiveCypher::Base
         next if klass.respond_to?(:abstract_class?) && klass.abstract_class?
 
-        conn = klass.connection
         # Store connection details for comparison
-        model_connections[klass] = {
-          adapter: conn.class.name,
-          config: conn.instance_variable_get(:@config),
-          object_id: conn.object_id
-        }
+        model_connections[klass] = connection_details(klass.connection)
       end
 
       relationships.each do |rel|
@@ -120,30 +138,9 @@ module ActiveCypher
         from_class = from_node.class
         to_class = to_node.class
 
-        # Look up connection details for each class
-        from_conn_details = model_connections[from_class]
-        to_conn_details = model_connections[to_class]
-
-        # If either class isn't in our mapping, refresh it
-        unless from_conn_details
-          conn = from_class.connection
-          from_conn_details = {
-            adapter: conn.class.name,
-            config: conn.instance_variable_get(:@config),
-            object_id: conn.object_id
-          }
-          model_connections[from_class] = from_conn_details
-        end
-
-        unless to_conn_details
-          conn = to_class.connection
-          to_conn_details = {
-            adapter: conn.class.name,
-            config: conn.instance_variable_get(:@config),
-            object_id: conn.object_id
-          }
-          model_connections[to_class] = to_conn_details
-        end
+        # Look up connection details for each class, refreshing the cache on miss
+        from_conn_details = conn_details_for(from_class, model_connections)
+        to_conn_details = conn_details_for(to_class, model_connections)
 
         # Compare connection details
         next unless from_conn_details[:object_id] != to_conn_details[:object_id] ||

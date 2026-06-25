@@ -213,40 +213,8 @@ module Cyrel
     # @return [self]
     # Because sometimes you just want to change everything and pretend it was always that way.
     def set(assignments)
-      # Process assignments similar to existing Set clause
-      processed_assignments = case assignments
-                              when Hash
-                                assignments.flat_map do |key, value|
-                                  case key
-                                  when Expression::PropertyAccess
-                                    # SET n.prop = value
-                                    [[:property, key, Expression.coerce(value)]]
-                                  when Symbol, String
-                                    # SET n = properties
-                                    raise ArgumentError, 'Value for variable assignment must be a Hash' unless value.is_a?(Hash)
-
-                                    [[:variable_properties, key.to_sym, Expression.coerce(value), :assign]]
-                                  when Cyrel::Plus
-                                    # SET n += properties
-                                    raise ArgumentError, 'Value for variable assignment must be a Hash' unless value.is_a?(Hash)
-
-                                    [[:variable_properties, key.variable.to_sym, Expression.coerce(value), :merge]]
-                                  else
-                                    raise ArgumentError, "Invalid key type in SET assignments: #{key.class}"
-                                  end
-                                end
-                              when Array
-                                assignments.map do |item|
-                                  unless item.is_a?(Array) && item.length == 2
-                                    raise ArgumentError, "Invalid label assignment format. Expected [[:variable, 'Label'], ...], got #{item.inspect}"
-                                  end
-
-                                  # SET n:Label
-                                  [:label, item[0].to_sym, item[1]]
-                                end
-                              else
-                                raise ArgumentError, "Invalid assignments type: #{assignments.class}"
-                              end
+      # Normalize assignments using the shared Set-clause logic
+      processed_assignments = Clause::Set.normalize_assignments(assignments)
 
       set_node = AST::SetNode.new(processed_assignments)
       ast_clause = AST::ClauseAdapter.new(set_node)

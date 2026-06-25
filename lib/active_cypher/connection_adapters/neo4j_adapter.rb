@@ -133,7 +133,7 @@ module ActiveCypher
       module Persistence
         include PersistenceMethods
 
-        module_function :create_record, :update_record, :destroy_record
+        module_function :create_record, :update_record, :destroy_record, :node_id_expr
       end
 
       protected

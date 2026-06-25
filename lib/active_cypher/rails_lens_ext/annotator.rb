@@ -115,24 +115,10 @@ module ActiveCypher
           models = []
 
           # Find all Node classes (ActiveCypher::Base descendants)
-          if defined?(::ActiveCypher::Base)
-            ObjectSpace.each_object(Class) do |klass|
-              next unless klass < ::ActiveCypher::Base
-              next if klass == ::ActiveCypher::Base
-
-              models << klass
-            end
-          end
+          models.concat(descendants_of(::ActiveCypher::Base)) if defined?(::ActiveCypher::Base)
 
           # Find all Relationship classes (ActiveCypher::Relationship descendants)
-          if defined?(::ActiveCypher::Relationship)
-            ObjectSpace.each_object(Class) do |klass|
-              next unless klass < ::ActiveCypher::Relationship
-              next if klass == ::ActiveCypher::Relationship
-
-              models << klass
-            end
-          end
+          models.concat(descendants_of(::ActiveCypher::Relationship)) if defined?(::ActiveCypher::Relationship)
 
           # Filter out abstract classes unless requested
           models.reject! { |m| m.respond_to?(:abstract_class?) && m.abstract_class? } unless options[:include_abstract]
@@ -150,6 +136,19 @@ module ActiveCypher
           end
 
           models.sort_by { |m| m.name || '' }
+        end
+
+        # Collect every loaded subclass of +base+ (excluding +base+ itself).
+        # @param base [Class] the ancestor to scan for
+        # @return [Array<Class>] strict descendants of +base+
+        def descendants_of(base)
+          [].tap do |found|
+            ObjectSpace.each_object(Class) do |klass|
+              next unless klass < base
+
+              found << klass
+            end
+          end
         end
 
         # Eager load graph models from Rails app

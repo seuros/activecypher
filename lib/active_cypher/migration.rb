@@ -40,14 +40,7 @@ module ActiveCypher
       composite = props.size > 1 if composite.nil?
 
       cypher = if connection.vendor == :memgraph
-                 if composite && props.size > 1
-                   # Memgraph 3.2+ composite index: CREATE INDEX ON :Label(prop1, prop2)
-                   props_list = props.join(', ')
-                   ["CREATE INDEX ON :#{label}(#{props_list})"]
-                 else
-                   # Memgraph single property indexes
-                   props.map { |p| "CREATE INDEX ON :#{label}(#{p})" }
-                 end
+                 memgraph_index_statements('INDEX', label, props, composite)
                else
                  # Neo4j syntax
                  props_clause = props.map { |p| "n.#{p}" }.join(', ')
@@ -72,13 +65,7 @@ module ActiveCypher
       composite = props.size > 1 if composite.nil?
 
       cypher = if connection.vendor == :memgraph
-                 if composite && props.size > 1
-                   # Memgraph 3.2+ composite edge index
-                   props_list = props.join(', ')
-                   ["CREATE EDGE INDEX ON :#{rel_type}(#{props_list})"]
-                 else
-                   props.map { |p| "CREATE EDGE INDEX ON :#{rel_type}(#{p})" }
-                 end
+                 memgraph_index_statements('EDGE INDEX', rel_type, props, composite)
                else
                  # Neo4j syntax
                  props_clause = props.map { |p| "r.#{p}" }.join(', ')
@@ -220,6 +207,22 @@ module ActiveCypher
     end
 
     private
+
+    # Build Memgraph CREATE [EDGE] INDEX statements for a label/type and properties.
+    # @param index_keyword [String] "INDEX" for nodes, "EDGE INDEX" for relationships
+    # @param label [Symbol, String] node label or relationship type
+    # @param props [Array<Symbol, String>] properties to index
+    # @param composite [Boolean] emit a single composite index when more than one prop
+    # @return [Array<String>] one or more Cypher statements
+    def memgraph_index_statements(index_keyword, label, props, composite)
+      if composite && props.size > 1
+        # Memgraph 3.2+ composite index: CREATE [EDGE] INDEX ON :Label(prop1, prop2)
+        ["CREATE #{index_keyword} ON :#{label}(#{props.join(', ')})"]
+      else
+        # Single property indexes
+        props.map { |p| "CREATE #{index_keyword} ON :#{label}(#{p})" }
+      end
+    end
 
     def execute_operations
       if connection.vendor == :memgraph

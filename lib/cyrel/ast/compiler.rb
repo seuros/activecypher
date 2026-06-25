@@ -84,10 +84,7 @@ module Cyrel
         @output << 'RETURN '
         @output << 'DISTINCT ' if node.distinct
 
-        node.items.each_with_index do |item, index|
-          @output << ', ' if index.positive?
-          render_expression(item)
-        end
+        render_comma_separated(node.items)
       end
 
       # Visit a SET node
@@ -109,10 +106,7 @@ module Cyrel
         @output << 'WITH '
         @output << 'DISTINCT ' if node.distinct
 
-        node.items.each_with_index do |item, index|
-          @output << ', ' if index.positive?
-          render_expression(item)
-        end
+        render_comma_separated(node.items)
 
         # Add WHERE clause if present
         return unless node.where_conditions && !node.where_conditions.empty?
@@ -139,13 +133,8 @@ module Cyrel
         if node.expression.is_a?(Array)
           # Array literal
           @output << format_array_literal(node.expression)
-        elsif node.expression.is_a?(Symbol)
-          # Parameter reference
-          param_key = register_parameter(node.expression)
-          @output << "$#{param_key}"
         else
-          # Other expressions
-          render_expression(node.expression)
+          render_param_or_expression(node.expression)
         end
 
         @output << " AS #{node.alias_name}"
@@ -280,11 +269,11 @@ module Cyrel
 
             subquery_compiler = QueryIntegratedCompiler.new(parameter_proxy)
             clause_cypher, = subquery_compiler.compile(clause.ast_node)
-            @output << clause_cypher.split("\n").map { |line| "  #{line}" }.join("\n")
+            @output << indent_block(clause_cypher)
           else
             # For legacy clauses, render normally
             clause_output = clause.render(subquery)
-            @output << clause_output.split("\n").map { |line| "  #{line}" }.join("\n") unless clause_output.blank?
+            @output << indent_block(clause_output) unless clause_output.blank?
 
             # Merge subquery parameters
             subquery.parameters.each_value do |value|
@@ -346,18 +335,12 @@ module Cyrel
       def visit_foreach_node(node)
         @output << "FOREACH (#{node.variable} IN "
 
-        # Handle the expression - could be an array literal or an expression
+        # Handle the expression - could be an array literal or an expression.
+        # An array is parameterized whole; everything else defers to the shared helper.
         if node.expression.is_a?(Array)
-          # Array literal - convert to parameter
-          param_key = register_parameter(node.expression)
-          @output << "$#{param_key}"
-        elsif node.expression.is_a?(Symbol)
-          # Symbol reference to parameter
-          param_key = register_parameter(node.expression)
-          @output << "$#{param_key}"
+          @output << "$#{register_parameter(node.expression)}"
         else
-          # Other expressions
-          render_expression(node.expression)
+          render_param_or_expression(node.expression)
         end
 
         @output << ' | '
@@ -392,8 +375,6 @@ module Cyrel
           inner_compiler.instance_variable_set(:@loop_variables, @loop_variables.dup)
           clause_cypher, = inner_compiler.compile([clause.ast_node])
           @output << clause_cypher
-
-          # For other clause types, render directly
         end
 
         # Restore previous loop variables context
@@ -515,6 +496,34 @@ module Cyrel
           render_expression(Expression.coerce(value))
         else
           raise "Unknown SET item type: #{item.class}"
+        end
+      end
+
+      # Render a list of items separated by commas (RETURN/WITH projections).
+      # @param items [Array] the expressions to render
+      # @return [void]
+      def render_comma_separated(items)
+        items.each_with_index do |item, index|
+          @output << ', ' if index.positive?
+          render_expression(item)
+        end
+      end
+
+      # Indent every line of a Cypher fragment by two spaces (subquery nesting).
+      # @param text [String] the fragment to indent
+      # @return [String] the indented fragment
+      def indent_block(text)
+        text.split("\n").map { |line| "  #{line}" }.join("\n")
+      end
+
+      # Render a symbol as a parameter reference, otherwise delegate to {#render_expression}.
+      # @param expression [Object] the value to render
+      # @return [void]
+      def render_param_or_expression(expression)
+        if expression.is_a?(Symbol)
+          @output << "$#{register_parameter(expression)}"
+        else
+          render_expression(expression)
         end
       end
 
