@@ -39,7 +39,15 @@ module ActiveCypher
       case conditions
       when Hash
         conditions.each do |key, value|
-          expr      = Cyrel.prop(node_alias, key).eq(value)
+          if value.is_a?(Array)
+            expr      = Cyrel::Expression::Comparison.new(
+                          Cyrel.prop(node_alias, key),
+                          :IN,
+                          value
+                        )
+          else
+            expr      = Cyrel.prop(node_alias, key).eq(value)
+          end
           new_query = new_query.where(expr)
         end
       when Cyrel::Expression::Base
