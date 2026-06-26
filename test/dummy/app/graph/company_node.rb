@@ -6,6 +6,9 @@
 #
 # attributes = [{ name = "id", type = "string" }, { name = "name", type = "string" }, { name = "founding_year", type = "integer" }, { name = "active", type = "boolean" }]
 #
+# [associations]
+# call_logs = { macro = "has_many", class = "CallLogNode", rel = "CALLED_FOR", direction = "in", relationship_class = "CalledForRel" }
+#
 # [connection]
 # writing = "neo4j"
 # reading = "neo4j"
