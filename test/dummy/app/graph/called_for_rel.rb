@@ -5,7 +5,6 @@
 # type = "CALLED_FOR"
 # from_class = "CallLogNode"
 # to_class = "CompanyNode"
-#
 # <rails-lens:graph:end>
 class CalledForRel < ApplicationGraphRelationship
 

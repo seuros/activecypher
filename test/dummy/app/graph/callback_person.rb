@@ -6,6 +6,9 @@
 #
 # attributes = [{ name = "id", type = "string" }, { name = "name", type = "string" }, { name = "age", type = "integer" }, { name = "active", type = "boolean" }, { name = "flag", type = "string" }]
 #
+# [associations]
+# hobbies = { macro = "has_many", class = "HobbyNode", rel = "ENJOYS", relationship_class = "EnjoysRel" }
+#
 # [connection]
 # writing = "primary"
 # reading = "primary"
