@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.15.4](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.3...active_cypher/v0.15.4) (2026-06-26)
+
+
+### Bug Fixes
+
+* repair broken has_one/belongs_to/through associations; dedup helpers ([#87](https://github.com/seuros/activecypher/issues/87)) ([20e7e44](https://github.com/seuros/activecypher/commit/20e7e44789562a1b2840acc213818ebe2b7b1246))
+
 ## [0.15.3](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.2...active_cypher/v0.15.3) (2026-06-25)
 
 
