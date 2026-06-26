@@ -159,10 +159,7 @@ module ActiveCypher
                 # End of results
                 break
               when Bolt::Messaging::Failure
-                code = msg.metadata['code']
-                message = msg.metadata['message']
-                connection.reset!
-                raise QueryError, "Query failed: #{code} - #{message}"
+                raise_query_failure(msg)
               else
                 raise ProtocolError, "Unexpected response during PULL: #{msg.class}"
               end
@@ -170,14 +167,19 @@ module ActiveCypher
 
             rows
           when Bolt::Messaging::Failure
-            code = run_response.metadata['code']
-            message = run_response.metadata['message']
-            connection.reset!
-            raise QueryError, "Query failed: #{code} - #{message}"
+            raise_query_failure(run_response)
           else
             raise ProtocolError, "Unexpected response to RUN: #{run_response.class}"
           end
         end
+      end
+
+      # Reset the connection and raise a QueryError for a Bolt Failure message.
+      # @param failure [Bolt::Messaging::Failure]
+      # @raise [QueryError]
+      def raise_query_failure(failure)
+        connection.reset!
+        raise QueryError, "Query failed: #{failure.metadata['code']} - #{failure.metadata['message']}"
       end
 
       # Memgraph defaults to **implicit auto‑commit** transactions
@@ -276,7 +278,7 @@ module ActiveCypher
       module Persistence
         include PersistenceMethods
 
-        module_function :create_record, :update_record, :destroy_record
+        module_function :create_record, :update_record, :destroy_record, :node_id_expr
       end
 
       class ProtocolHandler < AbstractProtocolHandler

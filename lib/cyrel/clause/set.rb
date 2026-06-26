@@ -17,7 +17,48 @@ module Cyrel
       #     e.g., [[:n, "NewLabel"], [:m, "AnotherLabel"]]
       #   Note: Mixing hash and array styles in one call is not directly supported, use multiple SET clauses if needed.
       def initialize(assignments)
-        @assignments = process_assignments(assignments)
+        @assignments = self.class.normalize_assignments(assignments)
+      end
+
+      # Normalize raw SET assignments (Hash of props/labels or Array of label pairs)
+      # into the internal tuple form consumed by both Clause::Set and Query#set.
+      # @param assignments [Hash, Array]
+      # @return [Array<Array>] tuples like [:property, ...], [:variable_properties, ...], [:label, ...]
+      def self.normalize_assignments(assignments)
+        case assignments
+        when Hash
+          assignments.flat_map do |key, value|
+            case key
+            when Expression::PropertyAccess
+              # SET n.prop = value
+              [[:property, key, Expression.coerce(value)]]
+            when Symbol, String
+              # SET n = properties
+              raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n = {props})' unless value.is_a?(Hash)
+
+              [[:variable_properties, key.to_sym, Expression.coerce(value), :assign]]
+            when Cyrel::Plus
+              # SET n += properties
+              raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n += {props})' unless value.is_a?(Hash)
+
+              [[:variable_properties, key.variable.to_sym, Expression.coerce(value), :merge]]
+            else
+              raise ArgumentError, "Invalid key type in SET assignments hash: #{key.class}"
+            end
+          end
+        when Array
+          assignments.map do |item|
+            unless item.is_a?(Array) && item.length == 2
+              raise ArgumentError,
+                    "Invalid label assignment format. Expected [[:variable, 'Label'], ...], got #{item.inspect}"
+            end
+
+            # SET n:Label
+            [:label, item[0].to_sym, item[1]]
+          end
+        else
+          raise ArgumentError, "Invalid assignments type for SET clause: #{assignments.class}"
+        end
       end
 
       # Renders the SET clause.
@@ -43,43 +84,6 @@ module Cyrel
       end
 
       private
-
-      def process_assignments(assignments)
-        case assignments
-        when Hash
-          assignments.flat_map do |key, value|
-            case key
-            when Expression::PropertyAccess
-              # SET n.prop = value
-              [[:property, key, Expression.coerce(value)]]
-            when Symbol, String
-              # SET n = properties
-              raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n = {props})' unless value.is_a?(Hash)
-
-              [[:variable_properties, key.to_sym, Expression.coerce(value), :assign]]
-            when Cyrel::Plus
-              # SET n += properties
-              raise ArgumentError, 'Value for variable assignment must be a Hash (for SET n += {props})' unless value.is_a?(Hash)
-
-              [[:variable_properties, key.variable.to_sym, Expression.coerce(value), :merge]]
-            else
-              raise ArgumentError, "Invalid key type in SET assignments hash: #{key.class}"
-            end
-          end
-        when Array
-          assignments.map do |item|
-            unless item.is_a?(Array) && item.length == 2 && item[0].is_a?(Symbol) && item[1].is_a?(String)
-              raise ArgumentError,
-                    "Invalid label assignment format. Expected [[:variable, 'Label'], ...], got #{item.inspect}"
-            end
-
-            # SET n:Label
-            [:label, item[0], item[1]]
-          end
-        else
-          raise ArgumentError, "Invalid assignments type for SET clause: #{assignments.class}"
-        end
-      end
 
       def render_assignment(assignment, query)
         type, target, value, op = assignment

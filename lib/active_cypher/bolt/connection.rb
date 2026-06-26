@@ -638,55 +638,35 @@ module ActiveCypher
 
         case @server_agent
         when %r{^Neo4j/(\d+\.\d+(?:\.\d+)?)}i
-          version_string = ::Regexp.last_match(1)
-          parts = version_string.split('.').map(&:to_i)
-          {
-            database_type: :neo4j,
-            version: version_string,
-            major: parts[0] || 0,
-            minor: parts[1] || 0,
-            patch: parts[2] || 0
-          }
+          version_info_from(:neo4j, ::Regexp.last_match(1))
         when %r{^Memgraph/(\d+\.\d+(?:\.\d+)?)}i
-          version_string = ::Regexp.last_match(1)
-          parts = version_string.split('.').map(&:to_i)
-          {
-            database_type: :memgraph,
-            version: version_string,
-            major: parts[0] || 0,
-            minor: parts[1] || 0,
-            patch: parts[2] || 0
-          }
+          version_info_from(:memgraph, ::Regexp.last_match(1))
         when /.*Memgraph/i
           # Handle Memgraph server agent: "Neo4j/v5.11.0 compatible graph database server - Memgraph"
           if @server_agent =~ %r{Neo4j/v(\d+\.\d+(?:\.\d+)?)}
-            version_string = ::Regexp.last_match(1)
-            parts = version_string.split('.').map(&:to_i)
-            {
-              database_type: :memgraph,
-              version: version_string,
-              major: parts[0] || 0,
-              minor: parts[1] || 0,
-              patch: parts[2] || 0
-            }
+            version_info_from(:memgraph, ::Regexp.last_match(1))
           else
-            {
-              database_type: :memgraph,
-              version: 'unknown',
-              major: 0,
-              minor: 0,
-              patch: 0
-            }
+            { database_type: :memgraph, version: 'unknown', major: 0, minor: 0, patch: 0 }
           end
         else
-          {
-            database_type: :unknown,
-            version: @server_agent,
-            major: 0,
-            minor: 0,
-            patch: 0
-          }
+          { database_type: :unknown, version: @server_agent, major: 0, minor: 0, patch: 0 }
         end
+      end
+
+      # Builds a version info hash from a dotted version string.
+      #
+      # @param database_type [Symbol] :neo4j or :memgraph
+      # @param version_string [String] dotted version, e.g. "5.11.0"
+      # @return [Hash] version information
+      def version_info_from(database_type, version_string)
+        parts = version_string.split('.').map(&:to_i)
+        {
+          database_type: database_type,
+          version: version_string,
+          major: parts[0] || 0,
+          minor: parts[1] || 0,
+          patch: parts[2] || 0
+        }
       end
 
       # Returns default version info when server_agent is not available.
