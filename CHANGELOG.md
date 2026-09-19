@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.15.5](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.4...active_cypher/v0.15.5) (2026-09-19)
+
+
+### Bug Fixes
+
+* one Bolt connection per thread, not one per pool  ([#90](https://github.com/seuros/activecypher/issues/90)) ([8ab4d2a](https://github.com/seuros/activecypher/commit/8ab4d2a90a0f07f11db0c85cbb90a283cddc4f51))
+
 ## [0.15.4](https://github.com/seuros/activecypher/compare/active_cypher/v0.15.3...active_cypher/v0.15.4) (2026-06-26)
 
 
