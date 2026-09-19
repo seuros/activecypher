@@ -112,6 +112,8 @@ module ActiveCypher
         end
       end
 
+      TRANSIENT_RETRIES = 3
+
       # Override run to execute queries using auto-commit mode.
       # Memgraph auto-commits each query, so we send RUN + PULL directly
       # without BEGIN/COMMIT wrapper. This avoids transaction state issues.
@@ -120,7 +122,26 @@ module ActiveCypher
         logger.debug { "[#{context}] #{cypher} #{params.inspect}" }
 
         instrument_query(cypher, params, context: context, metadata: { db: db, access_mode: access_mode }) do
-          run_auto_commit(cypher, prepare_params(params))
+          with_transient_retry(context) { run_auto_commit(cypher, prepare_params(params)) }
+        end
+      end
+
+      # Retry write/write conflicts the server flagged as transient. Safe only
+      # because this path is auto-commit (the whole query rolled back); do NOT
+      # lift into the explicit-transaction path, where earlier statements may
+      # already have applied.
+      def with_transient_retry(context)
+        attempts = 0
+        begin
+          yield
+        rescue ActiveCypher::TransientError => e
+          attempts += 1
+          raise if attempts > TRANSIENT_RETRIES
+
+          # Full jitter, so conflicting writers don't back off in step.
+          sleep(rand * 0.05 * (2**(attempts - 1)))
+          logger.debug { "[#{context}] transient conflict, retry #{attempts}/#{TRANSIENT_RETRIES}: #{e.message}" }
+          retry
         end
       end
 
