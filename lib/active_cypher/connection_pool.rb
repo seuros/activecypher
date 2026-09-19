@@ -25,27 +25,40 @@ module ActiveCypher
         @spec = resolved_config.merge(@spec.except(:url))
       end
 
-      @conn_ref = nil # holds the adapter instance
-      @creation_mutex = Mutex.new # prevents multiple threads from creating connections simultaneously
+      # One connection per thread: Bolt is a stateful, ordered protocol, so
+      # sharing a socket across threads corrupts the stream. @connections
+      # exists only so disconnect can close them all; the thread-local is
+      # what the hot path reads.
+      @connections = {}
+      @creation_mutex = Mutex.new
     end
 
-    # Returns a live adapter, initializing it once in a thread‑safe way.
+    # Returns a live adapter belonging to the calling thread.
     def connection
-      # Fast path — already connected and alive
-      conn = @conn_ref
+      conn = Thread.current[thread_key]
       return conn if conn&.active?
 
-      # Use mutex for the slow path to prevent thundering herd
-      @creation_mutex.synchronize do
-        # Check again inside the mutex in case another thread created it
-        conn = @conn_ref
-        return conn if conn&.active?
+      # Built outside the mutex: connecting does network IO.
+      new_conn = build_connection
+      Thread.current[thread_key] = new_conn
 
-        # Create a new connection
-        new_conn = build_connection
-        @conn_ref = new_conn
-        return new_conn
+      # Reap dead threads' connections, or each short-lived thread leaks a
+      # socket the server counts against max_connections.
+      orphaned = @creation_mutex.synchronize do
+        dead = @connections.reject { |t, _| t.alive? }
+        dead.each_key { |t| @connections.delete(t) }
+        @connections[Thread.current] = new_conn
+        dead.values
       end
+
+      # Closed outside the mutex: disconnecting does IO too.
+      orphaned.each do |conn|
+        conn.disconnect
+      rescue StandardError => e
+        puts "Warning: Error disconnecting orphaned connection: #{e.message}" if ENV['DEBUG']
+      end
+
+      new_conn
     end
     alias checkout connection
 
@@ -54,22 +67,30 @@ module ActiveCypher
       @retry_count >= @spec[:max_retries]
     end
 
-    # Explicitly close and reset the connection
+    # Explicitly close every connection this pool handed out.
     def disconnect
-      conn = @conn_ref
-      return unless conn
+      conns = @creation_mutex.synchronize do
+        taken = @connections.values
+        @connections.clear
+        taken
+      end
 
-      begin
+      conns.each do |conn|
         conn.disconnect
       rescue StandardError => e
         # Log but don't raise to ensure cleanup continues
         puts "Warning: Error disconnecting: #{e.message}" if ENV['DEBUG']
-      ensure
-        @conn_ref = nil
       end
+
+      Thread.current[thread_key] = nil
     end
 
     private
+
+    # Namespaced per pool instance so multiple databases don't share.
+    def thread_key
+      @thread_key ||= :"active_cypher_connection_#{object_id}"
+    end
 
     def build_connection
       adapter_name = @spec[:adapter]

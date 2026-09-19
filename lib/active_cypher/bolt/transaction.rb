@@ -77,7 +77,7 @@ module ActiveCypher
                 @state = :failed
                 code = msg.metadata['code']
                 message = msg.metadata['message']
-                raise QueryError, "Query execution failed: #{code} - #{message}"
+                raise query_error_for(code), "Query execution failed: #{code} - #{message}"
               else
                 raise ProtocolError, "Unexpected message type: #{msg.class}"
               end
@@ -90,7 +90,7 @@ module ActiveCypher
             @state = :failed
             code = response.metadata['code']
             message = response.metadata['message']
-            raise QueryError, "Query execution failed: #{code} - #{message}"
+            raise query_error_for(code), "Query execution failed: #{code} - #{message}"
           else
             raise ProtocolError, "Unexpected response to RUN: #{response.class}"
           end
@@ -203,6 +203,18 @@ module ActiveCypher
       # Checks if the transaction is in a failed state.
       def failed?
         @state == :failed
+      end
+
+      private
+
+      # Server error code -> exception class. Substring match covers both
+      # Neo4j and Memgraph spellings of the same codes.
+      def query_error_for(code)
+        c = code.to_s
+        return ConstraintError if c.include?('Constraint')
+        return TransientError  if c.include?('TransientError')
+
+        QueryError
       end
     end
   end
