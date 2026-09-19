@@ -52,6 +52,14 @@ module ActiveCypher
   # Could be you. Could be Cypher. Could be fate.
   class QueryError < Error; end
 
+  # A uniqueness or existence constraint said no.
+  # Rescue this to ignore duplicates without swallowing every QueryError.
+  class ConstraintError < QueryError; end
+
+  # Two writers touched the same node. Nothing is wrong with your query.
+  # The server is politely asking you to try again.
+  class TransientError < QueryError; end
+
   # Your Cypher syntax is... interpretive.
   # Unfortunately, the parser isn’t in the mood for interpretive dance.
   class CypherSyntaxError < QueryError; end
